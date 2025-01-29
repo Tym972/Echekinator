@@ -1,0 +1,114 @@
+[Event "?"]
+[Site "?"]
+[Date "2025.01.29"]
+[Heure "12:47:42"]
+[Round "1"]
+[White "PF4, ARS"]
+[Black "PF4, ARS"]
+[Result "1/2-1/2"]
+
+
+[Event "?"]
+[Site "?"]
+[Date "2025.01.29"]
+[Heure "12:47:42"]
+[Round "2"]
+[White "PF4, ARS"]
+[Black "PF4, ARS"]
+[Result "1/2-1/2"]
+
+
+[Event "?"]
+[Site "?"]
+[Date "2025.01.29"]
+[Heure "12:47:42"]
+[Round "3"]
+[White "PF4, ARS"]
+[Black "PF4, ARS"]
+[Result "1/2-1/2"]
+
+
+[Event "?"]
+[Site "?"]
+[Date "2025.01.29"]
+[Heure "12:47:42"]
+[Round "4"]
+[White "PF4, ARS"]
+[Black "PF4, ARS"]
+[Result "1/2-1/2"]
+
+
+[Event "?"]
+[Site "?"]
+[Date "2025.01.29"]
+[Heure "12:47:42"]
+[Round "5"]
+[White "PF4, ARS"]
+[Black "PF4, ARS"]
+[Result "1/2-1/2"]
+
+
+[Event "?"]
+[Site "?"]
+[Date "2025.01.29"]
+[Heure "12:47:42"]
+[Round "6"]
+[White "PF4, ARS"]
+[Black "PF4, ARS"]
+[Result "1/2-1/2"]
+
+
+[Event "?"]
+[Site "?"]
+[Date "2025.01.29"]
+[Heure "12:47:42"]
+[Round "7"]
+[White "PF4, ARS"]
+[Black "PF4, ARS"]
+[Result "1/2-1/2"]
+
+
+[Event "?"]
+[Site "?"]
+[Date "2025.01.29"]
+[Heure "12:47:42"]
+[Round "8"]
+[White "PF4, ARS"]
+[Black "PF4, ARS"]
+[Result "1/2-1/2"]
+
+
+[Event "?"]
+[Site "?"]
+[Date "2025.01.29"]
+[Heure "12:47:42"]
+[Round "9"]
+[White "PF4, ARS"]
+[Black "PF4, ARS"]
+[Result "1/2-1/2"]
+
+
+[Event "?"]
+[Site "?"]
+[Date "2025.01.29"]
+[Heure "12:47:42"]
+[Round "10"]
+[White "PF4, ARS"]
+[Black "PF4, ARS"]
+[Result "1/2-1/2"]
+
+
+PF4, ARS a gagné 0 parties, soit 0.00% des parties. 0 l'ont été avec les blancs (-nan% des victoires). 0 l'ont été avec les noirs (-nan% des victoires). 
+
+PF4, ARS a gagné 0 parties, soit 0.00% des parties. 0 l'ont été avec les blancs (-nan% des victoires). 0 l'ont été avec les noirs (-nan% des victoires). 
+
+10 parties sont nulles, soit 100.00% des parties. 0 l'ont été par manque de matériel (0.00% des nulles). 0 l'ont été par pat (0.00% des nulles). 
+10 l'ont été par triple répétition (100.00% des nulles). 0 l'ont été par la règle des 50 coups (0.00% des nulles). 
+
+Les blancs ont gagné 0 partie (0.00% des parties). Les noirs en ont gagné 0 (0.00%).
+
+9 parties avaient déjà était jouées, soit 90.00% des parties
+Les parties 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, sont identiques.
+
+Temps d'exécution : 00:00:00.11
+Temps moyen d'exécution : 00:00:00.01
