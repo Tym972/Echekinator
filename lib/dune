@@ -1,0 +1,22 @@
+(library
+ (name libs)
+ (modules
+  plateau
+  generateur
+  traduction1
+  traduction2
+  traduction3
+  ouvertures
+  zobrist
+  strategie1
+  quiescence
+  transposition
+  total
+  evaluations
+  strategie2
+  config
+  interfaces)
+ (libraries
+  str
+  unix
+  threads))

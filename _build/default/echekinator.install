@@ -1,0 +1,8 @@
+lib: [
+  "_build/install/default/lib/echekinator/META"
+  "_build/install/default/lib/echekinator/dune-package"
+  "_build/install/default/lib/echekinator/opam"
+]
+bin: [
+  "_build/install/default/bin/main"
+]

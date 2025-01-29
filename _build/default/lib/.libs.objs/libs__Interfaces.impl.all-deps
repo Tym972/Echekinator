@@ -1,0 +1,14 @@
+libs__Config
+libs__Evaluations
+libs__Generateur
+libs__Ouvertures
+libs__Plateau
+libs__Quiescence
+libs__Strategie1
+libs__Strategie2
+libs__Total
+libs__Traduction1
+libs__Traduction2
+libs__Traduction3
+libs__Transposition
+libs__Zobrist
