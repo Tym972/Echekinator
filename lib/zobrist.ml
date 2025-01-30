@@ -15,7 +15,7 @@ let () =
   done
 
 (*Indique la colonne d'une prise en passant potentielle*)
-let colonne_ep_1 coup plateau = let _ = plateau in match coup with
+let colonne_ep_1 coup plateau = match coup with
   |Classique {piece; depart; arrivee; prise} when (piece = 1 && prise = 0 && (depart > 47) && (arrivee < 40)) ->
     let droite = arrivee + 1 in
     if  droite <> 40 && plateau.(droite) = (-1) then begin
@@ -46,6 +46,7 @@ let colonne_ep_1 coup plateau = let _ = plateau in match coup with
     end
   |_ -> -1
 
+(*Fonction indiquant la colonne d'une prise en passant jouée*)
 let colonne_ep_2 coup = match coup with
     |Enpassant {depart = _; arrivee} -> arrivee mod 8
     |_ -> (-1)

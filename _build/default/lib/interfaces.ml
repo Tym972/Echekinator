@@ -29,13 +29,7 @@ let annule_coup plateau trait_aux_blancs dernier_coup droit_au_roque releve_coup
     |_ :: _ :: k :: t -> List.rev (k :: t)
     |_ -> []
   in let ancien_historique = aux !releve_coups in
-  for i = 0 to 63 do
-    plateau.(i) <- position_de_depart.(i)
-  done;
-  dernier_coup := dernier_coup_initial;
-  droit_au_roque := droit_au_roque_initial;
-  releve_coups := releve_coups_initial;
-  releve_plateau := releve_plateau_initial;
+  reinitialise plateau dernier_coup droit_au_roque releve_coups releve_plateau position_de_depart dernier_coup_initial droit_au_roque_initial releve_coups_initial releve_plateau_initial;
   joue_liste ancien_historique plateau dernier_coup releve_coups releve_plateau droit_au_roque (ref trait_aux_blancs_initial);
   print_endline ("Annulation du dernier coup des " ^ affiche_joueur);
   joue plateau coup_intermediaire;
@@ -315,8 +309,8 @@ let ensemble all_openings anti_repet nombre affichage =
   let repertoire_ouverture = ouvertures_echantillon in
   let nombre_ouvertures = List.length repertoire_ouverture in
   let doc = ref "" in
-  let config_j1 = config_antirepet_pf 4 in
-  let config_j2 = config_antirepet_pf 4 in
+  let config_j1 = config_pf 4 in
+  let config_j2 = config_pf 4 in
   let nom_j1, algo_j1, profondeur_j1, profondeur_max_j1, temps_limite_court_j1, duree_theorie_j1, duree_ouverture_j1, duree_finale_j1, phase1_j1, evaluation_ouverture_j1, evaluation_mdj_j1, evaluation_finale_j1, recherche_j1 = config_j1 in
   let nom_j2, algo_j2, profondeur_j2, profondeur_max_j2, temps_limite_court_j2, duree_theorie_j2, duree_ouverture_j2, duree_finale_j2, phase1_j2, evaluation_ouverture_j2, evaluation_mdj_j2, evaluation_finale_j2, recherche_j2 = config_j2 in
   let init_phase1_j1 = !phase1_j1 in

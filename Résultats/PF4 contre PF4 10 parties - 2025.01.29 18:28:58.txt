@@ -1,0 +1,243 @@
+[Event "?"]
+[Site "?"]
+[Date "2025.01.29"]
+[Heure "18:28:39"]
+[Round "1"]
+[White "PF4"]
+[Black "PF4"]
+[Result "1/2-1/2"]
+
+1. a3 a5 2. b4 axb4 3. Bb2 Nc6 4. Nf3 d5 5. axb4 Rxa1 6. Bxa1 Nxb4 7. d4 Bf5 
+8. Na3 Nf6 9. c4 Qd6 10. cxd5 Nd3+ 11. exd3 Qxa3 12. Be2 Nxd5 13. 0-0 Nf4 
+14. Ne5 Nxe2+ 15. Qxe2 f6 16. g4 Be6 17. Nc4 Qa6 18. Qe4 Qc6 19. Qxc6+ bxc6 
+20. h3 h5 21. Re1 Kf7 22. Re4 hxg4 23. Rf4 Rxh3 24. Ne5+ Kg8 25. Nxg4 Bd5 
+26. Nh2 Rxd3 27. Nf1 c5 28. Ne3 Rb3 29. Nxd5 Rb1+ 30. Kg2 Rxa1 31. dxc5 Rc1 
+32. Nxc7 e5 33. Rh4 Bxc5 34. Ne6 Ba3 35. Ra4 Bd6 36. Ra7 g5 37. Rg7+ Kh8 
+38. Rf7 Kg8 39. Rxf6 Rc4 40. Nxg5 Rg4+ 41. Kh3 Rd4 42. Rg6+ Kf8 43. Kh2 Rh4+ 
+44. Kg3 Rd4 45. Ne4 Be7 46. Ng5 Rd3+ 47. f3 Rd1 48. Kh3 Bd6 49. Ne4 Be7 
+50. Ra6 Rg1 51. Ra5 Rh1+ 52. Kg4 Rh4+ 53. Kg3 Rh5 54. Kg4 Rh4+ 55. Kg3 Rh5 
+56. Kg4 Bd8 57. Ra8 Rh4+ 58. Kg3 Rxe4 59. fxe4 Ke7 60. Ra7+ Ke6 61. Ra6+ Kf7 
+62. Kf3 Bg5 63. Ra2 Bf4 64. Ra6 Kg7 65. Rd6 Kf7 66. Rc6 Kg7 67. Rd6 Kf7 
+68. Rc6 Kg7 69. Rb6 Kf7 70. Rd6 Kg7 71. Rc6 Kf7 72. Rd6 Kg7 73. Rc6 Kf7 
+74. Rb6 Kg7 75. Ra6 Kf7 76. Rb6 Kg7 77. Re6 Kf7 78. Ra6 Kg7 79. Ra1 Kf6 
+80. Rh1 Kg5 81. Rd1 Bh2 82. Rd7 Bf4 83. Rd1 Bh2 84. Rd7 Bf4 85. Rd6 Bc1 
+86. Rd8 Bb2 87. Rc8 Bd4 88. Rc1 Kf6 89. Rc2 Ke6 90. Rh2 Kf6 91. Rc2 Ke6 
+92. Rh2 Kf6 93. Ra2 Ke6 94. Rc2 Kf6 95. Rc1 Ke6 96. Rh1 Kf6 97. Rc1 Ke6 
+98. Rh1 Kf6 99. Rh2 Ke6 100. Rc2 Kf6 101. Rh2 Ke6 102. Ra2 Kf6 103. Ra8 Ke6 
+104. Ra2 Kf6 105. Ra8 Ke6 106. Rh8 Kf6 107. Rg8 Bc5 108. Rh8 Bd4 
+109. Rg8 1/2-1/2
+
+[Event "?"]
+[Site "?"]
+[Date "2025.01.29"]
+[Heure "18:28:43"]
+[Round "2"]
+[White "PF4"]
+[Black "PF4"]
+[Result "1/2-1/2"]
+
+1. a3 e5 2. b3 d5 3. c3 Nf6 4. d3 Nc6 5. e3 Bd6 6. f3 0-0 7. g3 Be6 8. d4 a5 
+9. Nd2 exd4 10. cxd4 b6 11. Bb2 Bf5 12. Bb5 Na7 13. Be2 Nc6 14. g4 Bg6 
+15. Nh3 Qe7 16. Rc1 Na7 17. Rc3 b5 18. 0-0 b4 19. axb4 axb4 20. Rc1 Qxe3+ 
+21. Kg2 Rfe8 22. Rf2 Qe6 23. f4 Ne4 24. Nxe4 Bxe4+ 25. Kg1 Qh6 26. Ng5 Bxf4 
+27. Rxf4 Qxg5 28. Rf2 c6 29. Ra1 Re6 30. Bf3 Bg6 31. Bc1 Qe7 32. Bf4 Rf8 
+33. Be5 Nb5 34. Rg2 Na3 35. g5 Bf5 36. Qe2 Nc2 37. Ra2 Nxd4 38. Bxd4 Rxe2 
+39. Raxe2 Qd6 40. Re5 Bg6 41. Re3 Ra8 42. Re5 c5 43. Bb2 d4 44. Rxc5 Qxc5 
+45. Bxa8 Bc2 46. Rg4 d3+ 47. Bd4 Qf5 48. Rg2 Bxb3 49. Be3 Be6 50. Bc6 b3 
+51. Rf2 Qe5 52. Bf4 Qc3 53. Bf3 b2 54. Rxb2 Qxb2 55. Be3 d2 56. h4 Qc2 
+57. Bd4 d1=Q+ 58. Bxd1 Qxd1+ 59. Kg2 Qxd4 60. h5 Qg4+ 61. Kf2 Qxh5 62. Ke3 Qh1 
+63. g6 Qc1+ 64. Ke2 Qc4+ 65. Kf3 Bd5+ 66. Kg3 Qc3+ 67. Kf4 Qd4+ 68. Kg3 Qe5+ 
+69. Kf2 Qf4+ 70. Ke2 Qf3+ 71. Kd2 Qf4+ 72. Kc2 Qe4+ 73. Kc3 Qc4+ 74. Kd2 Qd4+ 
+75. Kc2 Be4+ 76. Kb3 Bd5+ 77. Kc2 Qc4+ 78. Kd2 Qf4+ 79. Kc2 Qe4+ 80. Kd2 Qb4+ 
+81. Ke2 Qe4+ 82. Kd2 Qb4+ 83. Kd3 Qb5+ 84. Kd4 Qc4+ 85. Ke3 Qc3+ 86. Kf4 Qd4+ 
+87. Kg3 Qe5+ 88. Kf2 Qf4+ 89. Ke2 Bc4+ 90. Kd1 Bb3+ 91. Ke2 Bc4+ 92. Kd1 Bb3+ 
+93. Ke2 Qe4+ 94. Kf2 Qd4+ 95. Kg2 Qe4+ 96. Kg3 Qe3+ 97. Kg2 Bd5+ 98. Kf1 Bc4+ 
+99. Kg2 Bd5+ 100. Kf1 Qf3+ 101. Ke1 Qc3+ 102. Ke2 Bc4+ 103. Kf2 Qf6+ 
+104. Kg2 Bd5+ 105. Kg3 Qg5+ 106. Kf2 Qd2+ 107. Kg3 Qg5+ 108. Kf2 Qd2+ 
+109. Kg3 Qe3+ 110. Kg4 Bf3+ 111. Kg3 Be2+ 112. Kg2 Bf3+ 113. Kg3 1/2-1/2
+
+[Event "?"]
+[Site "?"]
+[Date "2025.01.29"]
+[Heure "18:28:45"]
+[Round "3"]
+[White "PF4"]
+[Black "PF4"]
+[Result "1/2-1/2"]
+
+1. a3 e5 2. g3 d5 3. Bg2 Nf6 4. d3 Nc6 5. Nd2 Bd6 6. e3 0-0 7. h3 d4 
+8. Bxc6 dxe3 9. fxe3 bxc6 10. e4 Be6 11. g4 c5 12. Rh2 a5 13. Rf2 a4 14. Qf3 Nd7 
+15. Nc4 Be7 16. Ne2 Bh4 17. Ng3 Qf6 18. Qe3 Qe7 19. Kf1 g6 20. Kg1 Bf6 
+21. Qf3 Bg5 22. Bxg5 Qxg5 23. Rff1 Nb6 24. Qe2 Nxc4 25. dxc4 Rab8 26. Rab1 Rfd8 
+27. b3 Rd2 28. h4 Rxe2 29. hxg5 Rxc2 30. bxa4 Rxb1 31. Rxb1 Rxc4 32. Rb7 Rxa4 
+33. Rb8+ Kg7 34. Rb7 Rxa3 35. Nf1 c6 36. Rb6 Bd7 37. Nh2 Re3 38. Rb7 Be6 
+39. Rb6 Bd7 40. Rb7 Be6 41. Rb6 Bxg4 42. Nxg4 Rg3+ 43. Kf2 Rxg4 44. Rxc6 Rxe4 
+45. Rxc5 Rf4+ 46. Ke3 Rf5 47. Ke4 Rf4+ 48. Kxe5 Rf5+ 49. Kd6 Rf1 50. Kc6 Re1 
+51. Kb5 Re2 52. Kc6 Re1 53. Kb5 Re2 54. Kc6 Re3 55. Kb5 Re1 56. Kc6 Re2 
+57. Kb5 Re1 58. Kc6 Re2 59. Kb5 Re3 60. Kc6 Re4 61. Kb5 Re3 62. Kc6 Re4 
+63. Kb5 Re8 64. Kb6 Re7 65. Kc6 Re3 66. Kb5 Re4 67. Kc6 Re8 68. Kd7 Re4 
+69. Kc6 Re8 70. Kd7 Rb8 71. Kc7 Rb1 72. Kc6 Rh1 73. Kc7 Rf1 74. Kc6 Rh1 
+75. Kc7 Rd1 76. Kc6 Rf1 77. Kc7 Rh1 78. Kc6 Rf1 79. Kc7 Rh1 80. Kc6 Rd1 
+81. Kc7 Rb1 82. Kc6 Rd1 83. Kc7 Ra1 84. Kb6 Ra2 85. Rd5 Re2 86. Kc6 Re8 
+87. Kc7 Re7+ 88. Kc6 Re8 89. Kc7 Re7+ 90. Kc6 Ra7 91. Kb6 Ra1 92. Rc5 Ra2 
+93. Rd5 Re2 94. Kc6 Re7 95. Rc5 Ra7 96. Kb6 Ra1 97. Kb5 Rd1 98. Kc6 1/2-1/2
+
+[Event "?"]
+[Site "?"]
+[Date "2025.01.29"]
+[Heure "18:28:47"]
+[Round "4"]
+[White "PF4"]
+[Black "PF4"]
+[Result "0-1"]
+
+1. a3 e5 2. h3 d5 3. d4 exd4 4. Qxd4 Nc6 5. Qc3 Nf6 6. g4 Be7 7. g5 Nh5 
+8. f4 Bf5 9. Qb3 Be4 10. Rh2 0-0 11. Qxb7 Nd4 12. Kd1 Bxc2+ 13. Kd2 Nxf4 
+14. Kc3 Nb3 15. Bxf4 Nxa1 16. Nd2 Bf6+ 17. gxf6 Qxf6+ 18. Kb4 Qxb2+ 19. Kc5 Qxb7 
+20. Ngf3 Be4 21. Kd4 Qb2+ 22. Ke3 Qb6+ 23. Nd4 Nc2+ 24. Kf2 Qxd4+ 25. Kg3 Ne3 
+26. Bxe3 Qxe3+ 27. Nf3 Qxa3 28. Kf2 Rab8 29. Nd2 Qc5+ 30. e3 Qd6 31. Rg2 Bxg2 
+32. Bxg2 Rb2 33. Ke2 Qb4 34. Kf3 Qxd2 35. Bh1 Qh2 36. Kg4 Qxh1 37. Kg3 Qe4 
+38. h4 f5 39. h5 Qg4# 0-1
+
+[Event "?"]
+[Site "?"]
+[Date "2025.01.29"]
+[Heure "18:28:48"]
+[Round "5"]
+[White "PF4"]
+[Black "PF4"]
+[Result "0-1"]
+
+1. a3 g6 2. g4 d5 3. h3 Nc6 4. d4 e5 5. dxe5 Nxe5 6. Qd4 Bg7 7. Qc3 Bf6 8. g5 d4 
+9. Qg3 Bg7 10. Bf4 Nc4 11. Bxc7 Qd5 12. Bg2 Qe6 13. Qb3 Nb6 14. Qxe6+ fxe6 
+15. Bxb6 axb6 16. Nd2 b5 17. Ne4 Ke7 18. 0-0-0 Bd7 19. Nf3 e5 20. Nc5 Bc6 
+21. Nh4 Rf8 22. Bxc6 bxc6 23. Nf3 h6 24. Nd3 e4 25. Nfe5 exd3 26. Nxg6+ Kd6 
+27. Nxf8 dxe2 28. Rd3 Ne7 29. gxh6 Bxh6+ 30. Kb1 Rxf8 31. Rxd4+ Nd5 32. Rg4 Rxf2 
+33. Rg6+ Rf6 34. Rxf6+ Nxf6 35. Re1 Nd5 36. Rxe2 Bg5 37. Re4 Nf4 38. h4 Kd5 
+39. Rb4 Bh6 40. c3 Kc5 41. Rd4 Kb6 42. Kc2 Nd5 43. h5 Nf4 44. Rd6 Bg5 
+45. Rg6 Nxg6 46. hxg6 Bf6 47. Kb3 Be5 48. Kb4 c5+ 49. Kb3 c4+ 50. Kc2 Kc5 
+51. Kb1 Kd5 52. Kc1 Ke6 53. b3 Bxc3 54. b4 Bg7 55. Kc2 Kf5 56. Kd2 Kxg6 
+57. Kc2 Bd4 58. Kc1 c3 59. Kc2 Be5 60. Kb3 Kf5 61. Kc2 Ke4 62. Kb3 Kd3 63. a4 c2 
+64. axb5 c1=Q 65. Ka4 Kc4 66. Ka5 Qa1+ 67. Kb6 Qa4 68. Kb7 Qxb5+ 69. Ka7 Kxb4 
+70. Ka8 Qa6# 0-1
+
+[Event "?"]
+[Site "?"]
+[Date "2025.01.29"]
+[Heure "18:28:49"]
+[Round "6"]
+[White "PF4"]
+[Black "PF4"]
+[Result "1-0"]
+
+1. a4 b5 2. axb5 Bb7 3. Nc3 a6 4. d4 Nf6 5. Bg5 axb5 6. Rxa8 Bxa8 7. Nxb5 e6 
+8. Qa1 Be4 9. Qa5 c6 10. Qxd8+ Kxd8 11. Na3 Bxa3 12. bxa3 Bxc2 13. Bf4 Kc8 
+14. e3 d5 15. Be5 Nbd7 16. Nf3 Kb7 17. Bd6 Ne4 18. Bb4 c5 19. dxc5 Ndxc5 
+20. Ne5 f6 21. Nf7 Rc8 22. f3 Ng5 23. Nd6+ Kb8 24. Nxc8 Nd3+ 25. Bxd3 Bxd3 
+26. Kd2 Bg6 27. Ne7 Be8 28. Bd6+ Ka7 29. Kc1 Nf7 30. Bf4 g5 31. Bg3 Bb5 
+32. Ng8 f5 33. Nf6 h6 34. h4 gxh4 35. Rxh4 Bf1 36. Ng8 Bxg2 37. Nxh6 Ng5 
+38. Ra4+ Kb7 39. Rb4+ Kc8 40. Rb8+ Kd7 41. Rb7+ Kc6 42. Re7 Bxf3 43. Bf4 Nh3 
+44. Rxe6+ Kd7 45. Rd6+ Kc8 46. Rc6+ Kd7 47. Rd6+ Ke8 48. Nxf5 Nxf4 49. exf4 Be4 
+50. Nd4 Kf7 51. f5 Ke7 52. Rg6 Kf7 53. Rb6 Bd3 54. a4 Bc4 55. a5 Kg7 56. a6 Bxa6 
+57. Rxa6 Kf7 58. Ra5 Kf6 59. Rxd5 Kf7 60. Kc2 Kf6 61. Rb5 Kf7 62. Rb6 Kg7 
+63. f6+ Kg6 64. Nf3 Kh6 65. f7+ Kg7 66. Ne5 Kf8 67. Rf6 Kg7 68. f8=Q+ Kh7 
+69. Rh6# 1-0
+
+[Event "?"]
+[Site "?"]
+[Date "2025.01.29"]
+[Heure "18:28:51"]
+[Round "7"]
+[White "PF4"]
+[Black "PF4"]
+[Result "0-1"]
+
+1. a4 b6 2. d4 d5 3. Nc3 Nd7 4. Nxd5 Bb7 5. Nc3 Ngf6 6. Bf4 h6 7. h4 e6 
+8. Qd3 Be7 9. h5 0-0 10. 0-0-0 Nd5 11. Nxd5 exd5 12. Nf3 Nf6 13. Ne5 Ne4 
+14. Qf3 Qe8 15. b3 Ba3+ 16. Kb1 Bb4 17. Kc1 Nc3 18. Rd3 f6 19. Ng6 Ba3+ 
+20. Kd2 Ne4+ 21. Kd1 Rf7 22. Re3 Qe6 23. Rh3 a5 24. g3 c5 25. c3 Rc8 26. Rd3 c4 
+27. bxc4 dxc4 28. d5 cxd3 29. dxe6 Nxc3+ 30. Kd2 Nb1+ 31. Ke3 Bc1+ 32. Kxd3 Rc3+ 
+33. Kd4 Rfc7 34. Bxc7 Bxf3 35. Bxb6 Bg4 36. Ne7+ Kf8 37. Ng6+ Kg8 38. Ne7+ Kf8 
+39. Rh4 Bxe6 40. Ng6+ Kg8 41. e3 Rc2 42. Ne7+ Kf7 43. Bd3 Bb2+ 44. Ke4 Nd2+ 
+45. Kf4 Be5# 0-1
+
+[Event "?"]
+[Site "?"]
+[Date "2025.01.29"]
+[Heure "18:28:53"]
+[Round "8"]
+[White "PF4"]
+[Black "PF4"]
+[Result "1-0"]
+
+1. a4 d5 2. Nf3 Nf6 3. d4 Bg4 4. Bg5 Bxf3 5. exf3 Qd6 6. Nc3 Nfd7 7. f4 h6 
+8. Qh5 Qe6+ 9. Be2 Qb6 10. Nxd5 Qa5+ 11. Nc3 Qb6 12. 0-0-0 e5 13. fxe5 Na6 
+14. Bc4 g6 15. Qh3 Nab8 16. Bf4 g5 17. Bxg5 Be7 18. Bxe7 Nc6 19. Nd5 Qa5 
+20. Bb5 Rg8 21. b4 Qxb5 22. axb5 a5 23. Bh4 Rc8 24. bxc6 bxc6 25. Ne7 Rg6 
+26. Nxg6 fxg6 27. Qe6+ Kf8 28. Qxd7 Ra8 29. Qxc6 Rc8 30. Qf6+ Kg8 31. Qxg6+ Kf8 
+32. Rd3 axb4 33. Rf3# 1-0
+
+[Event "?"]
+[Site "?"]
+[Date "2025.01.29"]
+[Heure "18:28:56"]
+[Round "9"]
+[White "PF4"]
+[Black "PF4"]
+[Result "1/2-1/2"]
+
+1. a4 e5 2. a5 d5 3. e3 f5 4. a6 bxa6 5. d4 exd4 6. exd4 c6 7. Bd2 Nf6 
+8. Nf3 Bd6 9. Qe2+ Be7 10. Bb4 Ne4 11. Ba5 Qd6 12. Nbd2 0-0 13. 0-0-0 Bd7 
+14. Ne5 Be6 15. f3 Nf6 16. Nb3 Nbd7 17. Nxd7 Bxd7 18. Qxa6 Qe6 19. Nc5 Bxc5 
+20. dxc5 Qe3+ 21. Bd2 Qxc5 22. Be2 Rab8 23. Bf4 Rb3 24. Bd6 Qe3+ 25. Kb1 Rb6 
+26. Qd3 Qxd3 27. Bxd3 Rc8 28. Bc5 Rbb8 29. Bxa7 Ra8 30. Bd4 Rf8 31. h3 Ra4 
+32. Be3 Rfa8 33. Kc1 f4 34. Bc5 Ra1+ 35. Kd2 Rxd1+ 36. Rxd1 Be6 37. Re1 Bf7 
+38. Bd6 Ra4 39. b3 Ra8 40. Bxf4 d4 41. Be5 Rd8 42. Kc1 Re8 43. Bg3 Rxe1+ 
+44. Bxe1 c5 45. Bd2 Be6 46. g4 h5 47. gxh5 Bxh3 48. Bg6 Nd5 49. Kb2 Ne3 
+50. Bxe3 dxe3 51. Bd3 Be6 52. f4 Bg4 53. Kc3 Bxh5 54. Bc4+ Kf8 55. Bd5 e2 
+56. Kd2 Bg6 57. c3 Bd3 58. Bf3 Bc2 59. Bd5 Bd1 60. Be6 Ke7 61. Bd5 Kf6 
+62. Bc4 Kf5 63. Bxe2 Bxb3 64. Ke3 Bd5 65. Bf3 Bxf3 66. Kxf3 Kg6 67. Ke4 Kf6 
+68. Kd5 Kf5 69. Kxc5 Kxf4 70. c4 g5 71. Kd6 g4 72. c5 g3 73. c6 g2 74. c7 g1=Q 
+75. c8=Q Qd4+ 76. Ke7 Qg7+ 77. Kd6 Qe5+ 78. Kd7 Qf5+ 79. Kd8 Qf8+ 80. Kd7 Qf5+ 
+81. Kd8 Qg5+ 82. Kd7 Qg7+ 83. Kd6 Qe5+ 84. Kd7 Qd5+ 85. Ke7 Ke5 86. Qc3+ Kf4 
+87. Kf6 Ke4 88. Ke7 Kf4 89. Kf6 Qf5+ 90. Ke7 Qe4+ 91. Kd6 Kg4 92. Qe5 Qxe5+ 
+93. Kxe5 1/2-1/2
+
+[Event "?"]
+[Site "?"]
+[Date "2025.01.29"]
+[Heure "18:28:58"]
+[Round "10"]
+[White "PF4"]
+[Black "PF4"]
+[Result "0-1"]
+
+1. a4 e5 2. e4 d5 3. exd5 Qxd5 4. Nc3 Qe6 5. Nf3 Nd7 6. Be2 Ngf6 7. Nb5 Qc6 
+8. d4 e4 9. Bf4 Nd5 10. Ne5 Bb4+ 11. c3 Qf6 12. Nxd7 Qxf4 13. g3 Qh6 14. Qc2 Be7 
+15. Qxe4 c6 16. Ne5 Nf6 17. Nc7+ Kf8 18. Qd3 Rb8 19. Qc4 Nd5 20. Nxd5 cxd5 
+21. Qxd5 Be6 22. Qb5 a6 23. Qb6 Bd5 24. Nd7+ Ke8 25. Qxh6 gxh6 26. Nxb8 Bxh1 
+27. 0-0-0 Be4 28. d5 Bd6 29. Bh5 Bf5 30. Re1+ Kf8 31. g4 Bc8 32. Nxa6 bxa6 
+33. h3 Kg7 34. Re4 Rf8 35. f4 Kg8 36. f5 Bd7 37. Kb1 Re8 38. Rxe8+ Bxe8 
+39. b3 Kg7 40. c4 a5 41. Kc2 Bb4 42. Kd3 Bc5 43. Kc3 Be3 44. Kd3 Bc5 45. Ke4 Be7 
+46. Kf4 Bb4 47. Ke3 Be7 48. Kf4 Bb4 49. Ke3 Be7 50. Ke4 Bd7 51. Kd4 Kf6 
+52. c5 Bf8 53. c6 Bc8 54. Ke3 Bd6 55. Ke4 Be5 56. Bxf7 Bd6 57. Be6 Ba6 
+58. Kf3 Be5 59. Ke4 Bf1 60. h4 Bg3 61. g5+ hxg5 62. hxg5+ Kxg5 63. Kf3 Be5 
+64. Ke4 Kf6 65. Bg8 Bg2+ 66. Kd3 Bf1+ 67. Kc2 h5 68. Be6 Bh3 69. Kd2 h4 
+70. Kc2 Bxf5+ 71. Bxf5 Kxf5 72. Kd3 h3 73. c7 Bxc7 74. d6 Bxd6 75. Kc4 h2 
+76. Kb5 h1=Q 77. Kc4 Bb4 78. Kb5 Qd5+ 79. Kb6 Qxb3 80. Kb5 Bc3+ 81. Kc5 Qxa4 
+82. Kd5 Qe4+ 83. Kc5 a4 84. Kb5 a3 85. Kc5 a2 86. Kb5 a1=Q 87. Kc5 Qaa4 
+88. Kd6 Qe5# 0-1
+
+PF4 a gagné 2 parties, soit 20.00% des parties. 0 l'ont été avec les blancs (0.00% des victoires). 2 l'ont été avec les noirs (100.00% des victoires). 
+
+PF4 a gagné 4 parties, soit 40.00% des parties. 2 l'ont été avec les blancs (50.00% des victoires). 2 l'ont été avec les noirs (50.00% des victoires). 
+
+4 parties sont nulles, soit 40.00% des parties. 1 l'ont été par manque de matériel (25.00% des nulles). 0 l'ont été par pat (0.00% des nulles). 
+0 l'ont été par triple répétition (0.00% des nulles). 3 l'ont été par la règle des 50 coups (75.00% des nulles). 
+
+Les blancs ont gagné 2 partie (20.00% des parties). Les noirs en ont gagné 4 (40.00%).
+
+0 parties avaient déjà était jouées, soit 0.00% des parties
+
+Temps d'exécution : 00:00:21.16
+Temps moyen d'exécution : 00:00:02.11

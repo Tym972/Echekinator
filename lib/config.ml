@@ -34,33 +34,69 @@ let joue_liste liste_coups plateau dernier_coup releve_coups releve_plateau droi
     |_ -> ()
   in func liste_coups plateau dernier_coup releve_coups releve_plateau droit_au_roque trait_aux_blancs (ref true)
 
+(*Tableau représentant les dispositions KRN, l'indice correspondant au code*)
+let krn = 
+  [|[|2; 2; 4; 6; 4|]; [|2; 4; 2; 6; 2|]; [|2; 4; 6; 2; 4|]; [|2; 4; 6; 4; 2|]; [|4; 2; 2; 6; 4|];
+    [|4; 2; 6; 2; 4|]; [|4; 2; 6; 4; 2|]; [|4; 6; 2; 2; 4|]; [|4; 6; 2; 4; 2|]; [|4; 6; 4; 2; 2|]|]
+
+(*Fonction permettant de jouer une partie d'échec 960*)
+let fischer code_string position_de_depart releve_plateau =
+  for i = 0 to 7 do
+    position_de_depart.(i) <- 0;
+    position_de_depart.(i + 56) <- 0;
+  done;
+  Random.self_init ();
+  let code = ref 518 in
+  code := (try int_of_string code_string with _ -> (Random.int 960));
+  if !code < 0 || !code > 959 then begin
+    code := Random.int 960
+  end;
+  let x = !code / 4 in
+  let xmod = !code mod 4 in
+  let y = x / 4 in
+  let ymod = x mod 4 in
+  let z = y / 6 in
+  let zmod = y mod 6 in
+  let placement_fou_blanc placement = position_de_depart.(2 * placement + 1) <- (-3); position_de_depart.(2 * placement + 57) <- 3 in
+  placement_fou_blanc xmod;
+  let placement_fou_noir placement = position_de_depart.(2 * placement) <- (-3); position_de_depart.(2 * placement + 56) <- 3 in
+  placement_fou_noir ymod;
+  let placement_dame placement =
+    let rec aux placement case = match placement with
+      |0 ->
+        if position_de_depart.(case) = 0 then begin
+          position_de_depart.(case) <- (-5); position_de_depart.(case + 56) <- 5
+        end
+        else begin 
+          aux 0 (case + 1)
+        end
+      |n ->
+        if position_de_depart.(case) = 0 then begin
+          aux (n - 1) (case + 1)
+        end
+        else begin
+          aux n (case + 1)
+        end
+    in aux placement 0
+  in placement_dame zmod;
+  let placement_krn placement=
+    let pieces = krn.(placement) in
+    let case = ref 0 in
+    for i = 0 to 4 do
+      let piece = pieces.(i) in
+      while position_de_depart.(!case) <> 0 do
+        incr case
+      done;
+      position_de_depart.(!case) <- (- piece); position_de_depart.(!case + 56) <- piece
+    done
+  in placement_krn z;
+  releve_plateau := [zobrist position_de_depart true Aucun (true, true, true, true)]
+
 (*Affiche le plateau et l'enregistrement FEN*)
 let affiche_coup plateau trait_aux_blancs dernier_coup droit_au_roque releve_coups releve_plateau = 
   affiche plateau;
   print_endline (fen plateau trait_aux_blancs dernier_coup droit_au_roque releve_coups releve_plateau);
   print_newline ()
-
-let remplir position_de_depart dernier_coup droit_au_roque releve_coups releve_plateau trait_aux_blancs = let _ = dernier_coup, droit_au_roque, releve_coups, releve_plateau in
-  Array.fill position_de_depart 0 64 0;
-  for i = 0 to 63 do
-    position_de_depart.(i) <- 13;
-    affiche position_de_depart;
-    print_string "Entrez la pièce à la case marquée, ignorez si elle est vide : ";
-    flush stdout;
-    let piece_saisie = input_char stdin in
-    if piece_saisie <> '\n' then begin
-      ignore (input_line stdin);
-      let piece = try Hashtbl.find dicorespondance piece_saisie with _ -> 0 in
-      position_de_depart.(i) <- piece
-    end
-    else begin
-      position_de_depart.(i) <- 0
-    end
-  done;
-  print_string "Le trait est-il aux noirs? : ";
-  flush stdout;
-  let trait = input_line stdin in
-  trait_aux_blancs := not (est_oui trait)
     
 (*Fonction permettant à l'utilisateur de rentrer la position choisie*)
 let initialisation () =
@@ -74,20 +110,26 @@ let initialisation () =
   flush stdout;
   let exotique = input_line stdin in
   if est_oui exotique then begin
-    print_string "Tapez 1 pour remplir l'échiquier manuellement, 2 pour renseigner une position FEN, 3 pour une position aléatoire de Fischer : ";
+    print_string "Tapez 1 pour renseigner une position FEN, 2 pour une position aléatoire de Fischer : ";
     flush stdout;
     let choix = input_line stdin in
     if choix = "1" then begin
-      remplir position_de_depart dernier_coup droit_au_roque releve_coups releve_plateau trait_aux_blancs
-    end
-    else if choix = "2" then begin
       print_string "Rentrez l'enregistrement fen souhaité : ";
       flush stdout;
       let chaine_fen = input_line stdin in
       position_of_fen chaine_fen position_de_depart trait_aux_blancs dernier_coup droit_au_roque releve_coups releve_plateau
     end
-    else if choix = "3" then begin
-      
+    else if choix = "2" then begin
+      let code_string = ref "" in
+      print_string "Souhaitez-vous une position spécifique : ";
+      flush stdout;
+      let choice = input_line stdin in
+      if est_oui choice then begin
+        print_string "Saisissez le code de la position : ";
+        flush stdout;
+        code_string := input_line stdin
+      end;
+      fischer !code_string position_de_depart releve_plateau
     end;
     affiche_coup position_de_depart !trait_aux_blancs !dernier_coup !droit_au_roque !releve_coups !releve_plateau
   end;
@@ -235,8 +277,8 @@ let config_pv n =
   nom, algo, profondeur, profondeur_max, temps_limite_court, duree_theorie, duree_ouverture, duree_finale, phase_1, evaluation_ouverture, evaluation_mdj, evaluation_finale, recherche
 
 (*Configuration pour une profondeur fixée n*)
-let config_antirepet_pf n =
-  let nom = Printf.sprintf "PF%i, ARS" n in
+let config_pf n =
+  let nom = Printf.sprintf "PF%i" n in
   let algo = algo_decisionnel in
   let evaluation_ouverture = evalue_ouverture in
   let evaluation_mdj = evalue_mdj in
@@ -285,6 +327,7 @@ let config_pf_nve n =
   let recherche = negalphabetime_valide in
   nom, algo, profondeur, profondeur_max, temps_limite_court, duree_theorie, duree_ouverture, duree_finale, phase_1, evaluation_ouverture, evaluation_mdj, evaluation_finale, recherche
 
+(*Configuration pour une profondeur fixée n*)
 let config_pf_totale n =
   let nom = Printf.sprintf "PF%i, A" n in
   let algo = algo_decisionnel in

@@ -154,8 +154,14 @@ let algo_decisionnel plateau regle_des_50_coups dernier_coup releve_coups releve
   changement_du_trait plateau !coup trait_aux_blancs dernier_coup releve_coups releve_plateau droit_au_roque regle_des_50_coups verif partie_finie
 
 (*Fonction permmetant de jouer les coups au hasard*)
-let algo_hasard plateau regle_des_50_coups dernier_coup releve_coups releve_plateau trait_aux_blancs verif partie_finie (profondeur : int) (profondeur_max : int) (duree_theorie : int) (duree_ouverture : int) (duree_finale : int) (temps_limite_court : float) (phase1 : bool ref) (position_de_depart : int array) (affichage : bool)  (evaluation_ouverture : int array -> int -> bool -> int -> bool -> int -> int -> int) (evaluation_mdj : int array -> int -> bool -> int -> bool -> int -> int -> int) (evaluation_finale : int array -> int -> bool -> int -> bool -> int -> int -> int) droit_au_roque (recherche1 : int array -> int -> int -> mouvement -> bool * bool * bool * bool -> int -> (int array -> int -> bool -> int -> bool -> int -> int -> int) -> (int * mouvement) * float)  (recherche2 : int array -> int -> int -> mouvement -> bool * bool * bool * bool -> int list -> int -> (int array -> int -> bool -> int -> bool -> int -> int -> int) -> (int * mouvement) * float) =
-  let _ = profondeur, profondeur_max, duree_theorie, duree_ouverture, duree_finale, temps_limite_court, phase1, position_de_depart, affichage, evaluation_ouverture, evaluation_mdj, evaluation_finale, recherche1, recherche2 in
+let algo_hasard plateau regle_des_50_coups dernier_coup releve_coups releve_plateau trait_aux_blancs verif partie_finie (profondeur : int) (profondeur_max : int) (duree_theorie : int) (duree_ouverture : int) (duree_finale : int) (temps_limite_court : float) (phase1 : bool ref) (position_de_depart : int array) (affichage : bool)  (evaluation_ouverture : int array -> bool -> int -> bool -> int -> int -> int) (evaluation_mdj : int array -> bool -> int -> bool -> int -> int -> int) (evaluation_finale : int array -> bool -> int -> bool -> int -> int -> int) droit_au_roque (recherche : int array -> bool -> mouvement -> bool * bool * bool * bool -> int list -> int -> (int array -> bool -> int -> bool -> int -> int -> int) -> (int * mouvement) * float) =
+  let _ = profondeur, profondeur_max, duree_theorie, duree_ouverture, duree_finale, temps_limite_court, phase1, position_de_depart, affichage, evaluation_ouverture, evaluation_mdj, evaluation_finale, recherche in
+  if affichage then begin
+    affiche plateau;
+    print_endline (fen plateau !trait_aux_blancs !dernier_coup !droit_au_roque !releve_coups !releve_plateau);
+    print_newline ();
+    print_endline "Hasard"
+  end;
   let valides = coups_valides plateau !trait_aux_blancs !dernier_coup !droit_au_roque in
   Random.self_init ();
   let coup = List.nth valides (Random.int (List.length valides)) in
