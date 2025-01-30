@@ -35,4 +35,4 @@ let perft profondeur plateau =
   print_endline ("Nodes/seconde : " ^ (string_of_float ((float_of_int nodes)/. time)))
  
 
-let () = perft 6 plateau
+let () = perft 5 plateau

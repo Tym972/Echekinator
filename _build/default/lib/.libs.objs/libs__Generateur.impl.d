@@ -1,1 +1,1 @@
-lib/generateur.ml: Array Hashtbl List Plateau
+lib/generateur.ml: Array List Plateau

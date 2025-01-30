@@ -46,6 +46,7 @@ let colonne_ep_1 coup plateau = match coup with
     end
   |_ -> -1
 
+(*Fonction indiquant la colonne d'une prise en passant jouée*)
 let colonne_ep_2 coup = match coup with
     |Enpassant {depart = _; arrivee} -> arrivee mod 8
     |_ -> (-1)

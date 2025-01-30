@@ -9,7 +9,7 @@ open Evaluations
 (*Fonction permettant d'évaluer un plateau à la profondeur 0*)
 let traitement_profondeur_0 evaluation plateau trait_aux_blancs dernier_coup alpha beta =
   let position_roi = index plateau (roi trait_aux_blancs) in
-  if (menacee plateau position_roi) then begin
+  if (menacee plateau position_roi trait_aux_blancs) then begin
     let cp = coups_valides plateau trait_aux_blancs dernier_coup (false, false, false, false)
     in if cp = [] then begin
       (- 99950)
@@ -155,7 +155,7 @@ let rec negalphabeta_valide plateau trait_aux_blancs dernier_coup droit_au_roque
   else begin
     let cp = ref (coups_joueur plateau profondeur trait_aux_blancs dernier_coup droit_au_roque releve_plateau evaluation negalphabeta_valide)
     in if !cp = [] then begin incr compteur_noeuds_terminaux;
-      if menacee plateau (index plateau (roi trait_aux_blancs)) then begin
+      if menacee plateau (index plateau (roi trait_aux_blancs)) trait_aux_blancs then begin
         best_score := profondeur_initiale - (profondeur + 99999)
       end 
       else begin

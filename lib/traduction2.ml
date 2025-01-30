@@ -298,7 +298,7 @@ let type_mouvement_to_algebric liste position_de_depart dernier_coup_initial dro
         mot := !mot ^ " " ^ algebric_of_mouvement coup plateau coups_valides_joueur
       end;
       joue_coup_1 plateau coup trait_aux_blancs dernier_coup droit_au_roque;
-      if menacee plateau (index plateau (roi !trait_aux_blancs)) then begin
+      if menacee plateau (index plateau (roi !trait_aux_blancs)) !trait_aux_blancs then begin
         mot := !mot ^ "+"
       end;
       if !liste_coups <> [] then begin

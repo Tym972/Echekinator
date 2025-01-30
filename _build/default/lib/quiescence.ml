@@ -263,17 +263,17 @@ let captures plateau trait_aux_blancs dernier =
   let cp = ref ((enpassant plateau trait_aux_blancs dernier) @ pseudo_captures plateau trait_aux_blancs) in
   let roi_joueur = roi trait_aux_blancs in
   let position_roi = index plateau roi_joueur in
-  if menacee plateau position_roi then begin
+  if menacee plateau position_roi trait_aux_blancs then begin
     while !cp <> [] do
       let coup = List.hd !cp in
       joue plateau coup;
       if piece coup = roi_joueur then begin
-        if not (menacee plateau (arrivee coup)) then begin
+        if not (menacee plateau (arrivee coup) trait_aux_blancs) then begin
           l := coup :: !l
         end
       end
       else begin
-        if not (menacee plateau position_roi) then begin
+        if not (menacee plateau position_roi trait_aux_blancs) then begin
           l := coup :: !l
         end
       end;
@@ -288,7 +288,7 @@ let captures plateau trait_aux_blancs dernier =
       let coup = List.hd !cp in
       if piece coup = roi_joueur then begin
         joue plateau coup;
-        if not (menacee plateau (arrivee coup)) then begin
+        if not (menacee plateau (arrivee coup) trait_aux_blancs) then begin
           l := coup :: !l
         end;
         dejoue plateau coup
@@ -296,7 +296,7 @@ let captures plateau trait_aux_blancs dernier =
       else begin
         if List.mem (depart coup) piece_clouees || est_en_passant coup then begin
           joue plateau coup;
-          if not (menacee plateau position_roi) then begin
+          if not (menacee plateau position_roi trait_aux_blancs) then begin
             l := coup :: !l
           end;
           dejoue plateau coup
@@ -556,7 +556,7 @@ let compteur_quiescent = ref 0
 (*Fonction implémentant la recherche quiescente*)
 let rec recherche_quiescente plateau trait_aux_blancs alpha beta evaluation cap profondeur = incr compteur_quiescent;
   let position_roi = index plateau (roi trait_aux_blancs) in
-  let roi_en_echec = (menacee plateau position_roi) in
+  let roi_en_echec = (menacee plateau position_roi trait_aux_blancs) in
   let best_score = ref (-99999) in
   let delta = evaluation plateau trait_aux_blancs position_roi roi_en_echec alpha beta in
   if profondeur = 0 then begin
@@ -600,7 +600,7 @@ let traitement_quiescent_profondeur_0 evaluation plateau trait_aux_blancs dernie
   let position_roi = index plateau (roi trait_aux_blancs) in
   let cp = coups_valides plateau trait_aux_blancs dernier (false, false, false, false)
   in if cp = [] then begin
-    if (menacee plateau position_roi) then begin
+    if (menacee plateau position_roi trait_aux_blancs) then begin
       (- 99950)
     end
     else begin
@@ -610,7 +610,7 @@ let traitement_quiescent_profondeur_0 evaluation plateau trait_aux_blancs dernie
   else begin
     let cap = detecte_captures cp in
     if cap = [] then begin
-      evaluation plateau trait_aux_blancs position_roi (menacee plateau position_roi) alpha beta
+      evaluation plateau trait_aux_blancs position_roi (menacee plateau position_roi trait_aux_blancs) alpha beta
     end
     else begin
       recherche_quiescente plateau trait_aux_blancs alpha beta evaluation cap 1000
@@ -629,7 +629,7 @@ let rec negalphabeta_quiescent plateau trait_aux_blancs dernier_coup droit_au_ro
   else begin
     let cp = ref (coups_joueur plateau profondeur trait_aux_blancs dernier_coup droit_au_roque releve_plateau evaluation negalphabeta_valide)
     in if !cp = [] then begin incr compteur_noeuds_terminaux;
-      if (menacee plateau (index plateau (roi trait_aux_blancs))) then begin
+      if (menacee plateau (index plateau (roi trait_aux_blancs)) trait_aux_blancs) then begin
         best_score := (profondeur_initiale - (profondeur + 99999))
       end 
       else begin

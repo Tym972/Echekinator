@@ -3,10 +3,10 @@
 open Plateau
 
 (*Fonction indiquant si une case occupée par une pièce amie est attaquée par une pièce ennemie*)
-let menacee plateau case =
+let menacee plateau case trait_aux_blancs =
   let b = ref false in
   let m = tab64.(case) in
-  if plateau.(case) > 0 then begin
+  if trait_aux_blancs then begin
     let vect_pion = [|(-9); (-11)|] in
     let i = ref 0 in
     while (not !b && !i < 2) do
@@ -83,7 +83,7 @@ let menacee plateau case =
       done
     end
   end
-  else if plateau.(case) < 0 then begin
+  else begin
     let vect_pion = [|9; 11|] in
     let i = ref 0 in
     while (not !b && !i < 2) do
@@ -448,18 +448,9 @@ let roque plateau trait_aux_blancs droit_au_roque =
       let prp = (prb && plateau.(61) = 0 && plateau.(62) = 0 && plateau.(54) <> (-1) && plateau.(55) <> (-1)) in
       let grp = (grb && plateau.(57) = 0 && plateau.(58) = 0 && plateau.(59) = 0 && plateau.(49) <> (-1) && plateau.(50) <> (-1)) in
       if (prp || grp) then begin
-        let dep = deplacements_all plateau false in
-        let destinee = Hashtbl.create 64 in
-        let rec fonc2 liste = match liste with
-          |[] -> ()
-          |h::t -> begin match h with
-            |Classique {piece = _; depart = _; arrivee; prise = _} |Promotion {depart = _; arrivee; promotion = _; prise = _} -> Hashtbl.add destinee arrivee (); fonc2 t
-            |_ -> fonc2 t
-          end
-        in fonc2 dep;
-        if (prp && not (Hashtbl.mem destinee 61 || Hashtbl.mem destinee 62))
+        if (prp && not (menacee plateau 61 true || menacee plateau 62 true))
           then l := Roque {sorte = 1} :: !l;
-        if (grp && not (Hashtbl.mem destinee 58 || Hashtbl.mem destinee 59))
+        if (grp && not (menacee plateau 58 true || menacee plateau 59 true))
           then l := Roque {sorte = 2} :: !l
       end
     end
@@ -468,19 +459,10 @@ let roque plateau trait_aux_blancs droit_au_roque =
     if (prn || grn) && (plateau.(12) <> 1) then begin
       let prp = (prn && plateau.(5) = 0 && plateau.(6) = 0 && plateau.(14) <> 1 && plateau.(15) <> 1) in
       let grp = (grn && plateau.(1) = 0 && plateau.(2) = 0 && plateau.(3) = 0 && plateau.(9) <> 1 && plateau.(10) <> 1) in
-      if (prp || grp)then begin
-        let dep = deplacements_all plateau true in
-        let destinee = Hashtbl.create 64 in
-        let rec fonc2 liste = match liste with
-          |[] -> ()
-          |h::t -> begin match h with
-            |Classique {piece = _; depart = _; arrivee; prise = _} |Promotion {depart = _; arrivee; promotion = _; prise = _} -> Hashtbl.add destinee arrivee (); fonc2 t
-            |_ -> fonc2 t
-          end
-        in fonc2 dep;
-        if (prp && not (Hashtbl.mem destinee 5 || Hashtbl.mem destinee 6))
+      if (prp || grp) then begin
+        if (prp && not (menacee plateau 5 false || menacee plateau 6 false))
           then l := Roque {sorte = 3} :: !l;
-        if (grp && not (Hashtbl.mem destinee 2 || Hashtbl.mem destinee 3))
+        if (grp && not (menacee plateau 2 false || menacee plateau 3 false))
           then l := Roque {sorte = 4} :: !l
       end
     end
@@ -786,17 +768,17 @@ let coups_valides plateau trait_aux_blancs dernier_coup droit_au_roque =
   let cp = ref ((enpassant plateau trait_aux_blancs dernier_coup) @ (deplacements_all plateau trait_aux_blancs)) in
   let roi_joueur = roi trait_aux_blancs in
   let position_roi = index plateau roi_joueur in
-  if menacee plateau position_roi then begin
+  if menacee plateau position_roi trait_aux_blancs then begin
     while !cp <> [] do
       let coup = List.hd !cp in
       joue plateau coup;
       if piece coup = roi_joueur then begin
-        if not (menacee plateau (arrivee coup)) then begin
+        if not (menacee plateau (arrivee coup) trait_aux_blancs) then begin
           l := coup :: !l
         end
       end
       else begin
-        if not (menacee plateau position_roi) then begin
+        if not (menacee plateau position_roi trait_aux_blancs) then begin
           l := coup :: !l
         end
       end;
@@ -811,7 +793,7 @@ let coups_valides plateau trait_aux_blancs dernier_coup droit_au_roque =
       let coup = List.hd !cp in
       if piece coup = roi_joueur then begin
         joue plateau coup;
-        if not (menacee plateau (arrivee coup)) then begin
+        if not (menacee plateau (arrivee coup) trait_aux_blancs) then begin
           l := coup :: !l
         end;
         dejoue plateau coup
@@ -819,7 +801,7 @@ let coups_valides plateau trait_aux_blancs dernier_coup droit_au_roque =
       else begin
         if List.mem (depart coup) piece_clouees || est_en_passant coup then begin
           joue plateau coup;
-          if not (menacee plateau position_roi) then begin
+          if not (menacee plateau position_roi trait_aux_blancs) then begin
             l := coup :: !l
           end;
           dejoue plateau coup
@@ -838,11 +820,11 @@ let est_valide plateau coup joueur =
   let b = ref true in
   joue plateau coup;
   if piece coup = (roi joueur) then begin
-    if (menacee plateau (arrivee coup)) then begin
+    if (menacee plateau (arrivee coup) (plateau.(arrivee coup) > 0)) then begin
       b := false
     end
   end
-  else if (menacee plateau (index plateau (roi joueur))) then begin
+  else if (menacee plateau (index plateau (roi joueur)) (plateau.(arrivee coup) > 0)) then begin
     b := false
   end;
   dejoue plateau coup;
@@ -853,14 +835,14 @@ let est_valide_efficace plateau coup position_roi roi_en_echec piece_clouees =
   let b = ref true in
   if roi_en_echec then begin
     joue plateau coup;
-    if (menacee plateau position_roi) then begin
+    if (menacee plateau position_roi (plateau.(position_roi)>0)) then begin
       b := false
     end;
     dejoue plateau coup
   end
   else if List.mem (depart coup) piece_clouees then begin
     joue plateau coup;
-    if menacee plateau position_roi then begin
+    if menacee plateau position_roi (plateau.(position_roi)>0) then begin
       b := false
     end;
     dejoue plateau coup
@@ -872,7 +854,7 @@ let gagne plateau trait_aux_blancs dernier_coup =
   let vainqueur = ref 2 in
   if trait_aux_blancs then begin
     if (coups_valides plateau trait_aux_blancs dernier_coup (false, false, false, false)) = [] then begin
-      if menacee plateau (index plateau 6) then
+      if menacee plateau (index plateau 6) true then
         vainqueur := -1
       else
         vainqueur := 0
@@ -880,7 +862,7 @@ let gagne plateau trait_aux_blancs dernier_coup =
   end
   else begin
     if (coups_valides plateau trait_aux_blancs dernier_coup (false, false, false, false)) = [] then begin
-      if menacee plateau (index plateau (-6)) then
+      if menacee plateau (index plateau (-6)) false then
         vainqueur := 1
       else
         vainqueur := 0

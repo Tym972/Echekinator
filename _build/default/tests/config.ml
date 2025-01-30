@@ -17,7 +17,7 @@ let plateau = Array.copy echiquier
 
 let releve_plateau = ref [zobrist plateau true !dernier_coup !droit_au_roque]
 
-let chaine_fen = "rnbqkbnr/pppp1ppp/8/4p3/6P1/5P2/PPPPP2P/RNBQKBNR b KQkq - 0 2"
+let chaine_fen = "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq -"
 
 let liste_coup = ""
 

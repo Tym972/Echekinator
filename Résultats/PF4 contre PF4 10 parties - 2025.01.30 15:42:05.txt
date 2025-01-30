@@ -1,7 +1,7 @@
 [Event "?"]
 [Site "?"]
-[Date "2025.01.29"]
-[Heure "18:28:39"]
+[Date "2025.01.30"]
+[Heure "15:41:46"]
 [Round "1"]
 [White "PF4"]
 [Black "PF4"]
@@ -29,8 +29,8 @@
 
 [Event "?"]
 [Site "?"]
-[Date "2025.01.29"]
-[Heure "18:28:43"]
+[Date "2025.01.30"]
+[Heure "15:41:50"]
 [Round "2"]
 [White "PF4"]
 [Black "PF4"]
@@ -58,8 +58,8 @@
 
 [Event "?"]
 [Site "?"]
-[Date "2025.01.29"]
-[Heure "18:28:45"]
+[Date "2025.01.30"]
+[Heure "15:41:52"]
 [Round "3"]
 [White "PF4"]
 [Black "PF4"]
@@ -84,8 +84,8 @@
 
 [Event "?"]
 [Site "?"]
-[Date "2025.01.29"]
-[Heure "18:28:47"]
+[Date "2025.01.30"]
+[Heure "15:41:53"]
 [Round "4"]
 [White "PF4"]
 [Black "PF4"]
@@ -101,8 +101,8 @@
 
 [Event "?"]
 [Site "?"]
-[Date "2025.01.29"]
-[Heure "18:28:48"]
+[Date "2025.01.30"]
+[Heure "15:41:55"]
 [Round "5"]
 [White "PF4"]
 [Black "PF4"]
@@ -123,8 +123,8 @@
 
 [Event "?"]
 [Site "?"]
-[Date "2025.01.29"]
-[Heure "18:28:49"]
+[Date "2025.01.30"]
+[Heure "15:41:56"]
 [Round "6"]
 [White "PF4"]
 [Black "PF4"]
@@ -145,8 +145,8 @@
 
 [Event "?"]
 [Site "?"]
-[Date "2025.01.29"]
-[Heure "18:28:51"]
+[Date "2025.01.30"]
+[Heure "15:41:58"]
 [Round "7"]
 [White "PF4"]
 [Black "PF4"]
@@ -163,8 +163,8 @@
 
 [Event "?"]
 [Site "?"]
-[Date "2025.01.29"]
-[Heure "18:28:53"]
+[Date "2025.01.30"]
+[Heure "15:42:00"]
 [Round "8"]
 [White "PF4"]
 [Black "PF4"]
@@ -179,8 +179,8 @@
 
 [Event "?"]
 [Site "?"]
-[Date "2025.01.29"]
-[Heure "18:28:56"]
+[Date "2025.01.30"]
+[Heure "15:42:03"]
 [Round "9"]
 [White "PF4"]
 [Black "PF4"]
@@ -205,8 +205,8 @@
 
 [Event "?"]
 [Site "?"]
-[Date "2025.01.29"]
-[Heure "18:28:58"]
+[Date "2025.01.30"]
+[Heure "15:42:05"]
 [Round "10"]
 [White "PF4"]
 [Black "PF4"]
@@ -239,5 +239,5 @@ Les blancs ont gagné 2 partie (20.00% des parties). Les noirs en ont gagné 4 (
 
 0 parties avaient déjà était jouées, soit 0.00% des parties
 
-Temps d'exécution : 00:00:21.16
-Temps moyen d'exécution : 00:00:02.11
+Temps d'exécution : 00:00:20.69
+Temps moyen d'exécution : 00:00:02.06

@@ -182,7 +182,7 @@ let position_of_fen chaine position_de_depart trait_aux_blancs dernier_coup droi
             in List.rev (aux [] longueur)
           in split_fen := !split_fen @ (complete longueur_fen);
           trait_aux_blancs := not (List.nth !split_fen 1 = "b");
-          if (menacee position_de_depart (index position_de_depart (roi (not !trait_aux_blancs))) || coups_valides position_de_depart !trait_aux_blancs !dernier_coup !droit_au_roque = []) then begin
+          if (menacee position_de_depart (index position_de_depart (roi (not !trait_aux_blancs))) (not !trait_aux_blancs) || coups_valides position_de_depart !trait_aux_blancs !dernier_coup !droit_au_roque = []) then begin
             trait_aux_blancs := not !trait_aux_blancs
           end;
           roque_valide position_de_depart (List.nth !split_fen 2) droit_au_roque;
@@ -211,7 +211,7 @@ let position_of_fen chaine position_de_depart trait_aux_blancs dernier_coup droi
             end
           in nombre_coup !trait_aux_blancs (List.nth !split_fen 5)
         end;
-        if (not !fen_correct)|| menacee position_de_depart (index position_de_depart (roi (not !trait_aux_blancs))) || coups_valides position_de_depart !trait_aux_blancs !dernier_coup !droit_au_roque = [] then begin
+        if (not !fen_correct)|| menacee position_de_depart (index position_de_depart (roi (not !trait_aux_blancs))) (not !trait_aux_blancs) || coups_valides position_de_depart !trait_aux_blancs !dernier_coup !droit_au_roque = [] then begin
           reinitialise position_de_depart dernier_coup droit_au_roque releve_coups releve_plateau position_de_depart Aucun (true, true, true, true) [] [zobrist echiquier true Aucun (true, true, true, true)]
         end
       end
