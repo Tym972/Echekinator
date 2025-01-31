@@ -7,8 +7,6 @@ open Generateur
   pour les droits roques + 8 cases pour les colonnes de prise en passant*)
 let tab_zobrist = Array.make 781 0
 
-let rec f x y = if y = 0 then 1 else x * (f x (y - 1))
-
 let () =
   for i = 0 to 780 do
     tab_zobrist.(i) <- Int64.to_int (Random.int64 4611686018427387903L)

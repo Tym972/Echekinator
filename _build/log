@@ -1,4 +1,4 @@
-# dune exec bin/main.exe
+# dune exec tests/perft.exe
 # OCAMLPARAM: unset
 # Shared cache: disabled
 # Shared cache location: /home/tym972/.cache/dune/db
@@ -13,4 +13,4 @@
 #  ; build_dir = In_build_dir "default"
 #  ; instrument_with = []
 #  }
-$ /home/tym972/.opam/default/bin/ocamlc.opt -config > /tmp/dune_1b5f0e_output
+$ /home/tym972/.opam/default/bin/ocamlc.opt -config > /tmp/dune_85d4a3_output

@@ -294,7 +294,7 @@ let captures plateau trait_aux_blancs dernier =
         dejoue plateau coup
       end
       else begin
-        if List.mem (depart coup) piece_clouees || est_en_passant coup then begin
+        if List.mem (depart coup) piece_clouees then begin
           joue plateau coup;
           if not (menacee plateau position_roi trait_aux_blancs) then begin
             l := coup :: !l

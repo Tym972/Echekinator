@@ -656,7 +656,7 @@ let joue_coup_1 plateau coup trait_aux_blancs dernier_coup droit_au_roque =
 
 (*Fonction donnant la case de départ d'un coup classique et d'une promotion*)
 let depart coup = match coup with
-  |Classique {piece = _; depart; arrivee = _; prise = _} | Promotion {depart; arrivee = _; prise = _; promotion = _} -> depart
+  |Classique {piece = _; depart; arrivee = _; prise = _} | Enpassant {depart; arrivee = _} | Promotion {depart; arrivee = _; prise = _; promotion = _} -> depart
   |_ -> (-1)
 
 (*Fonction donnant la prise d'un coup*)
@@ -673,11 +673,6 @@ let piece coup = match coup with
 let arrivee coup = match coup with
   |Classique {piece = _; depart = _; arrivee; prise = _} | Promotion {depart = _; arrivee; prise = _; promotion = _} | Enpassant {depart = _; arrivee} -> arrivee
   |_ -> (-1)
-
-(*Fonction indiquant si un coup est une prise en passant*)
-let est_en_passant coup = match coup with
-  |Enpassant _ -> true
-  |_ -> false
 
 (*Fonction indiquant si une pièce cloue une pièce clouable*)
 let cloue plateau chessman trait_aux_blancs cord64 vect distance =
@@ -790,7 +785,7 @@ let clouees plateau case_roi trait_aux_blancs =
 (*Fonction construisant une liste des coups légaux du joueur*)  
 let coups_valides plateau trait_aux_blancs dernier_coup droit_au_roque =
   let l = ref [] in
-  let cp = ref ((enpassant plateau trait_aux_blancs dernier_coup) @ (deplacements_all plateau trait_aux_blancs)) in
+  let cp = ref ((enpassant plateau trait_aux_blancs dernier_coup) @ deplacements_all plateau trait_aux_blancs) in
   let roi_joueur = roi trait_aux_blancs in
   let position_roi = index plateau roi_joueur in
   if menacee plateau position_roi trait_aux_blancs then begin
@@ -814,30 +809,49 @@ let coups_valides plateau trait_aux_blancs dernier_coup droit_au_roque =
   end
   else begin
     let piece_clouees = clouees plateau position_roi trait_aux_blancs in
-    while !cp <> [] do
-      let coup = List.hd !cp in
-      if piece coup = roi_joueur then begin
-        joue plateau coup;
-        if not (menacee plateau (arrivee coup) trait_aux_blancs) then begin
-          l := coup :: !l
-        end;
-        dejoue plateau coup
-      end
-      else begin
-        if List.mem (depart coup) piece_clouees || est_en_passant coup then begin
+    if piece_clouees = [] then begin
+      while !cp <> [] do
+        let coup = List.hd !cp in
+        if piece coup = roi_joueur then begin
           joue plateau coup;
-          if not (menacee plateau position_roi trait_aux_blancs) then begin
+          if not (menacee plateau (arrivee coup) trait_aux_blancs) then begin
             l := coup :: !l
           end;
           dejoue plateau coup
         end
         else begin
           l := coup :: !l
+        end;
+        cp := List.tl !cp
+      done;
+      (roque plateau trait_aux_blancs droit_au_roque) @ !l
+    end
+    else begin
+      while !cp <> [] do
+        let coup = List.hd !cp in
+        if piece coup = roi_joueur then begin
+          joue plateau coup;
+          if not (menacee plateau (arrivee coup) trait_aux_blancs) then begin
+            l := coup :: !l
+          end;
+          dejoue plateau coup
         end
-      end;
-      cp := List.tl !cp
-    done;
-    (roque plateau trait_aux_blancs droit_au_roque) @ !l
+        else begin
+            if not (List.mem (depart coup) piece_clouees) then begin
+              l := coup :: !l
+            end
+            else begin
+              joue plateau coup;
+              if not (menacee plateau position_roi trait_aux_blancs) then begin
+                l := coup :: !l
+              end;
+              dejoue plateau coup
+            end
+          end;
+        cp := List.tl !cp
+      done;
+      (roque plateau trait_aux_blancs droit_au_roque) @ !l
+    end
   end
 
 (*Fonction indiquant si un coup est valide*)
@@ -860,14 +874,14 @@ let est_valide_efficace plateau coup position_roi roi_en_echec piece_clouees =
   let b = ref true in
   if roi_en_echec then begin
     joue plateau coup;
-    if (menacee plateau position_roi (plateau.(position_roi)>0)) then begin
+    if (menacee plateau position_roi (plateau.(position_roi) > 0)) then begin
       b := false
     end;
     dejoue plateau coup
   end
   else if List.mem (depart coup) piece_clouees then begin
     joue plateau coup;
-    if menacee plateau position_roi (plateau.(position_roi)>0) then begin
+    if menacee plateau position_roi (plateau.(position_roi) > 0) then begin
       b := false
     end;
     dejoue plateau coup
