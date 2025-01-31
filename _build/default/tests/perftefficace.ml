@@ -37,7 +37,7 @@ let algoperftime plateau trait_aux_blancs historique droit_au_roque profondeur =
   fx, (Sys.time () -. t)
 
 let perft profondeur plateau =
-  let nodes, time = algoperftime plateau true Aucun (true, true, true, true) profondeur in
+  let nodes, time = algoperftime plateau !trait_aux_blancs !dernier_coup !droit_au_roque profondeur in
   affiche plateau;
   print_endline (fen plateau !trait_aux_blancs !dernier_coup !droit_au_roque !releve_coups !releve_plateau);
   print_endline ("\nPerft " ^ (string_of_int profondeur));
@@ -46,4 +46,4 @@ let perft profondeur plateau =
   print_endline ("Nodes/seconde : " ^ (string_of_float ((float_of_int nodes)/. time)))
  
 
-let () = perft 6 plateau
+let () = perft profondeur_perft plateau

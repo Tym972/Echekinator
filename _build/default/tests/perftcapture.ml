@@ -1,6 +1,6 @@
-open Libs.Plateau
 open Libs.Generateur
 open Libs.Quiescence
+open Config
 
 let cc = ref 0
 
@@ -30,11 +30,11 @@ let algoperftime plateau trait_aux_blancs dernier_coup droit_au_roque profondeur
   fx, (Sys.time () -. t)
 
 let perftcapture profondeur plateau =
-  let nodes, time = algoperftime plateau true Aucun (true, true, true, true) profondeur in
+  let nodes, time = algoperftime plateau !trait_aux_blancs !dernier_coup !droit_au_roque profondeur in
   print_endline ("\nPerft " ^ (string_of_int profondeur));
   print_endline ("Total time (s) : " ^ (string_of_float time));
   print_endline ("Nodes searched : " ^ (string_of_int nodes));
   print_endline ("Captures : " ^ string_of_int !cc);
   print_endline ("Nodes/seconde : " ^ (string_of_float ((float_of_int nodes)/. time)))
 
-let () = perftcapture 6 echiquier
+let () = perftcapture profondeur_perft plateau

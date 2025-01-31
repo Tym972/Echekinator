@@ -31,7 +31,8 @@
  zobrist
  see
  brouillon
- config)
+ config
+ positions)
  (libraries 
  unix
  threads

@@ -6,6 +6,7 @@ open Libs.Evaluations
 open Libs.Traduction1
 open Libs.Traduction2
 open Libs.Traduction3
+open Positions
 
 let releve_coups = ref []
 
@@ -17,7 +18,7 @@ let plateau = Array.copy echiquier
 
 let releve_plateau = ref [zobrist plateau true !dernier_coup !droit_au_roque]
 
-let chaine_fen = "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq -"
+let chaine_fen = kiwipete
 
 let liste_coup = ""
 
@@ -29,7 +30,9 @@ let () =
 
 let evaluation = evalue_ouverture
 
-let profondeur = 6
+let profondeur = 8
+
+let profondeur_perft = 5
 
 let coups_valides_joueur = coups_valides plateau !trait_aux_blancs !dernier_coup !droit_au_roque
 

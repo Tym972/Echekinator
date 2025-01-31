@@ -6,128 +6,67 @@ open Generateur
 let mobilite_tour plateau case compteur =
   let co = plateau.(case) in
   let t = tab64.(case) in
-  if co > 0 then begin
-    for i = 0 to 3 do
-      let dir = vect_tour.(i) in
-      let k = ref 1 in
-      let s = ref true in
-      while (tab120.(t + (!k * dir)) <> (-1) && !s) do
-        let candidat = tab120.(t + (!k * dir)) in
-        let dest = plateau.(candidat) in
-        if dest = 0 then begin
-          incr compteur;
-          incr k
-        end
-        else if dest > 0 then begin
-          s :=  false
-        end
-        else begin 
-          incr compteur;
-          s :=  false
-        end
-      done
+  for i = 0 to 3 do
+    let dir = vect_tour.(i) in
+    let k = ref 1 in
+    let s = ref true in
+    while (tab120.(t + (!k * dir)) <> (-1) && !s) do
+      let candidat = tab120.(t + (!k * dir)) in
+      let dest = plateau.(candidat) in
+      if dest = 0 then begin
+        incr compteur;
+        incr k
+      end
+      else if co * dest > 0 then begin
+        s :=  false
+      end
+      else begin 
+        incr compteur;
+        s :=  false
+      end
     done
-  end
-  else begin
-    for i = 0 to 3 do
-      let dir = vect_tour.(i) in
-      let k = ref 1 in
-      let s = ref true in
-      while (tab120.(t + (!k * dir)) <> (-1) && !s) do
-        let candidat = tab120.(t + (!k * dir)) in
-        let dest = plateau.(candidat) in
-        if dest = 0 then begin
-          incr compteur;
-          incr k
-        end
-        else if dest < 0 then begin
-          s :=  false
-        end
-        else begin 
-          incr compteur;
-          s :=  false
-        end
-      done
-    done
-  end
+  done
 
 (*Fonction construisant une liste des déplacements possible d'un fou*)
 let mobilite_fou plateau case compteur =
   let co = plateau.(case) in
   let f = tab64.(case) in
-  if co > 0 then begin
-    for i = 0 to 3 do
-      let dir = vect_fou.(i) in
-      let k = ref 1 in
-      let s = ref true in
-      while (tab120.(f + (!k * dir)) <> (-1) && !s) do
-        let candidat = tab120.(f + (!k * dir)) in
-        let dest = plateau.(candidat) in
-        if dest = 0 then begin
-          incr compteur;
-          incr k
-        end
-        else if dest > 0 then begin
-          s :=  false
-        end
-        else begin
-          incr compteur;
-          s :=  false
-        end
-      done
+  for i = 0 to 3 do
+    let dir = vect_fou.(i) in
+    let k = ref 1 in
+    let s = ref true in
+    while (tab120.(f + (!k * dir)) <> (-1) && !s) do
+      let candidat = tab120.(f + (!k * dir)) in
+      let dest = plateau.(candidat) in
+      if dest = 0 then begin
+        incr compteur;
+        incr k
+      end
+      else if co * dest > 0 then begin
+        s :=  false
+      end
+      else begin
+        incr compteur;
+        s :=  false
+      end
     done
-  end
-  else begin
-    for i = 0 to 3 do
-      let dir = vect_fou.(i) in
-      let k = ref 1 in
-      let s = ref true in
-      while (tab120.(f + (!k * dir)) <> (-1) && !s) do
-        let candidat = tab120.(f + (!k * dir)) in
-        let dest = plateau.(candidat) in
-        if dest = 0 then begin
-          incr compteur;
-          incr k
-        end
-        else if dest < 0 then begin
-          s :=  false
-        end
-        else begin
-          incr compteur;
-          s :=  false
-        end
-      done
-    done
-  end
+  done
 
 (*Fonction construisant une liste des déplacements possible d'un cavalier*)
 let mobilite_cavalier plateau case compteur =
   let co = plateau.(case) in
   let c = tab64.(case) in
-  if co > 0 then begin
-    for i = 0 to 7 do
-      let dir = vect_cavalier.(i) in
-      if tab120.(c + dir) <> (-1) then begin
-        let candidat = tab120.(c + dir) in
-        let dest = plateau.(candidat) in
-        if dest <= 0 then begin
-          incr compteur
-        end
+  for i = 0 to 7 do
+    let dir = vect_cavalier.(i) in
+    if tab120.(c + dir) <> (-1) then begin
+      let candidat = tab120.(c + dir) in
+      let dest = plateau.(candidat) in
+      if co * dest <= 0 then begin
+        incr compteur
       end
-    done
-  end
-  else begin
-    for i = 0 to 7 do
-      let dir = vect_cavalier.(i) in
-      if tab120.(c + dir) <> (-1) then begin
-        let candidat = tab120.(c + dir) in
-        let dest = plateau.(candidat) in
-        if dest >= 0 then begin
-          incr compteur
-        end
-      end
-    done
-  end
+    end
+  done
+
 
 (*Fonction construisant une liste des déplacements possible d'une dame*)
 let mobilite_dame plateau case compteur =
@@ -138,30 +77,16 @@ let mobilite_dame plateau case compteur =
 let mobilite_roi plateau case compteur =
   let co = plateau.(case) in
   let r = tab64.(case) in
-  if co > 0 then begin
-    for i = 0 to 7 do
-      let dir = vect_roi.(i) in
-      if tab120.(r + dir) <> (-1) then begin
-        let candidat = tab120.(r + dir) in
-        let dest = plateau.(candidat) in
-        if dest <= 0 then begin
-          incr compteur
-        end
+  for i = 0 to 7 do
+    let dir = vect_roi.(i) in
+    if tab120.(r + dir) <> (-1) then begin
+      let candidat = tab120.(r + dir) in
+      let dest = plateau.(candidat) in
+      if co * dest <= 0 then begin
+        incr compteur
       end
-    done
-  end
-  else begin
-    for i = 0 to 7 do
-      let dir = vect_roi.(i) in
-      if tab120.(r + dir) <> (-1) then begin
-        let candidat = tab120.(r + dir) in
-        let dest = plateau.(candidat) in
-        if dest >= 0 then begin
-          incr compteur
-        end
-      end
-    done
-  end
+    end
+  done
 
 (*Fonction construisant une liste des déplacements possible d'un pion*)
 let mobilite_pion plateau case compteur =
@@ -1066,7 +991,7 @@ let rec eval_noirs liste_cases plateau trait_aux_blancs defendues attaque_noirs 
       eval_noirs t plateau trait_aux_blancs defendues attaque_noirs position_roi roi_en_echec piece_clouees materiel position
 
 let evaluation_double plateau trait_aux_blancs position_roi roi_en_echec materiel position =
-  let piece_clouees = clouees plateau position_roi in
+  let piece_clouees = clouees plateau position_roi trait_aux_blancs in
   let defendues = ref [] in
   let pieces_joueur = ref [] in
   let attaque_blancs = ref 0 in
@@ -1087,7 +1012,7 @@ let evaluation_double plateau trait_aux_blancs position_roi roi_en_echec materie
   end
 
 let evaluation_double_finale plateau trait_aux_blancs position_roi roi_en_echec materiel position =
-  let piece_clouees = clouees plateau position_roi in
+  let piece_clouees = clouees plateau position_roi trait_aux_blancs in
   let defendues = ref [] in
   let pieces_joueur = ref [] in
   let attaque_blancs = ref 0 in

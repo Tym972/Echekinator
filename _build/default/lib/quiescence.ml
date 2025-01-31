@@ -283,7 +283,7 @@ let captures plateau trait_aux_blancs dernier =
     !l
   end
   else begin
-    let piece_clouees = clouees plateau position_roi in
+    let piece_clouees = clouees plateau position_roi trait_aux_blancs in
     while !cp <> [] do
       let coup = List.hd !cp in
       if piece coup = roi_joueur then begin

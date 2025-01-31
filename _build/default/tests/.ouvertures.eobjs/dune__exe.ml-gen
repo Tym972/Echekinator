@@ -30,6 +30,9 @@ module Perftcapture = Dune__exe__Perftcapture
 (** @canonical Dune__exe.Perftefficace *)
 module Perftefficace = Dune__exe__Perftefficace
 
+(** @canonical Dune__exe.Positions *)
+module Positions = Dune__exe__Positions
+
 (** @canonical Dune__exe.Pv *)
 module Pv = Dune__exe__Pv
 

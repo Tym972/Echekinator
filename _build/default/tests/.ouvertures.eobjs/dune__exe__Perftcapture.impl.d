@@ -1,1 +1,1 @@
-tests/perftcapture.ml: Libs List Sys
+tests/perftcapture.ml: Config Libs List Sys
