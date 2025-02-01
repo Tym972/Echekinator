@@ -224,7 +224,7 @@ let hasard =
   let duree_ouverture = 0 in
   let duree_finale = 0 in
   let phase_1 = ref true in
-  let recherche = negalphabetime_valide in
+  let recherche = negalphabetime in
   nom, algo, profondeur, profondeur_max, temps_limite_court, duree_theorie, duree_ouverture, duree_finale, phase_1, evaluation_ouverture, evaluation_mdj, evaluation_finale, recherche
 
 let config_pf_quiescent n =
@@ -256,7 +256,7 @@ let config_pf_simple n =
   let duree_ouverture = 30 in
   let duree_finale = 90 in
   let phase_1 = ref true in
-  let recherche = negalphabetime_valide in
+  let recherche = negalphabetime in
   nom, algo, profondeur, profondeur_max, temps_limite_court, duree_theorie, duree_ouverture, duree_finale, phase_1, evaluation_ouverture, evaluation_mdj, evaluation_finale, recherche
 
 (*Configuration pour une profondeur variable, supérieure ou égale à n*)
@@ -273,7 +273,7 @@ let config_pv n =
   let duree_ouverture = 30 in
   let duree_finale = 90 in
   let phase_1 = ref true in
-  let recherche = negalphabetime_valide in
+  let recherche = negalphabetime in
   nom, algo, profondeur, profondeur_max, temps_limite_court, duree_theorie, duree_ouverture, duree_finale, phase_1, evaluation_ouverture, evaluation_mdj, evaluation_finale, recherche
 
 (*Configuration pour une profondeur fixée n*)
@@ -290,7 +290,7 @@ let config_pf n =
   let duree_ouverture = 30 in
   let duree_finale = 90 in
   let phase_1 = ref true in
-  let recherche = negalphabetime_valide in
+  let recherche = negalphabetime in
   nom, algo, profondeur, profondeur_max, temps_limite_court, duree_theorie, duree_ouverture, duree_finale, phase_1, evaluation_ouverture, evaluation_mdj, evaluation_finale, recherche
 
 (*Configuration pour une profondeur fixée n*)
@@ -324,7 +324,7 @@ let config_pf_nve n =
   let duree_ouverture = 30 in
   let duree_finale = 90 in
   let phase_1 = ref true in
-  let recherche = negalphabetime_valide in
+  let recherche = negalphabetime in
   nom, algo, profondeur, profondeur_max, temps_limite_court, duree_theorie, duree_ouverture, duree_finale, phase_1, evaluation_ouverture, evaluation_mdj, evaluation_finale, recherche
 
 (*Configuration pour une profondeur fixée n*)

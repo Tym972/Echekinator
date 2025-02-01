@@ -46,11 +46,11 @@ let colonne_ep_1 coup plateau = match coup with
 
 (*Fonction indiquant la colonne d'une prise en passant jouée*)
 let colonne_ep_2 coup = match coup with
-    |Enpassant {depart = _; arrivee} -> arrivee mod 8
-    |_ -> (-1)
+  |Enpassant {depart = _; arrivee} -> arrivee mod 8
+  |_ -> (-1)
 
 (*Fonction de hachage*)
-let zobrist plateau trait_aux_blancs dernier_coup droit_au_roque =
+let zobrist plateau trait_aux_blancs dernier_coup (prb, grb, prn, grn) =
   let h = ref 0 in
   for i = 0 to 63 do
     let piece = plateau.(i) in
@@ -64,7 +64,6 @@ let zobrist plateau trait_aux_blancs dernier_coup droit_au_roque =
   if trait_aux_blancs then begin
     h := !h lxor tab_zobrist.(768)
   end;
-  let prb, grb, prn, grn = droit_au_roque in
   if prb then begin
     h := !h lxor tab_zobrist.(769)
   end;
@@ -84,14 +83,13 @@ let zobrist plateau trait_aux_blancs dernier_coup droit_au_roque =
   !h
 
 (*Fonction caulculant la valeur de la fonction de zobrist en fonction de la précédente et du coup joué. Non utilisée.*)
-let nouveau_zobrist plateau coup ancien_zobrist droit_au_roque =
+let nouveau_zobrist plateau coup ancien_zobrist (prb, grb, prn, grn) =
   let h = ref (ancien_zobrist lxor tab_zobrist.(768)) in
   let pep_joueur = colonne_ep_1 coup plateau in
   if pep_joueur <> (-1) then begin
     h := !h lxor tab_zobrist.(773 + pep_joueur)
   end;
-  let prb, grb, prn, grn = droit_au_roque in
-  let nprb, ngrb, nprn, ngrn = modification_roque coup droit_au_roque in
+  let nprb, ngrb, nprn, ngrn = modification_roque coup (prb, grb, prn, grn) in
   if prb <> nprb then begin
     h:= !h lxor tab_zobrist.(769)
   end;

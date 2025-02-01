@@ -134,7 +134,7 @@ let partie_unique () =
           jeu_humain plateau regle_des_50_coups dernier_coup releve_coups releve_plateau trait_aux_blancs verif proposition_invalide partie_finie droit_au_roque position_de_depart trait_aux_blancs_initial dernier_coup_initial droit_au_roque_initial releve_coups_initial releve_plateau_initial
         end;
         if not (!trait_aux_blancs || !partie_finie) then begin
-          algo_decisionnel plateau regle_des_50_coups dernier_coup releve_coups releve_plateau trait_aux_blancs verif partie_finie profondeur profondeur_max duree_theorie duree_ouverture duree_finale temps_limite_court phase1 position_de_depart affichage evalue_ouverture evalue_mdj evalue_finale droit_au_roque negalphabetime_valide
+          algo_decisionnel plateau regle_des_50_coups dernier_coup releve_coups releve_plateau trait_aux_blancs verif partie_finie profondeur profondeur_max duree_theorie duree_ouverture duree_finale temps_limite_court phase1 position_de_depart affichage evalue_ouverture evalue_mdj evalue_finale droit_au_roque negalphabetime
         end
       done
     end
@@ -142,7 +142,7 @@ let partie_unique () =
       while not !partie_finie do
         let proposition_invalide = ref false in
         if !trait_aux_blancs then begin
-          algo_decisionnel plateau regle_des_50_coups dernier_coup releve_coups releve_plateau trait_aux_blancs verif partie_finie profondeur profondeur_max duree_theorie duree_ouverture duree_finale temps_limite_court phase1 position_de_depart affichage evalue_ouverture evalue_mdj evalue_finale droit_au_roque negalphabetime_valide
+          algo_decisionnel plateau regle_des_50_coups dernier_coup releve_coups releve_plateau trait_aux_blancs verif partie_finie profondeur profondeur_max duree_theorie duree_ouverture duree_finale temps_limite_court phase1 position_de_depart affichage evalue_ouverture evalue_mdj evalue_finale droit_au_roque negalphabetime
         end;
         if not (!trait_aux_blancs || !partie_finie) then begin
           jeu_humain plateau regle_des_50_coups dernier_coup releve_coups releve_plateau trait_aux_blancs verif proposition_invalide partie_finie droit_au_roque position_de_depart trait_aux_blancs_initial dernier_coup_initial droit_au_roque_initial releve_coups_initial releve_plateau_initial
@@ -153,10 +153,10 @@ let partie_unique () =
   else if mode = "0" then begin
     while not !partie_finie do
       if !trait_aux_blancs then begin
-        algo_decisionnel plateau regle_des_50_coups dernier_coup releve_coups releve_plateau trait_aux_blancs verif partie_finie profondeur profondeur_max duree_theorie duree_ouverture duree_finale temps_limite_court phase1 position_de_depart affichage evalue_ouverture evalue_mdj evalue_finale droit_au_roque negalphabetime_valide
+        algo_decisionnel plateau regle_des_50_coups dernier_coup releve_coups releve_plateau trait_aux_blancs verif partie_finie profondeur profondeur_max duree_theorie duree_ouverture duree_finale temps_limite_court phase1 position_de_depart affichage evalue_ouverture evalue_mdj evalue_finale droit_au_roque negalphabetime
       end;
       if not (!trait_aux_blancs || !partie_finie) then begin
-        algo_decisionnel plateau regle_des_50_coups dernier_coup releve_coups releve_plateau trait_aux_blancs verif partie_finie profondeur profondeur_max duree_theorie duree_ouverture duree_finale temps_limite_court phase1 position_de_depart affichage evalue_ouverture evalue_mdj evalue_finale droit_au_roque negalphabetime_valide
+        algo_decisionnel plateau regle_des_50_coups dernier_coup releve_coups releve_plateau trait_aux_blancs verif partie_finie profondeur profondeur_max duree_theorie duree_ouverture duree_finale temps_limite_court phase1 position_de_depart affichage evalue_ouverture evalue_mdj evalue_finale droit_au_roque negalphabetime
       end
     done
   end;

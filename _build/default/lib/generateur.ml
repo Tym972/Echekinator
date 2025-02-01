@@ -229,8 +229,28 @@ let deplacements_cavalier plateau case liste =
 
 (*Fonction construisant une liste des déplacements possible d'une dame*)
 let deplacements_dame plateau case liste =
-  (deplacements_tour plateau case liste);
-  (deplacements_fou plateau case liste)
+  let co = plateau.(case) in
+  let f = tab64.(case) in
+  for i = 0 to 7 do
+    let dir = vect_roi.(i) in
+    let k = ref 1 in
+    let s = ref true in
+    while (!s && tab120.(f + (!k * dir)) <> (-1)) do
+      let candidat = tab120.(f + (!k * dir)) in
+      let dest = plateau.(candidat) in
+      if dest = 0 then begin
+        liste := Classique {piece = co; depart = case; arrivee = candidat; prise = 0} :: !liste;
+        incr k
+      end
+      else if co * dest > 0 then begin
+        s :=  false
+      end
+      else begin
+        liste := Classique {piece = co; depart = case; arrivee = candidat; prise = dest} :: !liste;
+        s :=  false
+      end
+    done
+  done
 
 (*Fonction construisant une liste des déplacements possible d'un roi*)
 let deplacements_roi plateau case liste =
@@ -783,7 +803,7 @@ let clouees plateau case_roi trait_aux_blancs =
   !ensemble
 
 (*Fonction construisant une liste des coups légaux du joueur*)  
-let coups_valides plateau trait_aux_blancs dernier_coup droit_au_roque =
+let coups_valides plateau trait_aux_blancs dernier_coup (prb, grb, prn, grn) =
   let l = ref [] in
   let cp = ref ((enpassant plateau trait_aux_blancs dernier_coup) @ deplacements_all plateau trait_aux_blancs) in
   let roi_joueur = roi trait_aux_blancs in
@@ -808,6 +828,7 @@ let coups_valides plateau trait_aux_blancs dernier_coup droit_au_roque =
     !l
   end
   else begin
+    let droit_au_roque = if trait_aux_blancs then prb || grb else prn || grn in
     let piece_clouees = clouees plateau position_roi trait_aux_blancs in
     if piece_clouees = [] then begin
       while !cp <> [] do
@@ -824,7 +845,7 @@ let coups_valides plateau trait_aux_blancs dernier_coup droit_au_roque =
         end;
         cp := List.tl !cp
       done;
-      (roque plateau trait_aux_blancs droit_au_roque) @ !l
+      if droit_au_roque then (roque plateau trait_aux_blancs (prb, grb, prn, grn)) @ !l else !l
     end
     else begin
       while !cp <> [] do
@@ -850,7 +871,7 @@ let coups_valides plateau trait_aux_blancs dernier_coup droit_au_roque =
           end;
         cp := List.tl !cp
       done;
-      (roque plateau trait_aux_blancs droit_au_roque) @ !l
+      if droit_au_roque then (roque plateau trait_aux_blancs (prb, grb, prn, grn)) @ !l else !l
     end
   end
 

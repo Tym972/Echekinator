@@ -26,7 +26,7 @@ let trait_aux_blancs = ref true
 
 let () = 
   position_of_fen chaine_fen plateau trait_aux_blancs dernier_coup droit_au_roque releve_coups releve_plateau;
-  joue_liste (algebric_to_type_mouvement liste_coup !trait_aux_blancs !dernier_coup !droit_au_roque echiquier) plateau dernier_coup releve_coups releve_plateau droit_au_roque trait_aux_blancs
+  joue_liste (algebric_to_type_mouvement liste_coup !trait_aux_blancs !dernier_coup !droit_au_roque plateau) plateau dernier_coup releve_coups releve_plateau droit_au_roque trait_aux_blancs
 
 let evaluation = evalue_ouverture
 

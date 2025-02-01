@@ -8,7 +8,7 @@ open Libs.Quiescence
 
 let rec affiche_liste liste plateau coups_valides_joueur = match liste with
   |(x, coup) :: t ->
-    print_endline ("Matériel : " ^ (string_of_float ((float_of_int x)/. 1000.)) ^ " " ^ (algebric_of_mouvement coup plateau coups_valides_joueur) ^ " ");
+    print_endline ("Score : " ^ (string_of_float ((float_of_int x)/. 1000.)) ^ " " ^ (algebric_of_mouvement coup plateau coups_valides_joueur) ^ " ");
     affiche_liste t plateau coups_valides_joueur
   |_ -> ()
 
@@ -48,7 +48,7 @@ let rec association liste_coups =
   in List.map (fun (note, coup) -> (100 * note, coup) ) (tri_fusion (association (coups_valides plateau trait_aux_blancs dernier_coup droit_au_roque)))
 
 let tri_negalphabeta plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau profondeur evaluation =
-  tri_algo plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau profondeur evaluation negalphabeta_valide
+  tri_algo plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau profondeur evaluation negalphabeta
 
 let tri_negalphabeta_quiescent plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau profondeur evaluation =
   tri_algo plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau profondeur evaluation negalphabeta_quiescent

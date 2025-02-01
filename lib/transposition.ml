@@ -26,7 +26,7 @@ let enfant noeud = match noeud with
 
 let (table : (noeuds * int * int * mouvement * int) ZobristHashtbl.t) =  ZobristHashtbl.create taille_transposition
 
-let traitement_hash (hash_node_type : noeuds) (hash_profondeur : int) (hash_valeur : int) (hash_best : mouvement) (profondeur : int) alpha beta valeur best continuation hash_depth = let _ = alpha, beta in
+let traitement_hash (hash_node_type : noeuds) (hash_profondeur : int) (hash_valeur : int) (hash_best : mouvement) (profondeur : int) alpha beta valeur best continuation hash_depth =
   if profondeur <= hash_profondeur then begin
     hash_depth := hash_profondeur;
     match hash_node_type with
@@ -62,11 +62,12 @@ let rec negalphabeta_trans plateau trait_aux_blancs dernier_coup droit_au_roque 
     let alpha0 = ref alpha in
     let beta0 = ref beta in
     let continuation = ref true in
-    let presence = ref false in
+    let presence = ref true in
     let hash_depth = ref 0 in
-    if ZobristHashtbl.mem table zobrist_position then begin
-      presence := true;
-      let hash_node_type, hash_profondeur, hash_valeur, hash_best, _ = ZobristHashtbl.find table zobrist_position in
+    let hash_node_type, hash_profondeur, hash_valeur, hash_best, _ = try ZobristHashtbl.find table zobrist_position with _ -> begin
+      presence := false; (Pv, 0, 0, Aucun, 0)
+    end
+    in if !presence then begin 
       traitement_hash hash_node_type hash_profondeur hash_valeur hash_best profondeur alpha0 beta0 best_score best_move continuation hash_depth
     end;
     if !continuation then begin
@@ -75,7 +76,7 @@ let rec negalphabeta_trans plateau trait_aux_blancs dernier_coup droit_au_roque 
         ZobristHashtbl.add table zobrist_position (node_type, 0, !best_score, Aucun, 0)
       end
       else begin
-        let cp = ref (coups_joueur plateau profondeur trait_aux_blancs dernier_coup droit_au_roque releve_plateau evaluation negalphabeta_valide)
+        let cp = ref (coups_joueur plateau profondeur trait_aux_blancs dernier_coup droit_au_roque releve_plateau evaluation negalphabeta)
         in if !cp = [] then begin
           if (menacee plateau (index plateau (roi trait_aux_blancs)) trait_aux_blancs) then begin
             best_score := (profondeur_initiale - (profondeur + 99999))

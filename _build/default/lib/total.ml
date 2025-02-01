@@ -22,7 +22,7 @@ let rec negalphabeta_total plateau trait_aux_blancs dernier_coup droit_au_roque 
   end
   else begin
     let continuation = ref true in
-    let cp = ref (coups_joueur plateau profondeur trait_aux_blancs dernier_coup droit_au_roque releve_plateau evaluation negalphabeta_valide) in
+    let cp = ref (coups_joueur plateau profondeur trait_aux_blancs dernier_coup droit_au_roque releve_plateau evaluation negalphabeta) in
     (*if profondeur = 4 then print_endline (string_of_int (List.length !cp));*)
     
     

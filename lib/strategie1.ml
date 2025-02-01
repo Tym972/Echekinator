@@ -143,7 +143,7 @@ let est_irremediable coup = match coup with
   |_ -> false
 
 (*Implémentation d'un algorithme de recherche minimax avec élagage alpha-bêta et negamax, utilisé après l'ouverture. Les pat par répétitions sont pris en comptes*)
-let rec negalphabeta_valide plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau profondeur profondeur_initiale alpha beta evaluation = incr compteur_recherche;
+let rec negalphabeta plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau profondeur profondeur_initiale alpha beta evaluation = incr compteur_recherche;
   let best_score = ref (-99999) in
   let best_move = ref Aucun in
   if repetition releve_plateau 3 then begin incr compteur_noeuds_terminaux;
@@ -153,7 +153,7 @@ let rec negalphabeta_valide plateau trait_aux_blancs dernier_coup droit_au_roque
     best_score := traitement_profondeur_0 evaluation plateau trait_aux_blancs dernier_coup alpha beta
   end
   else begin
-    let cp = ref (coups_joueur plateau profondeur trait_aux_blancs dernier_coup droit_au_roque releve_plateau evaluation negalphabeta_valide)
+    let cp = ref (coups_joueur plateau profondeur trait_aux_blancs dernier_coup droit_au_roque releve_plateau evaluation negalphabeta)
     in if !cp = [] then begin incr compteur_noeuds_terminaux;
       if menacee plateau (index plateau (roi trait_aux_blancs)) trait_aux_blancs then begin
         best_score := profondeur_initiale - (profondeur + 99999)
@@ -186,7 +186,7 @@ let rec negalphabeta_valide plateau trait_aux_blancs dernier_coup droit_au_roque
             zobrist plateau (not trait_aux_blancs) coup nouveau_droit_au_roque :: releve_plateau
           end
         in let score =
-          let note, _ = negalphabeta_valide plateau (not trait_aux_blancs) coup nouveau_droit_au_roque nouveau_releve (profondeur - 1) profondeur_initiale (- beta) (- !alpha0) evaluation
+          let note, _ = negalphabeta plateau (not trait_aux_blancs) coup nouveau_droit_au_roque nouveau_releve (profondeur - 1) profondeur_initiale (- beta) (- !alpha0) evaluation
           in - note
         in if score > !best_score then begin
           best_score := score;
@@ -203,9 +203,9 @@ let rec negalphabeta_valide plateau trait_aux_blancs dernier_coup droit_au_roque
   !best_score, !best_move
 
 (*Fonction renvoyant un appel à la fonction alphabeta_valide ansi que le temps nécessaire à l'éxécution*)
-let negalphabetime_valide plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau profondeur evaluation =
+let negalphabetime plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau profondeur evaluation =
   let t = Sys.time () in
-  let fx = negalphabeta_valide plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau profondeur profondeur (-99999) 99999 evaluation in
+  let fx = negalphabeta plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau profondeur profondeur (-99999) 99999 evaluation in
   fx, (Sys.time () -. t)
 
 (*Premier coup évité par le moteur s'il joue les blancs*)

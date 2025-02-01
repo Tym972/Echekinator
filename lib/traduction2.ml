@@ -224,10 +224,10 @@ let dicoprecision =
   ht
 
 (*Fonction participant à traduire un coup classique noté en type Mouvement en sa notation algébrique*)
-let algebric_of_classique piece depart arrivee plateau coups_valides_joueur =
+let algebric_of_classique piece depart arrivee prise plateau coups_valides_joueur =
   let trait_aux_blancs =  piece > 0 in
   let algebric = ref "" in
-  let prise = if plateau.(arrivee) <> 0 then "x" else "" in
+  let prise = if prise <> 0 then "x" else "" in
   let precision = ref "" in
   if (piece = pion trait_aux_blancs && (depart - arrivee) mod 2 <> 0) then begin
     precision := String.make 1 coord.(depart).[0]
@@ -269,7 +269,7 @@ let algebric_of_mouvement coup plateau coups_valides_joueur = match coup with
   |Enpassant {depart = depart; arrivee = arrivee} -> String.make 1 ((coord.(depart)).[0]) ^ "x" ^ coord.(arrivee) ^ "ep"
   |Roque {sorte} when (sorte = 1 || sorte = 3) -> "0-0"
   |Roque {sorte = _} -> "0-0-0"
-  |Classique {piece = piece; depart = depart; arrivee = arrivee; prise = _} -> algebric_of_classique piece depart arrivee plateau coups_valides_joueur
+  |Classique {piece = piece; depart = depart; arrivee = arrivee; prise} -> algebric_of_classique piece depart arrivee prise plateau coups_valides_joueur
   |Promotion {depart = depart; arrivee = arrivee; promotion = promotion; prise = _} -> algebric_of_promotion depart arrivee promotion
   |_ -> ""
 

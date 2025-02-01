@@ -13,8 +13,9 @@ let rec algoperft plateau trait_aux_blancs dernier_coup droit_au_roque profondeu
   end
   else begin
     let zob = zobrist plateau trait_aux_blancs dernier_coup droit_au_roque lxor profondeur in
-    if ZobristHashtbl.mem table_perft zob then begin
-      ZobristHashtbl.find table_perft zob
+    let nombre = try ZobristHashtbl.find table_perft zob with _ -> (-1) in
+    if nombre <> (-1) then begin
+      nombre
     end
     else begin
       let cp = ref (coups_valides plateau trait_aux_blancs dernier_coup droit_au_roque) in
@@ -31,9 +32,9 @@ let rec algoperft plateau trait_aux_blancs dernier_coup droit_au_roque profondeu
     end
   end
 
-let algoperftime plateau trait_aux_blancs historique droit_au_roque profondeur =
+let algoperftime plateau trait_aux_blancs dernier_coup droit_au_roque profondeur =
   let t = Sys.time () in
-  let fx = algoperft plateau trait_aux_blancs historique droit_au_roque profondeur in
+  let fx = algoperft plateau trait_aux_blancs dernier_coup droit_au_roque profondeur in
   fx, (Sys.time () -. t)
 
 let perft profondeur plateau =

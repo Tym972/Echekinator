@@ -3,7 +3,7 @@ open Libs.Generateur
 open Libs.Traduction3
 open Config
 
-let rec algoperft plateau trait_aux_blancs dernier_coup droit_au_roque profondeur = (*let _ = zobrist plateau trait_aux_blancs dernier_coup droit_au_roque in*)
+let rec algoperft plateau trait_aux_blancs dernier_coup droit_au_roque profondeur =
   if profondeur = 0 then begin
     1
   end

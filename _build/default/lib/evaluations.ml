@@ -67,7 +67,6 @@ let mobilite_cavalier plateau case compteur =
     end
   done
 
-
 (*Fonction construisant une liste des déplacements possible d'une dame*)
 let mobilite_dame plateau case compteur =
   (mobilite_tour plateau case compteur);
@@ -544,9 +543,82 @@ let evalue_cavalier plateau case trait_aux_blancs defendues attaquee position_ro
 
 (*Fonction donnant le nombre de cases controllées par une dame*)
 let evalue_dame plateau case trait_aux_blancs defendues attaquee position_roi roi_en_echec piece_clouees =
-  let s1 = evalue_tour plateau case trait_aux_blancs defendues attaquee position_roi roi_en_echec piece_clouees in 
-  let s2 = evalue_fou plateau case trait_aux_blancs defendues attaquee position_roi roi_en_echec piece_clouees in
-  s1 + s2
+  let compteur = ref 0 in
+  let co = plateau.(case) in
+  let t = tab64.(case) in
+  if co > 0 then begin
+    for i = 0 to 7 do
+      let dir = vect_roi.(i) in
+      let k = ref 1 in
+      let s = ref true in 
+      while (tab120.(t + (!k * dir)) <> (-1) && !s) do
+        let candidat = tab120.(t + (!k * dir)) in
+        let dest = plateau.(candidat) in
+        if dest = 0 then begin
+          compteur := !compteur + 1;
+          k := !k + 1
+        end
+        else if dest > 0 then begin
+          compteur := !compteur + 2;
+          if not trait_aux_blancs then begin
+            defendues := candidat :: !defendues;
+          end;
+          s := false
+        end
+        else begin
+          if trait_aux_blancs && (est_valide_efficace plateau (Classique {piece = co; depart = case; arrivee = candidat; prise = dest}) position_roi roi_en_echec piece_clouees) then begin
+            if List.mem candidat !defendues then begin
+              let difference = tabvalue.(co) - tabvalue.(- dest) in
+              if difference < 0 then begin
+                attaquee := max !attaquee (- difference)
+              end
+            end
+            else begin
+              attaquee := max !attaquee tabvalue.(- dest)
+            end
+          end;
+          s := false
+        end
+      done
+    done
+  end
+  else begin
+    for i = 0 to 7 do
+      let dir = vect_roi.(i) in
+      let k = ref 1 in
+      let s = ref true in
+      while (tab120.(t + (!k * dir)) <> (-1) && !s) do
+        let candidat = tab120.(t + (!k * dir)) in
+        let dest = plateau.(candidat) in
+        if dest = 0 then begin
+          compteur := !compteur + 1;
+          k := !k + 1
+        end
+        else if dest < 0 then begin
+          compteur := !compteur + 2;
+          if trait_aux_blancs then begin
+            defendues := candidat :: !defendues;
+          end;
+          s := false
+        end
+        else begin
+          if not trait_aux_blancs && (est_valide_efficace plateau (Classique {piece = co; depart = case; arrivee = candidat; prise = dest}) position_roi roi_en_echec piece_clouees) then begin
+            if List.mem candidat !defendues then begin
+              let difference = - tabvalue.(- co) + tabvalue.(dest) in
+              if difference > 0 then begin
+                attaquee := max !attaquee difference
+              end
+            end
+            else begin
+              attaquee := max !attaquee tabvalue.(dest)
+            end
+          end;
+          s := false
+        end
+      done
+    done
+  end;
+  !compteur
 
 (*Fonction évaluant le positionnement d'un roi*) 
 let evalue_roi plateau case trait_aux_blancs defendues attaquee position_roi roi_en_echec piece_clouees = let _ = position_roi, roi_en_echec, piece_clouees in
