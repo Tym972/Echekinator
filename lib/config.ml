@@ -36,7 +36,7 @@ let joue_liste liste_coups plateau dernier_coup releve_coups releve_plateau droi
 
 (*Tableau représentant les dispositions KRN, l'indice correspondant au code*)
 let krn = 
-  [|[|2; 2; 4; 6; 4|]; [|2; 4; 2; 6; 2|]; [|2; 4; 6; 2; 4|]; [|2; 4; 6; 4; 2|]; [|4; 2; 2; 6; 4|];
+  [|[|2; 2; 4; 6; 4|]; [|2; 4; 2; 6; 4|]; [|2; 4; 6; 2; 4|]; [|2; 4; 6; 4; 2|]; [|4; 2; 2; 6; 4|];
     [|4; 2; 6; 2; 4|]; [|4; 2; 6; 4; 2|]; [|4; 6; 2; 2; 4|]; [|4; 6; 2; 4; 2|]; [|4; 6; 4; 2; 2|]|]
 
 (*Fonction permettant de jouer une partie d'échec 960*)
@@ -79,18 +79,89 @@ let fischer code_string position_de_depart releve_plateau =
         end
     in aux placement 0
   in placement_dame zmod;
-  let placement_krn placement=
+  let placement_krn placement =
     let pieces = krn.(placement) in
+    let tour_grand_roque = ref true in
     let case = ref 0 in
     for i = 0 to 4 do
       let piece = pieces.(i) in
       while position_de_depart.(!case) <> 0 do
         incr case
       done;
-      position_de_depart.(!case) <- (- piece); position_de_depart.(!case + 56) <- piece
+      position_de_depart.(!case) <- (- piece); position_de_depart.(!case + 56) <- piece;
+      if piece = 4 then begin
+        if !tour_grand_roque then begin
+          depart_tour_noire_gr := !case;
+          depart_tour_blanche_gr := !case + 56;
+          tour_grand_roque := false
+        end
+        else begin
+          depart_tour_noire_pr := !case;
+          depart_tour_blanche_pr := !case + 56
+        end
+      end
+      else if piece = 6 then begin
+        depart_roi_noir := !case;
+        depart_roi_blanc := !case + 56;
+        clouage_roi_noir_1 := !case + 8;
+        clouage_roi_noir_2 := !case + 16;
+        clouage_roi_blanc_1 := !case + 48;
+        clouage_roi_blanc_2 := !case + 40;
+        if !case > 5 || !case < 3 then begin
+          rois_centrees := false
+        end
+      end
     done
   in placement_krn z;
-  releve_plateau := [zobrist position_de_depart true Aucun (true, true, true, true)]
+  releve_plateau := [zobrist position_de_depart true Aucun (true, true, true, true)];
+  List.iter (fun tab -> Array.fill tab 0 (Array.length tab) 0) [chemin_blanc_pr; chemin_blanc_gr; chemin_noir_pr; chemin_noir_gr];
+  List.iter (fun mut -> mut := 0) [longueur_chemin_roi_pr; longueur_chemin_roi_gr];
+  List.iter (fun mut -> mut := []) [vides_blanc_pr; vides_blanc_gr; vides_noir_pr; vides_noir_gr];
+  let j = ref 0 in
+  let aux_vides vides_blanc vides_noir i =
+    vides_blanc := i :: !vides_blanc;
+    vides_noir := (i - 56) :: !vides_noir
+  in let aux chemin_blanc chemin_noir longueur_chemin_roi vides_blanc vides_noir j i =
+    chemin_blanc.(!j) <- i;
+    chemin_noir.(!j) <- i - 56;
+    incr longueur_chemin_roi;
+    aux_vides vides_blanc vides_noir i;
+    incr j
+  in
+  for i = !depart_roi_blanc + 1 to 62 do
+    aux chemin_blanc_pr chemin_noir_pr longueur_chemin_roi_pr vides_blanc_pr vides_noir_pr j i
+  done;
+  j := 0;
+  for i = !depart_roi_blanc - 1 downto 58 do
+    aux chemin_blanc_gr chemin_noir_gr longueur_chemin_roi_gr vides_blanc_gr vides_noir_gr j i
+  done;
+  j := 0;
+  for i = !depart_tour_blanche_gr + 1 to 59 do
+    aux_vides vides_blanc_gr vides_noir_gr i
+  done;
+  for i = !depart_tour_blanche_pr - 1 downto 61 do
+    aux_vides vides_blanc_pr vides_noir_pr i
+  done;
+  let rec supprime_doublon_triee liste = match liste with
+    |[] -> []
+    |[h] -> [h]
+    |h :: g :: t -> if h = g then h :: supprime_doublon_triee t else h :: (supprime_doublon_triee (g :: t))
+  in let rec aux_liste liste depart_tour depart_roi = match liste with
+    |[] -> []
+    |h::t when not (List.mem h [depart_tour; depart_roi]) -> h :: aux_liste t depart_tour depart_roi
+    |_::t -> aux_liste t depart_tour depart_roi
+  in vides_blanc_pr := List.rev (supprime_doublon_triee (tri_fusion (aux_liste !vides_blanc_pr !depart_tour_blanche_pr !depart_roi_blanc)));
+  vides_noir_pr := List.rev (supprime_doublon_triee (tri_fusion (aux_liste !vides_noir_pr !depart_tour_noire_pr !depart_roi_noir)));
+  vides_blanc_gr := supprime_doublon_triee (tri_fusion (aux_liste !vides_blanc_gr !depart_tour_blanche_gr !depart_roi_blanc));
+  vides_noir_gr := supprime_doublon_triee (tri_fusion (aux_liste !vides_noir_gr !depart_tour_noire_gr !depart_roi_noir));
+  
+  print_endline (coord.(!depart_roi_blanc) ^ " " ^ coord.(!depart_tour_blanche_pr) ^ " " ^ coord.(!depart_tour_blanche_gr)
+  ^ "\n" ^ coord.(!depart_roi_noir) ^ " " ^ coord.(!depart_tour_noire_pr) ^ " " ^ coord.(!depart_tour_noire_gr)
+  ^ "\n" ^ string_of_bool !rois_centrees); print_newline ();
+  print_endline ((string_of_int !longueur_chemin_roi_pr) ^ " " ^ (string_of_int !longueur_chemin_roi_gr)); print_newline ();
+  List.iter (fun tab -> Array.iter (fun c -> if c <> 0 then print_string (coord.(c) ^ " ")) tab; print_newline ()) [chemin_blanc_pr; chemin_blanc_gr; chemin_noir_pr; chemin_noir_gr]; print_newline ();
+  List.iter (fun list -> List.iter (fun c -> print_string (coord.(c) ^ " ")) list; print_newline ()) [!vides_blanc_pr; !vides_blanc_gr; !vides_noir_pr; !vides_noir_gr]
+
 
 (*Affiche le plateau et l'enregistrement FEN*)
 let affiche_coup plateau trait_aux_blancs dernier_coup droit_au_roque releve_coups releve_plateau = 
