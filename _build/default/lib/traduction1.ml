@@ -548,7 +548,7 @@ let supprimer chaine =
   let nc = ref "" in
   for i = 0 to ((String.length chaine) - 1) do
     let k = chaine.[i] in
-    if (k <> 'x' && k <> '(' && k <> ')' && k <> '+' && k <> '.' && k <> '?' && k <> '!') then begin
+    if not (List.mem k ['x'; '('; ')'; '+'; '.'; '?'; '!'; '\n']) then begin
       nc := !nc ^ (String.make 1 k)
     end
   done;

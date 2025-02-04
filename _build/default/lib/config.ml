@@ -16,6 +16,32 @@ open Total
 let est_oui reponse =
   List.mem (String.lowercase_ascii reponse) ["oui"; "o"; "yes"; "y"]
 
+(*Fonction permettant la lecture d'une réponse*)
+let lire_entree message =
+  print_string message;
+  flush stdout;
+  let entree = input_line stdin in
+  supprimer entree
+
+(*Permet de lire une entrée avec des sauts de lignes*)
+let lire_entree_multiligne message =
+  let temps_reel = ref 0. in
+  print_string message;
+  flush stdout;
+  let rec lire_lignes acc b =
+    let ligne = input_line stdin in
+    if b && String.length ligne <> (-1) then begin 
+      temps_reel := Unix.gettimeofday ()
+    end;
+    if (Unix.gettimeofday () -. !temps_reel) > 0.1 || (b && (String.length ligne < 60 || String.length ligne > 80)) then begin
+      List.rev (ligne :: acc)
+    end
+    else begin
+      lire_lignes (ligne :: acc) false
+    end
+  in
+  String.concat " " (lire_lignes [] true)
+
 (*Fonction permettant de jouer une liste de coups*)
 let joue_liste liste_coups plateau dernier_coup releve_coups releve_plateau droit_au_roque trait_aux_blancs =
   let rec func liste_coups plateau dernier_coup releve_coups releve_plateau droit_au_roque trait_aux_blancs controle = match liste_coups with
@@ -81,7 +107,6 @@ let fischer code_string position_de_depart releve_plateau =
   in placement_dame zmod;
   let placement_krn placement =
     let pieces = krn.(placement) in
-    let tour_grand_roque = ref true in
     let case = ref 0 in
     for i = 0 to 4 do
       let piece = pieces.(i) in
@@ -89,79 +114,10 @@ let fischer code_string position_de_depart releve_plateau =
         incr case
       done;
       position_de_depart.(!case) <- (- piece); position_de_depart.(!case + 56) <- piece;
-      if piece = 4 then begin
-        if !tour_grand_roque then begin
-          depart_tour_noire_gr := !case;
-          depart_tour_blanche_gr := !case + 56;
-          tour_grand_roque := false
-        end
-        else begin
-          depart_tour_noire_pr := !case;
-          depart_tour_blanche_pr := !case + 56
-        end
-      end
-      else if piece = 6 then begin
-        depart_roi_noir := !case;
-        depart_roi_blanc := !case + 56;
-        clouage_roi_noir_1 := !case + 8;
-        clouage_roi_noir_2 := !case + 16;
-        clouage_roi_blanc_1 := !case + 48;
-        clouage_roi_blanc_2 := !case + 40;
-        if !case > 5 || !case < 3 then begin
-          rois_centrees := false
-        end
-      end
     done
   in placement_krn z;
-  releve_plateau := [zobrist position_de_depart true Aucun (true, true, true, true)];
-  List.iter (fun tab -> Array.fill tab 0 (Array.length tab) 0) [chemin_blanc_pr; chemin_blanc_gr; chemin_noir_pr; chemin_noir_gr];
-  List.iter (fun mut -> mut := 0) [longueur_chemin_roi_pr; longueur_chemin_roi_gr];
-  List.iter (fun mut -> mut := []) [vides_blanc_pr; vides_blanc_gr; vides_noir_pr; vides_noir_gr];
-  let j = ref 0 in
-  let aux_vides vides_blanc vides_noir i =
-    vides_blanc := i :: !vides_blanc;
-    vides_noir := (i - 56) :: !vides_noir
-  in let aux chemin_blanc chemin_noir longueur_chemin_roi vides_blanc vides_noir j i =
-    chemin_blanc.(!j) <- i;
-    chemin_noir.(!j) <- i - 56;
-    incr longueur_chemin_roi;
-    aux_vides vides_blanc vides_noir i;
-    incr j
-  in
-  for i = !depart_roi_blanc + 1 to 62 do
-    aux chemin_blanc_pr chemin_noir_pr longueur_chemin_roi_pr vides_blanc_pr vides_noir_pr j i
-  done;
-  j := 0;
-  for i = !depart_roi_blanc - 1 downto 58 do
-    aux chemin_blanc_gr chemin_noir_gr longueur_chemin_roi_gr vides_blanc_gr vides_noir_gr j i
-  done;
-  j := 0;
-  for i = !depart_tour_blanche_gr + 1 to 59 do
-    aux_vides vides_blanc_gr vides_noir_gr i
-  done;
-  for i = !depart_tour_blanche_pr - 1 downto 61 do
-    aux_vides vides_blanc_pr vides_noir_pr i
-  done;
-  let rec supprime_doublon_triee liste = match liste with
-    |[] -> []
-    |[h] -> [h]
-    |h :: g :: t -> if h = g then h :: supprime_doublon_triee t else h :: (supprime_doublon_triee (g :: t))
-  in let rec aux_liste liste depart_tour depart_roi = match liste with
-    |[] -> []
-    |h::t when not (List.mem h [depart_tour; depart_roi]) -> h :: aux_liste t depart_tour depart_roi
-    |_::t -> aux_liste t depart_tour depart_roi
-  in vides_blanc_pr := List.rev (supprime_doublon_triee (tri_fusion (aux_liste !vides_blanc_pr !depart_tour_blanche_pr !depart_roi_blanc)));
-  vides_noir_pr := List.rev (supprime_doublon_triee (tri_fusion (aux_liste !vides_noir_pr !depart_tour_noire_pr !depart_roi_noir)));
-  vides_blanc_gr := supprime_doublon_triee (tri_fusion (aux_liste !vides_blanc_gr !depart_tour_blanche_gr !depart_roi_blanc));
-  vides_noir_gr := supprime_doublon_triee (tri_fusion (aux_liste !vides_noir_gr !depart_tour_noire_gr !depart_roi_noir));
-  
-  print_endline (coord.(!depart_roi_blanc) ^ " " ^ coord.(!depart_tour_blanche_pr) ^ " " ^ coord.(!depart_tour_blanche_gr)
-  ^ "\n" ^ coord.(!depart_roi_noir) ^ " " ^ coord.(!depart_tour_noire_pr) ^ " " ^ coord.(!depart_tour_noire_gr)
-  ^ "\n" ^ string_of_bool !rois_centrees); print_newline ();
-  print_endline ((string_of_int !longueur_chemin_roi_pr) ^ " " ^ (string_of_int !longueur_chemin_roi_gr)); print_newline ();
-  List.iter (fun tab -> Array.iter (fun c -> if c <> 0 then print_string (coord.(c) ^ " ")) tab; print_newline ()) [chemin_blanc_pr; chemin_blanc_gr; chemin_noir_pr; chemin_noir_gr]; print_newline ();
-  List.iter (fun list -> List.iter (fun c -> print_string (coord.(c) ^ " ")) list; print_newline ()) [!vides_blanc_pr; !vides_blanc_gr; !vides_noir_pr; !vides_noir_gr]
-
+  actualisation_roque position_de_depart;
+  releve_plateau := [zobrist position_de_depart true Aucun (true, true, true, true)]
 
 (*Affiche le plateau et l'enregistrement FEN*)
 let affiche_coup plateau trait_aux_blancs dernier_coup droit_au_roque releve_coups releve_plateau = 
@@ -177,28 +133,18 @@ let initialisation () =
   let releve_coups = ref [] in
   let releve_plateau = ref [zobrist echiquier true Aucun (true, true, true, true)] in
   let trait_aux_blancs = ref true in
-  print_string "Voulez-vous une position initiale exotique : ";
-  flush stdout;
-  let exotique = input_line stdin in
+  let exotique = lire_entree "Voulez-vous une position initiale exotique : " in
   if est_oui exotique then begin
-    print_string "Tapez 1 pour renseigner une position FEN, 2 pour une position aléatoire de Fischer : ";
-    flush stdout;
-    let choix = input_line stdin in
+    let choix = lire_entree "Tapez 1 pour renseigner une position FEN, 2 pour une position aléatoire de Fischer : " in
     if choix = "1" then begin
-      print_string "Rentrez l'enregistrement fen souhaité : ";
-      flush stdout;
-      let chaine_fen = input_line stdin in
+      let chaine_fen = lire_entree "Rentrez l'enregistrement fen souhaité : " in
       position_of_fen chaine_fen position_de_depart trait_aux_blancs dernier_coup droit_au_roque releve_coups releve_plateau
     end
     else if choix = "2" then begin
       let code_string = ref "" in
-      print_string "Souhaitez-vous une position spécifique : ";
-      flush stdout;
-      let choice = input_line stdin in
+      let choice = lire_entree "Souhaitez-vous une position spécifique : " in
       if est_oui choice then begin
-        print_string "Saisissez le code de la position : ";
-        flush stdout;
-        code_string := input_line stdin
+        code_string := lire_entree "Saisissez le code de la position : "
       end;
       fischer !code_string position_de_depart releve_plateau
     end;
@@ -218,45 +164,33 @@ let config () =
   let releve_plateau_initial = !releve_plateau in
   let trait_aux_blancs_initial = !trait_aux_blancs in
   let plateau = Array.copy position_de_depart in
-  print_string "Des coups ont-ils été joués? : ";
-  flush stdout;
-  let historique = input_line stdin in
+  let historique = lire_entree "Des coups ont-ils été joués? : " in
   if est_oui historique then begin
-    print_string "Entrez la notation algébrique du début de partie : ";
-    flush stdout;
-    let reverse_historique = try algebric_to_type_mouvement (input_line stdin) !trait_aux_blancs !dernier_coup !droit_au_roque position_de_depart with _ -> [] in
+    let reverse_historique = try algebric_to_type_mouvement (lire_entree_multiligne "Entrez la notation algébrique du début de partie : ") !trait_aux_blancs !dernier_coup !droit_au_roque position_de_depart with _ -> [] in
     joue_liste reverse_historique plateau dernier_coup releve_coups releve_plateau droit_au_roque trait_aux_blancs;
     affiche_coup plateau !trait_aux_blancs !dernier_coup !droit_au_roque !releve_coups !releve_plateau
   end;
-  print_string "Tapez 2 pour jouer à deux, tapez 1 pour jouer seul et tapez 0 pour être spectateur : ";
-  flush stdout;
-  let mode = input_line stdin in
+  let mode = lire_entree "Tapez 2 pour jouer à deux, tapez 1 pour jouer seul et tapez 0 pour être spectateur : " in
   let temps_limite_court = ref 1.5 in
   let profondeur = ref 8 in
   let profondeur_max = ref 8 in
   if List.mem mode ["0"; "1"] then begin
     let pf = ref true in
-    print_string "Jouez-vous avec une cadence lente? : ";
-    flush stdout;
-    let decision1 = input_line stdin in
+    let decision1 = lire_entree "Jouez-vous avec une cadence lente? : " in
     if est_oui decision1 then begin
       profondeur := 10;
       profondeur_max := 10;
       pf := false;
     end
     else begin
-      print_string "Jouez-vous en blitz? : ";
-      flush stdout;
-      let decision2 = input_line stdin in
+      let decision2 = lire_entree "Jouez-vous en blitz? : " in
       if est_oui decision2 then begin
         profondeur := 6;
         profondeur_max := 6;
         pf := false
       end
       else begin
-        print_string "Jouez-vous en bullet? : ";
-        flush stdout;
-        let decision2 = input_line stdin in
+        let decision2 = lire_entree "Jouez-vous en bullet? : " in
         if est_oui decision2 then begin
           profondeur := 4;
           profondeur_max := 4;
@@ -265,9 +199,7 @@ let config () =
       end
     end;
     if !pf then begin
-      print_string "Voulez-vous utiliser une profondeur variable? : ";
-      flush stdout;
-      let decision2 = input_line stdin in
+      let decision2 = lire_entree "Voulez-vous utiliser une profondeur variable? : " in
       if est_oui decision2 then begin
         profondeur_max := 10
       end

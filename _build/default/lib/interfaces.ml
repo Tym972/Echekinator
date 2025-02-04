@@ -42,9 +42,7 @@ let jeu_humain plateau regle_des_50_coups dernier_coup releve_coups releve_plate
   let affiche_joueur = if !trait_aux_blancs then "blancs" else "noirs" in
   print_string ("Au tour des " ^ affiche_joueur ^ " de jouer\n");
   let coups_valides_joueur = coups_valides plateau !trait_aux_blancs !dernier_coup !droit_au_roque in
-  print_string "Entrez votre coup : ";
-  flush stdout;
-  let coup = supprimer (input_line stdin) in
+  let coup = supprimer (lire_entree "Entrez votre coup : ") in
   if coup = "X-X-X" && (List.length (List.filter (fun coup -> coup <> Aucun) !releve_coups)) > 1 then begin
     annule_coup plateau trait_aux_blancs dernier_coup droit_au_roque releve_coups releve_plateau affiche_joueur position_de_depart trait_aux_blancs_initial dernier_coup_initial droit_au_roque_initial releve_coups_initial releve_plateau_initial
   end
@@ -124,9 +122,7 @@ let partie_unique () =
     done
   end
   else if mode = "1" then begin
-    print_string "Tapez 1 si vous voulez jouez les blancs, 2 si vous voulez jouez les noirs : ";
-    flush stdout;
-    let ordre = input_line stdin in
+    let ordre = lire_entree "Tapez 1 si vous voulez jouez les blancs, 2 si vous voulez jouez les noirs : " in
     if ordre = "1" then begin
       while not !partie_finie do
         let proposition_invalide = ref false in
@@ -419,3 +415,16 @@ let ensemble all_openings anti_repet nombre affichage =
   let fichier_sortie = open_out (Printf.sprintf "%s%s contre %s %i parties - %s.txt" dossier_de_sortie nom_j1 nom_j2 n (date () ^ " " ^ heure ())) in
   output_string fichier_sortie !doc;
   close_out fichier_sortie
+
+let partie_multiple () =
+  let all_openings = est_oui (lire_entree "Voulez vous tester chaque ouverture du répertoire désigné? : ") in
+    let nombre = ref 0 in
+    let anti_repet = ref false in
+    if not all_openings then begin
+      nombre := (try int_of_string (lire_entree "Tapez le nombre de parties désirées : ") with _ -> exit 0);
+      if est_oui ("Voulez-vous prévenir l'utilisation d'une même ouverture plusieurs fois? : ") then begin 
+        anti_repet := true 
+      end
+    end;
+    let affichage = est_oui (lire_entree "Voulez vous afficher les coups? : ") in
+    ensemble all_openings !anti_repet !nombre affichage

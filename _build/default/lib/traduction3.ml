@@ -5,10 +5,12 @@ open Generateur
 open Traduction1
 open Zobrist
 
+(*Tableau contenant la représentation algébrique des pièces*)
 let tabfen_blanc = [|"P"; "N"; "B"; "R"; "Q"; "K"|]
 
 let tabfen_noir = [|"p"; "n"; "b"; "r"; "q"; "k"|]
 
+(*Tableau dont dont les élément sont le strind de l'indice*)
 let tabstring =
   [|
   "0"; "1";"2";"3";"4";"5";"6";"7";
@@ -21,8 +23,49 @@ let tabstring =
   "56";"57";"58";"59";"60";"61";"62";"63"
   |]
 
+(*Tableau utilisé pour expliciter la notation des roques dans la notation FEN en cas d'ambiguïté*)
+let tab_roques = [|"q"; "b"; "c"; "d"; "e"; "f"; "g"; "k"|]
+
+(*Fonction utilisée pour expliciter la notation des roques dans la notation FEN en cas d'ambiguïté*)
+let xfen_roque plateau =
+  let representation_roques = [|"K"; "Q"; "k"; "q"|] in
+  let aux plateau case_gauche depart_tour_pr depart_tour_gr trait_aux_blancs i = 
+    let liste_piece = ref [] in
+    let case = ref case_gauche in
+    let case_droite = case_gauche + 8 in
+    let roi = roi trait_aux_blancs in
+    let tour = tour trait_aux_blancs in
+    let decrement = if trait_aux_blancs then 56 else 0 in
+    let indice_pr = depart_tour_pr - decrement in
+    let indice_gr = depart_tour_gr - decrement in
+    let maj = if trait_aux_blancs then String.uppercase_ascii else fun s -> s in
+    while !case < case_droite do
+      let piece = plateau.(!case) in
+      if piece = tour then begin
+        liste_piece := piece :: !liste_piece
+      end;
+      if piece = roi then begin
+        liste_piece := piece :: !liste_piece
+      end;
+      incr case
+    done;
+    if List.length !liste_piece = 3 then begin
+      let droite = List.hd !liste_piece in
+      let milieu = List.nth !liste_piece 1 in
+      let gauche = List.nth !liste_piece 2 in
+      if droite = milieu then begin
+        representation_roques.(i) <- maj (tab_roques.(indice_pr))
+      end
+      else if gauche = milieu then begin
+        representation_roques.(i + 1) <- maj (tab_roques.(indice_gr))
+      end
+    end
+  in aux plateau 56 !depart_tour_blanche_pr !depart_tour_blanche_gr true 0;
+  aux plateau 0 !depart_tour_noire_pr !depart_tour_noire_gr false 2;
+  representation_roques
+
 (*Fonction représentant un plateau en sa notation FEN*)
-let fen plateau trait_aux_blancs dernier_coup droit_au_roque releve_coups releve_plateau =
+let fen plateau trait_aux_blancs dernier_coup (prb, grb, prn, grn) releve_coups releve_plateau =
   let fen = ref "" in
   let vides = ref 0 in
   for i = 0 to 63 do
@@ -57,15 +100,15 @@ let fen plateau trait_aux_blancs dernier_coup droit_au_roque releve_coups releve
   else begin
     fen := !fen ^ " b "
   end;
-  let prb, grb, prn, grn = droit_au_roque in
   if not (prb || grb || prn || grn) then begin
     fen := !fen ^ "-"
   end
   else begin
-    if prb then fen := !fen ^ "K";
-    if grb then fen := !fen ^ "Q";
-    if prn then fen := !fen ^ "k";
-    if grn then fen := !fen ^ "q"
+    let representation_roques = xfen_roque plateau in
+    if prb then fen := !fen ^ representation_roques.(0);
+    if grb then fen := !fen ^ representation_roques.(1);
+    if prn then fen := !fen ^ representation_roques.(2);
+    if grn then fen := !fen ^ representation_roques.(3)
   end;
   let pep = enpassant plateau trait_aux_blancs dernier_coup in
   fen := !fen ^ " " ^ (try coord.(arrivee (List.hd pep)) ^ " " with _ -> "- ");
@@ -129,12 +172,12 @@ let deduction_ep position_de_depart case_ep trait_aux_blancs =
 
 (*Fonction vérifiant la validité des roques d'une position FEN*)
 let roque_valide position_de_depart roques droit_au_roque =
-  let roi_blanc_roque = position_de_depart.(60) = 6 in
-  let roi_noir_roque = position_de_depart.(4) = (-6) in
-  let tour_blanc_petit_roque = position_de_depart.(63) = 4 in
-  let tour_blanc_grand_roque = position_de_depart.(56) = 4 in
-  let tour_noir_petit_roque = position_de_depart.(7) = (-4) in
-  let tour_noir_grand_roque = position_de_depart.(0) = (-4) in
+  let roi_blanc_roque = position_de_depart.(!depart_roi_blanc) = 6 in
+  let roi_noir_roque = position_de_depart.(!depart_roi_noir) = (-6) in
+  let tour_blanc_petit_roque = position_de_depart.(!depart_tour_blanche_pr) = 4 in
+  let tour_blanc_grand_roque = position_de_depart.(!depart_tour_blanche_gr) = 4 in
+  let tour_noir_petit_roque = position_de_depart.(!depart_tour_noire_pr) = (-4) in
+  let tour_noir_grand_roque = position_de_depart.(!depart_tour_noire_gr) = (-4) in
   droit_au_roque :=
   (String.contains roques 'K') && roi_blanc_roque && tour_blanc_petit_roque,
   (String.contains roques 'Q') && roi_blanc_roque && tour_blanc_grand_roque,
@@ -146,6 +189,7 @@ let reinitialise plateau dernier_coup droit_au_roque releve_coups releve_plateau
   for i = 0 to 63 do
     plateau.(i) <- position_de_depart.(i)
   done;
+  actualisation_roque position_de_depart;
   dernier_coup := dernier_coup_initial;
   droit_au_roque := droit_au_roque_initial;
   releve_coups := releve_coups_initial;
@@ -172,6 +216,7 @@ let position_of_fen chaine position_de_depart trait_aux_blancs dernier_coup droi
           try plateau_of_fen position_de_depart split_ligne fen_correct with _ -> fen_correct := false
         end;
         if !fen_correct then begin
+          actualisation_roque position_de_depart;
           let complete longueur = 
             let rec aux acc longueur = match longueur with
               |5 -> aux ("1" :: acc) 6
@@ -186,7 +231,7 @@ let position_of_fen chaine position_de_depart trait_aux_blancs dernier_coup droi
             trait_aux_blancs := not !trait_aux_blancs
           end;
           roque_valide position_de_depart (List.nth !split_fen 2) droit_au_roque;
-          let poussee_pep = deduction_ep position_de_depart (List.nth !split_fen 3) !trait_aux_blancs in 
+          let poussee_pep = deduction_ep position_de_depart (List.nth !split_fen 3) !trait_aux_blancs in
           if poussee_pep <> Aucun then begin
             dernier_coup := poussee_pep
           end;
@@ -211,8 +256,8 @@ let position_of_fen chaine position_de_depart trait_aux_blancs dernier_coup droi
             end
           in nombre_coup !trait_aux_blancs (List.nth !split_fen 5)
         end;
-        if (not !fen_correct)|| menacee position_de_depart (index position_de_depart (roi (not !trait_aux_blancs))) (not !trait_aux_blancs) || coups_valides position_de_depart !trait_aux_blancs !dernier_coup !droit_au_roque = [] then begin
-          reinitialise position_de_depart dernier_coup droit_au_roque releve_coups releve_plateau position_de_depart Aucun (true, true, true, true) [] [zobrist echiquier true Aucun (true, true, true, true)]
+        if (not !fen_correct) || menacee position_de_depart (index position_de_depart (roi (not !trait_aux_blancs))) (not !trait_aux_blancs) || coups_valides position_de_depart !trait_aux_blancs !dernier_coup !droit_au_roque = [] then begin
+          reinitialise position_de_depart dernier_coup droit_au_roque releve_coups releve_plateau echiquier Aucun (true, true, true, true) [] [zobrist echiquier true Aucun (true, true, true, true)]
         end
       end
     end
