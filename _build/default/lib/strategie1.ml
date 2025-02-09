@@ -8,7 +8,7 @@ open Evaluations
 
 (*Fonction permettant d'évaluer un plateau à la profondeur 0*)
 let traitement_profondeur_0 evaluation plateau trait_aux_blancs dernier_coup alpha beta =
-  let position_roi = index plateau (roi trait_aux_blancs) in
+  let position_roi = index_tableau plateau (roi trait_aux_blancs) in
   if (menacee plateau position_roi trait_aux_blancs) then begin
     let cp = coups_valides plateau trait_aux_blancs dernier_coup (false, false, false, false)
     in if cp = [] then begin
@@ -155,7 +155,7 @@ let rec negalphabeta plateau trait_aux_blancs dernier_coup droit_au_roque releve
   else begin
     let cp = ref (coups_joueur plateau profondeur trait_aux_blancs dernier_coup droit_au_roque releve_plateau evaluation negalphabeta)
     in if !cp = [] then begin incr compteur_noeuds_terminaux;
-      if menacee plateau (index plateau (roi trait_aux_blancs)) trait_aux_blancs then begin
+      if menacee plateau (index_tableau plateau (roi trait_aux_blancs)) trait_aux_blancs then begin
         best_score := profondeur_initiale - (profondeur + 99999)
       end 
       else begin
@@ -316,7 +316,7 @@ let theoriques_possibles historique =
 let tours_connectees plateau joueur = 
   let b = ref false in
   if Array.mem (tour joueur) plateau then begin
-    let t = tab64.(index plateau (tour joueur)) in
+    let t = tab64.(index_tableau plateau (tour joueur)) in
     let s1 = ref true in
     let i = ref 0 in
     while (!i < 4 && !s1) do

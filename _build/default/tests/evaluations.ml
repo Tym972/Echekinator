@@ -4,7 +4,7 @@ open Libs.Generateur
 open Libs.Traduction2
 let main =
   print_newline ();
-  let position_roi = index plateau (roi !trait_aux_blancs) in
+  let position_roi = index_tableau plateau (roi !trait_aux_blancs) in
   let roi_en_echec = menacee plateau position_roi !trait_aux_blancs in
   affiche plateau;
   let word =

@@ -392,10 +392,10 @@ let depart_tour_noire_pr = ref 7
 let depart_tour_noire_gr = ref 0
 
 (*Cases de passage du roi pour le roque*)
-let chemin_blanc_pr = [|61; 62; 0; 0; 0|]
-let chemin_blanc_gr = [|59; 58; 0; 0|]
-let chemin_noir_pr = [|5; 6; 0; 0; 0|]
-let chemin_noir_gr = [|3; 2; 0; 0|]
+let chemin_blanc_pr = [|61; 62; 0; 0; 0; 0|]
+let chemin_blanc_gr = [|59; 58; 0; 0; 0|]
+let chemin_noir_pr = [|5; 6; 0; 0; 0; 0|]
+let chemin_noir_gr = [|3; 2; 0; 0; 0|]
 
 (*Nombre de case traversée par le roi*)
 let longueur_chemin_roi_blanc_pr = ref 2
@@ -413,11 +413,27 @@ let vides_noir_gr = ref [3; 2; 1]
 let roi_blanc_clouable = ref true
 let roi_noir_clouable = ref true
 
+(*Variables indiquants si la colonne de départ de la tour du grand roque est a*)
+let tour_blanche_gr_en_a = ref true
+let tour_noire_gr_en_a = ref true
+
+(*Variables indiquant si la colonne de départ de la tour du petit roque est h*)
+let tour_blanche_pr_en_h = ref true
+let tour_noire_pr_en_h = ref true
+
 (*Case critique pour le droit au roque*)
 let clouage_roi_blanc_1 = ref 52
 let clouage_roi_blanc_2 = ref 44
 let clouage_roi_noir_1 = ref 12
 let clouage_roi_noir_2 = ref 20
+
+(*Variable indiquant la direction du grand roque, valant 1 si le déplacement du roi se fait vers la droite, (-1) sinon*)
+let direction_gr_blanc = ref (-1)
+let direction_gr_noir = ref (-1)
+
+(*Variable indiquant si la case de départ de la tour du grand roque est b1 (respectivement b8)*)
+let tour_blanche_gr_en_b = ref false
+let tour_noire_gr_en_b = ref false
 
 (*Vecteurs de déplacement des potentielles menaces au roque*)
 let vect_fou_roque_blanc_pr = [|(-9); (-11)|]
@@ -429,51 +445,51 @@ let vect_cavalier_roque_noir = [|8; 12; 19; 21|]
 
 (*Fonction actualisant les variables relatives au roque en fonction de la position de départ*)
 let actualisation_roque position_de_depart =
-  let tour_grand_roque = ref true in
-  for case = 0 to 7 do
-    let piece = position_de_depart.(case) in
-    if piece = (-4) then begin
-      if !tour_grand_roque then begin
-        depart_tour_noire_gr := case;
-        tour_grand_roque := false
-      end
-      else begin
-        depart_tour_noire_pr := case;
-      end
-    end
-    else if piece = (-6) then begin
-      depart_roi_noir := case;
-      clouage_roi_noir_1 := case + 8;
-      clouage_roi_noir_2 := case + 16;
-      if List.mem case [2; 6] then begin
-        roi_noir_clouable := false
-      end
-    end
-  done;
-  tour_grand_roque := true;
-  for case = 56 to 63 do
-    let piece = position_de_depart.(case) in
-    if piece = 4 then begin
-      if !tour_grand_roque then begin
-        depart_tour_blanche_gr := case;
-        tour_grand_roque := false
-      end
-      else begin
-        depart_tour_blanche_pr := case
-      end
-    end
-    else if piece = 6 then begin
-      depart_roi_blanc := case;
-      clouage_roi_blanc_1 := case - 8;
-      clouage_roi_blanc_2 := case - 16;
-      if List.mem case [58; 62] then begin
-        roi_blanc_clouable := false
-      end
-    end;
-  done;
   List.iter (fun tab -> Array.fill tab 0 (Array.length tab) 0) [chemin_blanc_pr; chemin_blanc_gr; chemin_noir_pr; chemin_noir_gr];
   List.iter (fun mut -> mut := 0) [longueur_chemin_roi_blanc_pr; longueur_chemin_roi_blanc_gr; longueur_chemin_roi_noir_pr; longueur_chemin_roi_noir_gr];
   List.iter (fun mut -> mut := []) [vides_blanc_pr; vides_blanc_gr; vides_noir_pr; vides_noir_gr];
+  List.iter (fun (v, b) -> v := b) [(roi_blanc_clouable, true); (roi_noir_clouable, true); (tour_blanche_gr_en_a, true); (tour_noire_gr_en_a, true); (tour_blanche_gr_en_b, false); (tour_noire_gr_en_b, false); (tour_blanche_pr_en_h, true); (tour_blanche_pr_en_h, true)];
+  List.iter (fun direction_gr -> direction_gr := (-1)) [direction_gr_blanc; direction_gr_noir];
+  List.iter (fun (vect_fou_roque_joueur_gr, vect_fou_roque_adversaire_pr) ->
+    for i = 0 to 1 do
+      vect_fou_roque_joueur_gr.(i) <- (- vect_fou_roque_adversaire_pr.(i))
+    done)
+  [(vect_fou_roque_blanc_gr, vect_fou_roque_noir_pr); (vect_fou_roque_noir_gr, vect_fou_roque_blanc_pr)];
+  let aux signe_joueur depart_roi depart_tour_pr depart_tour_gr clouage_roi_1 clouage_roi_2 roi_clouable tour_gr_en_a tour_gr_en_b tour_pr_en_h direction_gr vect_fou_roque_pr vect_fou_roque_gr =
+    let tour_grand_roque = ref true in
+    let increment = if signe_joueur > 0 then 56 else 0 in
+    for case = 0 + increment to 7 + increment do
+      let piece = signe_joueur * position_de_depart.(case) in
+      if piece = 4 then begin
+        if !tour_grand_roque then begin
+          depart_tour_gr := case;
+          tour_gr_en_a := case = 0 + increment;
+          tour_gr_en_b := case = 1 + increment;
+          tour_grand_roque := false
+        end
+        else begin
+          depart_tour_pr := case;
+          tour_pr_en_h := case = 7 + increment
+        end
+      end
+      else if piece = 6 then begin
+        depart_roi := case;
+        clouage_roi_1 := case - (signe_joueur * 8);
+        clouage_roi_2 := case - (signe_joueur * 16);
+        if List.mem case [2 + increment; 6 + increment] then begin
+          roi_clouable := false
+        end
+        else if case = 1 + increment then begin
+          List.iter (fun i -> vect_fou_roque_gr.(i) <- vect_fou_roque_pr.(i)) [0; 1];
+          direction_gr := 1
+        end
+      end
+    done
+  in List.iter
+  (fun (signe_joueur, depart_roi, depart_tour_pr, depart_tour_gr, clouage_roi_1, clouage_roi_2, roi_clouable, tour_gr_en_a, tour_gr_en_b, tour_pr_en_h, direction_gr, vect_fou_roque_pr, vect_fou_roque_gr) ->
+  aux signe_joueur depart_roi depart_tour_pr depart_tour_gr clouage_roi_1 clouage_roi_2 roi_clouable  tour_gr_en_a tour_gr_en_b tour_pr_en_h direction_gr vect_fou_roque_pr vect_fou_roque_gr)
+  [((-1), depart_roi_noir, depart_tour_noire_pr, depart_tour_noire_gr, clouage_roi_noir_1, clouage_roi_noir_2, roi_noir_clouable, tour_noire_gr_en_a, tour_noire_gr_en_b, tour_noire_pr_en_h, direction_gr_noir, vect_fou_roque_noir_pr, vect_fou_roque_noir_gr);
+  (1, depart_roi_blanc, depart_tour_blanche_pr, depart_tour_blanche_gr, clouage_roi_blanc_1, clouage_roi_blanc_2, roi_blanc_clouable, tour_blanche_gr_en_a, tour_blanche_gr_en_b, tour_blanche_pr_en_h, direction_gr_blanc, vect_fou_roque_blanc_pr, vect_fou_roque_blanc_gr)];
   let j = ref 0 in
   let aux chemin longueur_chemin_roi vides j i =
     chemin.(!j) <- i;
@@ -485,17 +501,27 @@ let actualisation_roque position_de_depart =
     aux chemin_blanc_pr longueur_chemin_roi_blanc_pr vides_blanc_pr j i
   done;
   j := 0;
-  for i = !depart_roi_blanc - 1 downto 58 do
-    aux chemin_blanc_gr longueur_chemin_roi_blanc_gr vides_blanc_gr j i
-  done;
+  if !depart_roi_blanc = 57 then begin
+    aux chemin_blanc_gr longueur_chemin_roi_blanc_gr vides_blanc_gr j 58
+  end
+  else begin
+    for i = !depart_roi_blanc - 1 downto 58 do
+      aux chemin_blanc_gr longueur_chemin_roi_blanc_gr vides_blanc_gr j i
+    done
+  end;
   j := 0;
   for i = !depart_roi_noir + 1 to 6 do
     aux chemin_noir_pr longueur_chemin_roi_noir_pr vides_noir_pr j i
   done;
   j := 0;
-  for i = !depart_roi_noir - 1 downto 2 do
-    aux chemin_noir_gr longueur_chemin_roi_noir_gr vides_noir_gr j i
-  done;
+  if !depart_roi_noir = 1 then begin
+    aux chemin_noir_gr longueur_chemin_roi_noir_gr vides_noir_gr j 2
+  end
+  else begin 
+    for i = !depart_roi_noir - 1 downto 2 do
+      aux chemin_noir_gr longueur_chemin_roi_noir_gr vides_noir_gr j i
+    done
+  end;
   j := 0;
   for i = !depart_tour_blanche_gr + 1 to 59 do
     vides_blanc_gr := i :: !vides_blanc_gr
@@ -524,7 +550,7 @@ let actualisation_roque position_de_depart =
   vides_noir_gr := supprime_doublon_triee (tri_fusion (aux_liste !vides_noir_gr !depart_tour_noire_gr !depart_roi_noir))
 
 (*Fonction permettant de vérifier la validité des roques*)
-let aux_roques plateau signe_joueur clouage_roi pseudo_e2 chemin_roi longueur_chemin_roi vect_fou vect_cavalier signe_roque =
+let menaces_roques plateau signe_joueur clouage_roi pseudo_e2 chemin_roi longueur_chemin_roi vect_fou vect_cavalier signe_roque =
   let i = ref 0 in
   let b = ref false in
   let diagonale = ref pseudo_e2 in
@@ -572,7 +598,7 @@ let aux_roques plateau signe_joueur clouage_roi pseudo_e2 chemin_roi longueur_ch
       end;
       if not !b then begin
         if !i < longueur_chemin_roi then begin
-          diagonale := signe_joueur * plateau.(clouage_roi + signe_roque * (1 + !i));
+          diagonale := signe_joueur * plateau.(clouage_roi + signe_roque * (1 + !i))
         end;
         if List.mem !diagonale [(-4); (-5); (-6)] then begin
           b := true
@@ -604,25 +630,36 @@ let aux_roques plateau signe_joueur clouage_roi pseudo_e2 chemin_roi longueur_ch
     done;
   !b
 
+(*Fonction indiquant l'absence de menace en a ou b empêchant un grand roque*)
+let gr_possible plateau trait_aux_blancs =
+  if trait_aux_blancs then begin
+    let b1 = plateau.(57) in
+    not ((b1 < (-3)) || ((b1 = 0 || !tour_blanche_gr_en_b) && List.mem plateau.(56) [(-4); (-5)]))
+  end
+  else begin
+    let b8 = plateau.(1) in
+    not (b8 > 3 || ((b8 = 0 || !tour_noire_gr_en_b) && List.mem plateau.(0) [4; 5]))
+  end
+
 (*Fonction construisant une liste des roques possible d'un joueur*)
 let roque plateau trait_aux_blancs (prb, grb, prn, grn) =
   let l = ref [] in 
   if trait_aux_blancs then begin
     let pseudo_e2 = plateau.(!clouage_roi_blanc_1) in
     if not (!roi_blanc_clouable && (pseudo_e2 = (-1) || plateau.(!clouage_roi_blanc_2) = (-2))) then begin
-      if prb && List.for_all (fun case -> plateau.(case) = 0) !vides_blanc_pr && not (aux_roques plateau 1 !clouage_roi_blanc_1 pseudo_e2 chemin_blanc_pr !longueur_chemin_roi_blanc_pr vect_fou_roque_blanc_pr vect_cavalier_roque_blanc 1)
+      if prb && (!tour_blanche_pr_en_h || plateau.(63) > (-4)) && List.for_all (fun case -> plateau.(case) = 0) !vides_blanc_pr && not (menaces_roques plateau 1 !clouage_roi_blanc_1 pseudo_e2 chemin_blanc_pr !longueur_chemin_roi_blanc_pr vect_fou_roque_blanc_pr vect_cavalier_roque_blanc 1)
           then l := Roque {sorte = 1} :: !l
       end;
-      if grb (*&& (plateau.(56) > (-4) && plateau.(57) > (-4)*) && List.for_all (fun case -> plateau.(case) = 0) !vides_blanc_gr && not (aux_roques plateau 1 !clouage_roi_blanc_1 pseudo_e2 chemin_blanc_gr !longueur_chemin_roi_blanc_gr vect_fou_roque_blanc_gr vect_cavalier_roque_blanc (-1))
+      if grb && (!tour_blanche_gr_en_a || gr_possible plateau true) && List.for_all (fun case -> plateau.(case) = 0) !vides_blanc_gr && not (menaces_roques plateau 1 !clouage_roi_blanc_1 pseudo_e2 chemin_blanc_gr !longueur_chemin_roi_blanc_gr vect_fou_roque_blanc_gr vect_cavalier_roque_blanc !direction_gr_blanc)
         then l := Roque {sorte = 2} :: !l
   end
   else begin
     let pseudo_e7 = - plateau.(!clouage_roi_noir_1) in
     if not (!roi_noir_clouable && (pseudo_e7 = (-1) || plateau.(!clouage_roi_noir_2) = 2)) then begin
-      if prn && List.for_all (fun case -> plateau.(case) = 0) !vides_noir_pr && not (aux_roques plateau (-1) !clouage_roi_noir_1 pseudo_e7 chemin_noir_pr !longueur_chemin_roi_noir_pr vect_fou_roque_noir_pr vect_cavalier_roque_noir 1)
+      if prn && (!tour_noire_pr_en_h || plateau.(0) < 4) && List.for_all (fun case -> plateau.(case) = 0) !vides_noir_pr && not (menaces_roques plateau (-1) !clouage_roi_noir_1 pseudo_e7 chemin_noir_pr !longueur_chemin_roi_noir_pr vect_fou_roque_noir_pr vect_cavalier_roque_noir 1)
           then l := Roque {sorte = 3} :: !l
       end;
-      if grn && (*plateau.(0) < 4 && plateau.(1) < 4) &&*) List.for_all (fun case -> plateau.(case) = 0) !vides_noir_gr && not (aux_roques plateau (-1) !clouage_roi_noir_1 pseudo_e7 chemin_noir_gr !longueur_chemin_roi_noir_gr vect_fou_roque_noir_gr vect_cavalier_roque_noir (-1))
+      if grn && (!tour_noire_gr_en_a || gr_possible plateau false) && List.for_all (fun case -> plateau.(case) = 0) !vides_noir_gr && not (menaces_roques plateau (-1) !clouage_roi_noir_1 pseudo_e7 chemin_noir_gr !longueur_chemin_roi_noir_gr vect_fou_roque_noir_gr vect_cavalier_roque_noir !direction_gr_noir)
         then l := Roque {sorte = 4} :: !l
     end;
   !l
@@ -902,7 +939,7 @@ let coups_valides plateau trait_aux_blancs dernier_coup (prb, grb, prn, grn) =
   let l = ref [] in
   let cp = ref ((enpassant plateau trait_aux_blancs dernier_coup) @ deplacements_all plateau trait_aux_blancs) in
   let roi_joueur = roi trait_aux_blancs in
-  let position_roi = index plateau roi_joueur in
+  let position_roi = index_tableau plateau roi_joueur in
   if menacee plateau position_roi trait_aux_blancs then begin
     while !cp <> [] do
       let coup = List.hd !cp in
@@ -979,7 +1016,7 @@ let est_valide plateau coup joueur =
       b := false
     end
   end
-  else if (menacee plateau (index plateau (roi joueur)) (plateau.(arrivee coup) > 0)) then begin
+  else if (menacee plateau (index_tableau plateau (roi joueur)) (plateau.(arrivee coup) > 0)) then begin
     b := false
   end;
   dejoue plateau coup;
@@ -1009,7 +1046,7 @@ let gagne plateau trait_aux_blancs dernier_coup =
   let vainqueur = ref 2 in
   if trait_aux_blancs then begin
     if (coups_valides plateau trait_aux_blancs dernier_coup (false, false, false, false)) = [] then begin
-      if menacee plateau (index plateau 6) true then
+      if menacee plateau (index_tableau plateau 6) true then
         vainqueur := -1
       else
         vainqueur := 0
@@ -1017,7 +1054,7 @@ let gagne plateau trait_aux_blancs dernier_coup =
   end
   else begin
     if (coups_valides plateau trait_aux_blancs dernier_coup (false, false, false, false)) = [] then begin
-      if menacee plateau (index plateau (-6)) false then
+      if menacee plateau (index_tableau plateau (-6)) false then
         vainqueur := 1
       else
         vainqueur := 0

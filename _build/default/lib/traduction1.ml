@@ -14,7 +14,7 @@ let dicosimple =
 let origine_en_passant coup trait_aux_blancs =
   let arrivee = Hashtbl.find dicocoord ((String.make 1 coup.[1]) ^ (String.make 1 coup.[2])) in
   let depart =
-    if trait_aux_blancs then 
+    if trait_aux_blancs then
       Hashtbl.find dicocoord ((String.make 1 (coup.[0])) ^ string_of_int ((int_of_string (String.make 1 (coup.[2]))) - 1)) 
     else
       Hashtbl.find dicocoord ((String.make 1 (coup.[0])) ^ string_of_int ((int_of_string (String.make 1 (coup.[2]))) + 1))

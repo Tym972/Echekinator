@@ -1,1 +1,1 @@
-lib/traduction3.ml: Array Generateur Hashtbl List Plateau Str String Traduction1 Zobrist
+lib/traduction3.ml: Array Char Generateur Hashtbl List Plateau Str String Traduction1 Zobrist

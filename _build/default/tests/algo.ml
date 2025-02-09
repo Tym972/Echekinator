@@ -18,7 +18,7 @@ let rec negamax plateau trait_aux_blancs dernier_coup droit_au_roque profondeur 
   else begin
     let cp = ref (coups_valides plateau trait_aux_blancs dernier_coup droit_au_roque)
     in if !cp = [] then begin
-      if menacee plateau (index plateau (roi trait_aux_blancs)) trait_aux_blancs then begin
+      if menacee plateau (index_tableau plateau (roi trait_aux_blancs)) trait_aux_blancs then begin
         best_score := (- (profondeur + 9999))
       end 
       else begin
@@ -53,7 +53,7 @@ let rec negalphabeta_simple plateau trait_aux_blancs dernier_coup droit_au_roque
   else begin
     let cp = ref (coups_joueur plateau profondeur trait_aux_blancs dernier_coup droit_au_roque [] evaluation negalphabeta)
     in if !cp = [] then begin
-      if menacee plateau (index plateau (roi trait_aux_blancs)) trait_aux_blancs then begin
+      if menacee plateau (index_tableau plateau (roi trait_aux_blancs)) trait_aux_blancs then begin
         best_score := (profondeur_initiale - (profondeur + 99999))
       end 
       else begin
@@ -93,7 +93,7 @@ let rec pvs plateau trait_aux_blancs dernier_coup droit_au_roque profondeur prof
   else begin
     let cp = ref (coups_joueur plateau profondeur trait_aux_blancs dernier_coup droit_au_roque [] evaluation negalphabeta)
     in if !cp = [] then begin
-      if menacee plateau (index plateau (roi trait_aux_blancs)) trait_aux_blancs then begin
+      if menacee plateau (index_tableau plateau (roi trait_aux_blancs)) trait_aux_blancs then begin
         alpha0 := (profondeur_initiale - (profondeur + 9999))
       end 
       else begin
@@ -163,7 +163,7 @@ let rec negalphabeta_idd plateau trait_aux_blancs dernier_coup droit_au_roque re
   else begin
     let cp = ref (coups_joueur_idd plateau profondeur profondeur_initiale trait_aux_blancs dernier_coup droit_au_roque releve_plateau evaluation idd_candidat negalphabeta)
     in if !cp = [] then begin
-      if menacee plateau (index plateau (roi trait_aux_blancs)) trait_aux_blancs then begin
+      if menacee plateau (index_tableau plateau (roi trait_aux_blancs)) trait_aux_blancs then begin
         best_score := (profondeur_initiale - (profondeur + 99999))
       end 
       else begin

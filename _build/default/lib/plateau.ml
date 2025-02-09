@@ -165,28 +165,16 @@ let rec select liste n = match liste with
   |h::t -> if n = 0 then [] else h :: select t (n - 1)
 
 (*Fonction renvoyant l'indice de la première occurence d'un élément dans un tableau*)
-let index tableau element =
+let index_tableau tableau element =
   if element < 0 then begin
-    let i = ref (-1) in
-    let b = ref true in
-    while !b do
-      incr i;
-      if tableau.(!i) = element then begin
-        b := false
-      end
-    done;
-    !i
+    let rec aux i =
+      if tableau.(i) = element then i else aux (i + 1)
+    in aux 0
   end
   else begin
-    let i = ref 64 in
-    let b = ref true in
-    while !b do
-      decr i;
-      if tableau.(!i) = element then begin
-        b := false
-      end
-    done;
-    !i
+    let rec aux i =
+      if tableau.(i) = element then i else aux (i - 1)
+    in aux 63
   end
 
 (*Tri fusion*)

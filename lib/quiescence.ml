@@ -262,7 +262,7 @@ let captures plateau trait_aux_blancs dernier =
   let l = ref [] in
   let cp = ref ((enpassant plateau trait_aux_blancs dernier) @ pseudo_captures plateau trait_aux_blancs) in
   let roi_joueur = roi trait_aux_blancs in
-  let position_roi = index plateau roi_joueur in
+  let position_roi = index_tableau plateau roi_joueur in
   if menacee plateau position_roi trait_aux_blancs then begin
     while !cp <> [] do
       let coup = List.hd !cp in
@@ -555,7 +555,7 @@ let compteur_quiescent = ref 0
 
 (*Fonction implémentant la recherche quiescente*)
 let rec recherche_quiescente plateau trait_aux_blancs alpha beta evaluation cap profondeur = incr compteur_quiescent;
-  let position_roi = index plateau (roi trait_aux_blancs) in
+  let position_roi = index_tableau plateau (roi trait_aux_blancs) in
   let roi_en_echec = (menacee plateau position_roi trait_aux_blancs) in
   let best_score = ref (-99999) in
   let delta = evaluation plateau trait_aux_blancs position_roi roi_en_echec alpha beta in
@@ -597,7 +597,7 @@ let rec recherche_quiescente plateau trait_aux_blancs alpha beta evaluation cap 
 
 (*Fonction permettant d'évaluer un plateau à la profondeur 0*)
 let traitement_quiescent_profondeur_0 evaluation plateau trait_aux_blancs dernier alpha beta =
-  let position_roi = index plateau (roi trait_aux_blancs) in
+  let position_roi = index_tableau plateau (roi trait_aux_blancs) in
   let cp = coups_valides plateau trait_aux_blancs dernier (false, false, false, false)
   in if cp = [] then begin
     if (menacee plateau position_roi trait_aux_blancs) then begin
@@ -629,7 +629,7 @@ let rec negalphabeta_quiescent plateau trait_aux_blancs dernier_coup droit_au_ro
   else begin
     let cp = ref (coups_joueur plateau profondeur trait_aux_blancs dernier_coup droit_au_roque releve_plateau evaluation negalphabeta)
     in if !cp = [] then begin incr compteur_noeuds_terminaux;
-      if (menacee plateau (index plateau (roi trait_aux_blancs)) trait_aux_blancs) then begin
+      if (menacee plateau (index_tableau plateau (roi trait_aux_blancs)) trait_aux_blancs) then begin
         best_score := (profondeur_initiale - (profondeur + 99999))
       end 
       else begin

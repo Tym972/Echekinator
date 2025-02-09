@@ -78,7 +78,7 @@ let rec negalphabeta_trans plateau trait_aux_blancs dernier_coup droit_au_roque 
       else begin
         let cp = ref (coups_joueur plateau profondeur trait_aux_blancs dernier_coup droit_au_roque releve_plateau evaluation negalphabeta)
         in if !cp = [] then begin
-          if (menacee plateau (index plateau (roi trait_aux_blancs)) trait_aux_blancs) then begin
+          if (menacee plateau (index_tableau plateau (roi trait_aux_blancs)) trait_aux_blancs) then begin
             best_score := (profondeur_initiale - (profondeur + 99999))
           end 
           else begin

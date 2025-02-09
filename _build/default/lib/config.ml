@@ -66,14 +66,13 @@ let krn =
     [|4; 2; 6; 2; 4|]; [|4; 2; 6; 4; 2|]; [|4; 6; 2; 2; 4|]; [|4; 6; 2; 4; 2|]; [|4; 6; 4; 2; 2|]|]
 
 (*Fonction permettant de jouer une partie d'échec 960*)
-let fischer code_string position_de_depart releve_plateau =
+let fischer code_fen position_de_depart releve_plateau =
   for i = 0 to 7 do
     position_de_depart.(i) <- 0;
     position_de_depart.(i + 56) <- 0;
   done;
   Random.self_init ();
-  let code = ref 518 in
-  code := (try int_of_string code_string with _ -> (Random.int 960));
+  let code = ref code_fen in
   if !code < 0 || !code > 959 then begin
     code := Random.int 960
   end;
@@ -141,12 +140,13 @@ let initialisation () =
       position_of_fen chaine_fen position_de_depart trait_aux_blancs dernier_coup droit_au_roque releve_coups releve_plateau
     end
     else if choix = "2" then begin
-      let code_string = ref "" in
+      Random.self_init ();
+      let code_fen = ref (Random.int 960) in
       let choice = lire_entree "Souhaitez-vous une position spécifique : " in
       if est_oui choice then begin
-        code_string := lire_entree "Saisissez le code de la position : "
+        code_fen := (try int_of_string (lire_entree "Saisissez le code de la position : ") with _ -> !code_fen) 
       end;
-      fischer !code_string position_de_depart releve_plateau
+      fischer !code_fen position_de_depart releve_plateau
     end;
     affiche_coup position_de_depart !trait_aux_blancs !dernier_coup !droit_au_roque !releve_coups !releve_plateau
   end;

@@ -29,39 +29,28 @@ let tab_roques = [|"q"; "b"; "c"; "d"; "e"; "f"; "g"; "k"|]
 (*Fonction utilisée pour expliciter la notation des roques dans la notation FEN en cas d'ambiguïté*)
 let xfen_roque plateau =
   let representation_roques = [|"K"; "Q"; "k"; "q"|] in
-  let aux plateau case_gauche depart_tour_pr depart_tour_gr trait_aux_blancs i = 
-    let liste_piece = ref [] in
-    let case = ref case_gauche in
-    let case_droite = case_gauche + 8 in
-    let roi = roi trait_aux_blancs in
-    let tour = tour trait_aux_blancs in
+  let aux plateau depart_tour_pr depart_tour_gr trait_aux_blancs i =
     let decrement = if trait_aux_blancs then 56 else 0 in
+    let case = ref decrement in
+    let case_droite = decrement + 8 in
+    let tour = tour trait_aux_blancs in
     let indice_pr = depart_tour_pr - decrement in
     let indice_gr = depart_tour_gr - decrement in
     let maj = if trait_aux_blancs then String.uppercase_ascii else fun s -> s in
     while !case < case_droite do
       let piece = plateau.(!case) in
       if piece = tour then begin
-        liste_piece := piece :: !liste_piece
-      end;
-      if piece = roi then begin
-        liste_piece := piece :: !liste_piece
+        if !case < depart_tour_gr then begin
+          representation_roques.(i + 1) <- maj (tab_roques.(indice_gr))
+        end
+        else if !case > depart_tour_pr then begin
+          representation_roques.(i) <- maj (tab_roques.(indice_pr))
+        end
       end;
       incr case
-    done;
-    if List.length !liste_piece = 3 then begin
-      let droite = List.hd !liste_piece in
-      let milieu = List.nth !liste_piece 1 in
-      let gauche = List.nth !liste_piece 2 in
-      if droite = milieu then begin
-        representation_roques.(i) <- maj (tab_roques.(indice_pr))
-      end
-      else if gauche = milieu then begin
-        representation_roques.(i + 1) <- maj (tab_roques.(indice_gr))
-      end
-    end
-  in aux plateau 56 !depart_tour_blanche_pr !depart_tour_blanche_gr true 0;
-  aux plateau 0 !depart_tour_noire_pr !depart_tour_noire_gr false 2;
+    done
+  in List.iter (fun (depart_tour_pr, depart_tour_gr, trait_aux_blancs, i) -> aux plateau depart_tour_pr depart_tour_gr trait_aux_blancs i)
+  [(!depart_tour_blanche_pr, !depart_tour_blanche_gr, true, 0); (!depart_tour_noire_pr, !depart_tour_noire_gr, false, 2)];
   representation_roques
 
 (*Fonction représentant un plateau en sa notation FEN*)
@@ -170,19 +159,137 @@ let deduction_ep position_de_depart case_ep trait_aux_blancs =
     Aucun
   end
 
-(*Fonction vérifiant la validité des roques d'une position FEN*)
+(*Tableau utilisé pour expliciter la notation des roques dans la notation FEN en cas d'ambiguïté*)
+let dicoroque_xfend =
+  let ht = Hashtbl.create 12 in
+  List.iter (fun (key, value) -> Hashtbl.add ht key value)
+  [('q', 0); ('b', 1); ('c', 2); ('d', 3); ('e', 4); ('f', 5); ('g', 6); ('k', 7)];
+  ht
+
+(*Fonction vérifiant la validité des roques d'une position XFEN*)
 let roque_valide position_de_depart roques droit_au_roque =
-  let roi_blanc_roque = position_de_depart.(!depart_roi_blanc) = 6 in
-  let roi_noir_roque = position_de_depart.(!depart_roi_noir) = (-6) in
-  let tour_blanc_petit_roque = position_de_depart.(!depart_tour_blanche_pr) = 4 in
-  let tour_blanc_grand_roque = position_de_depart.(!depart_tour_blanche_gr) = 4 in
-  let tour_noir_petit_roque = position_de_depart.(!depart_tour_noire_pr) = (-4) in
-  let tour_noir_grand_roque = position_de_depart.(!depart_tour_noire_gr) = (-4) in
-  droit_au_roque :=
-  (String.contains roques 'K') && roi_blanc_roque && tour_blanc_petit_roque,
-  (String.contains roques 'Q') && roi_blanc_roque && tour_blanc_grand_roque,
-  (String.contains roques 'k') && roi_noir_roque && tour_noir_petit_roque,
-  (String.contains roques 'q') && roi_noir_roque && tour_noir_grand_roque
+  let prb = ref false in
+  let grb = ref false in
+  let prn = ref false in
+  let grn = ref false in
+  let nombre_roques_blancs = ref 0 in
+  let nombre_roques_noirs = ref 0 in
+  let n = if roques = "-" then 0 else String.length roques in
+  for i = 0 to (n - 1) do 
+    let roque = roques.[i] in
+    if roque = Char.uppercase_ascii roque then begin
+      incr nombre_roques_blancs
+    end
+    else begin
+      incr nombre_roques_noirs
+    end
+  done;
+  let position_tours_blanches = ref [] in
+  let position_tours_noires = ref [] in
+  let position_roi_blanc = ref (-1) in
+  let position_roi_noir = ref (-1) in
+  let aux_plateau plateau trait_aux_blancs position_tours position_roi =
+    let increment = if trait_aux_blancs then 56 else 0 in
+    let case = ref increment in
+    let case_droite = increment + 8 in
+    let tour = tour trait_aux_blancs in
+    let roi = roi trait_aux_blancs in
+    while !case < case_droite do
+      let piece = plateau.(!case) in
+      if piece = tour then begin
+        position_tours := !case :: !position_tours
+      end
+      else if piece = roi then begin
+        position_roi := !case
+      end;
+      incr case
+    done
+  in List.iter
+  (fun (trait_aux_blancs, positions_tour, position_roi) -> aux_plateau position_de_depart trait_aux_blancs positions_tour position_roi)
+  [(true, position_tours_blanches, position_roi_blanc); (false, position_tours_noires, position_roi_noir)];
+  let indice = ref 0 in
+  let aux_string position_roi nombres_roques trait_aux_blancs indice =
+    if nombres_roques = 2 then begin
+      let result = Hashtbl.find dicoroque_xfend (Char.lowercase_ascii roques.[!indice]), Hashtbl.find dicoroque_xfend (Char.lowercase_ascii roques.[!indice + 1])
+      in indice := !indice + 2;
+      result
+    end
+    else if nombres_roques = 1 then begin
+      let increment = if trait_aux_blancs then 56 else 0 in
+      let depart_tour = Hashtbl.find dicoroque_xfend (Char.lowercase_ascii roques.[!indice]) + increment in
+      incr indice;
+      if depart_tour > position_roi then begin
+        depart_tour, (-2)
+      end
+      else begin
+        (-2), depart_tour
+      end
+    end
+    else begin
+      (-2), (-2)
+    end
+  in let petit_roque_blanc, grand_roque_blanc = aux_string !position_roi_blanc !nombre_roques_blancs true indice
+  in let petit_roque_noir, grand_roque_noir = aux_string !position_roi_noir !nombre_roques_noirs false indice in
+  if !nombre_roques_blancs <> 0 && !position_roi_blanc <> (-1) then begin
+    if (grand_roque_blanc <> (-2) && List.exists (fun position_tour -> !position_roi_blanc > position_tour) !position_tours_blanches) then begin
+      grb := true
+    end;
+    if (petit_roque_blanc <> (-2) && List.exists (fun position_tour -> !position_roi_blanc < position_tour) !position_tours_blanches) then begin
+      prb := true
+    end
+  end;
+  if !nombre_roques_noirs <> 0 && !position_roi_noir <> (-1) then begin
+    if (grand_roque_noir <> (-2) && List.exists (fun position_tour -> !position_roi_noir > position_tour) !position_tours_noires) then begin
+      grn := true
+    end;
+    if (petit_roque_noir <> (-2) && List.exists (fun position_tour -> !position_roi_noir < position_tour) !position_tours_noires) then begin
+      prn := true
+    end
+  end;
+  droit_au_roque := !prb, !grn, !prn, !grn;
+  if !prb || !prn || !grb || !grn then begin
+    let plateau_provisoire = Array.make 64 0
+    in let depart_gr_blanc = ref (if grand_roque_blanc = (-2) then (-1) else if grand_roque_blanc = 56 then (List.hd (List.rev !position_tours_blanches)) else grand_roque_blanc) in
+    let depart_pr_blanc = ref (if petit_roque_blanc = (-2) then (-1) else if petit_roque_blanc = 63 then (List.hd !position_tours_blanches) else petit_roque_blanc) in
+    let depart_gr_noir = ref (if grand_roque_noir = (-2) then (-1) else if grand_roque_noir = 0 then (List.hd (List.rev !position_tours_noires)) else grand_roque_noir) in
+    let depart_pr_noir = ref (if petit_roque_noir = (-2) then (-1) else if petit_roque_noir = 7 then (List.hd !position_tours_noires) else petit_roque_noir) in
+    let liste_occupee_blanche = List.filter (fun case -> case > (-1)) [!depart_gr_blanc; !depart_pr_blanc; !position_roi_blanc] in
+    let liste_occupee_noire = List.filter (fun case -> case > (-1)) [!depart_gr_noir; !depart_pr_noir; !position_roi_noir] in
+    let aux_depart depart trait_aux_blancs est_pr liste_occupee =
+      if !depart = (-1) then begin
+        let increment = if trait_aux_blancs then 56 else 0 in
+        if est_pr then begin
+          let b = ref true in
+          let case = ref (increment + 7) in
+          while !b do
+            if List.mem !case liste_occupee then
+              decr case
+            else begin
+              depart := !case;
+              b := false
+            end
+          done
+        end
+        else begin
+          let b = ref true in
+          let case = ref increment in
+          while !b do
+            if List.mem !case liste_occupee then
+            incr case
+            else begin
+              depart := !case;
+              b := false
+            end
+          done
+        end
+      end
+    in List.iter (fun (depart, trait_aux_blancs, est_pr, liste_occupee) -> aux_depart depart trait_aux_blancs est_pr liste_occupee)
+    [(depart_gr_blanc, true, false, liste_occupee_blanche); (depart_pr_blanc, true, true, liste_occupee_blanche);
+    (depart_gr_noir, false, false, liste_occupee_noire) ;(depart_pr_noir, false, true, liste_occupee_noire)];
+    List.iter (fun (position, piece) -> plateau_provisoire.(position) <- piece)
+    [(!position_roi_blanc, 6); (!position_roi_noir, (-6)); (!depart_gr_blanc, 4); (!depart_pr_blanc, 4); (!depart_gr_noir, (-4)); (!depart_pr_noir, (-4))];
+    actualisation_roque plateau_provisoire
+  end
 
 (*Fonction permettant de réinitialiser un plateau à l'état d'origine*)
 let reinitialise plateau dernier_coup droit_au_roque releve_coups releve_plateau position_de_depart dernier_coup_initial droit_au_roque_initial releve_coups_initial releve_plateau_initial = 
@@ -227,7 +334,7 @@ let position_of_fen chaine position_de_depart trait_aux_blancs dernier_coup droi
             in List.rev (aux [] longueur)
           in split_fen := !split_fen @ (complete longueur_fen);
           trait_aux_blancs := not (List.nth !split_fen 1 = "b");
-          if (menacee position_de_depart (index position_de_depart (roi (not !trait_aux_blancs))) (not !trait_aux_blancs) || coups_valides position_de_depart !trait_aux_blancs !dernier_coup !droit_au_roque = []) then begin
+          if (menacee position_de_depart (index_tableau position_de_depart (roi (not !trait_aux_blancs))) (not !trait_aux_blancs) || coups_valides position_de_depart !trait_aux_blancs !dernier_coup !droit_au_roque = []) then begin
             trait_aux_blancs := not !trait_aux_blancs
           end;
           roque_valide position_de_depart (List.nth !split_fen 2) droit_au_roque;
@@ -256,7 +363,7 @@ let position_of_fen chaine position_de_depart trait_aux_blancs dernier_coup droi
             end
           in nombre_coup !trait_aux_blancs (List.nth !split_fen 5)
         end;
-        if (not !fen_correct) || menacee position_de_depart (index position_de_depart (roi (not !trait_aux_blancs))) (not !trait_aux_blancs) || coups_valides position_de_depart !trait_aux_blancs !dernier_coup !droit_au_roque = [] then begin
+        if (not !fen_correct) || menacee position_de_depart (index_tableau position_de_depart (roi (not !trait_aux_blancs))) (not !trait_aux_blancs) || coups_valides position_de_depart !trait_aux_blancs !dernier_coup !droit_au_roque = [] then begin
           reinitialise position_de_depart dernier_coup droit_au_roque releve_coups releve_plateau echiquier Aucun (true, true, true, true) [] [zobrist echiquier true Aucun (true, true, true, true)]
         end
       end

@@ -29,7 +29,7 @@ let rec negalphabeta_total plateau trait_aux_blancs dernier_coup droit_au_roque 
     
     
     (*if profondeur = 3 then print_endline ( string_of_int beta);*)
-    if (not (menacee plateau (index plateau (roi trait_aux_blancs)) trait_aux_blancs)) && profondeur >= 3 then begin
+    if (not (menacee plateau (index_tableau plateau (roi trait_aux_blancs)) trait_aux_blancs)) && profondeur >= 3 then begin
       let score,_ = negalphabeta_total plateau (not trait_aux_blancs) Aucun droit_au_roque releve_plateau (profondeur - 3) profondeur_initiale (- beta) (- beta + 1) evaluation false in
       if score >= beta then begin
         let biggie = Array.copy plateau in dejoue biggie dernier_coup;
@@ -65,7 +65,7 @@ let rec negalphabeta_total plateau trait_aux_blancs dernier_coup droit_au_roque 
     
     if !continuation then begin
       if !cp = [] then begin
-        if (menacee plateau (index plateau (roi trait_aux_blancs)) trait_aux_blancs) then begin
+        if (menacee plateau (index_tableau plateau (roi trait_aux_blancs)) trait_aux_blancs) then begin
           best_score := (profondeur_initiale - (profondeur + 99999))
         end 
         else begin

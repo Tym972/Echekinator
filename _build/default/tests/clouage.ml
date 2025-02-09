@@ -9,7 +9,7 @@ let main b1 b11 =
   print_newline ();
   affiche plateau;
   if b1 then begin
-    let c = clouees plateau (index plateau (roi !trait_aux_blancs)) !trait_aux_blancs in
+    let c = clouees plateau (index_tableau plateau (roi !trait_aux_blancs)) !trait_aux_blancs in
     print_string "Clouées : ";
     print_list c;
     print_newline ();
