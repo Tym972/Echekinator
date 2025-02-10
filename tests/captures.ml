@@ -1,4 +1,3 @@
-
 open Config
 open Libs.Plateau
 open Libs.Generateur

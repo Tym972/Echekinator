@@ -117,12 +117,6 @@ let fischer code_fen position_de_depart releve_plateau =
   in placement_krn z;
   actualisation_roque position_de_depart;
   releve_plateau := [zobrist position_de_depart true Aucun (true, true, true, true)]
-
-(*Affiche le plateau et l'enregistrement FEN*)
-let affiche_coup plateau trait_aux_blancs dernier_coup droit_au_roque releve_coups releve_plateau = 
-  affiche plateau;
-  print_endline (fen plateau trait_aux_blancs dernier_coup droit_au_roque releve_coups releve_plateau);
-  print_newline ()
     
 (*Fonction permettant à l'utilisateur de rentrer la position choisie*)
 let initialisation () =
@@ -166,7 +160,7 @@ let config () =
   let plateau = Array.copy position_de_depart in
   let historique = lire_entree "Des coups ont-ils été joués? : " in
   if est_oui historique then begin
-    let reverse_historique = try algebric_to_type_mouvement (lire_entree_multiligne "Entrez la notation algébrique du début de partie : ") !trait_aux_blancs !dernier_coup !droit_au_roque position_de_depart with _ -> [] in
+    let reverse_historique = algebric_to_type_mouvement (lire_entree_multiligne "Entrez la notation algébrique du début de partie : ") !trait_aux_blancs !dernier_coup !droit_au_roque position_de_depart in
     joue_liste reverse_historique plateau dernier_coup releve_coups releve_plateau droit_au_roque trait_aux_blancs;
     affiche_coup plateau !trait_aux_blancs !dernier_coup !droit_au_roque !releve_coups !releve_plateau
   end;

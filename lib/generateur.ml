@@ -656,7 +656,7 @@ let roque plateau trait_aux_blancs (prb, grb, prn, grn) =
   else begin
     let pseudo_e7 = - plateau.(!clouage_roi_noir_1) in
     if not (!roi_noir_clouable && (pseudo_e7 = (-1) || plateau.(!clouage_roi_noir_2) = 2)) then begin
-      if prn && (!tour_noire_pr_en_h || plateau.(0) < 4) && List.for_all (fun case -> plateau.(case) = 0) !vides_noir_pr && not (menaces_roques plateau (-1) !clouage_roi_noir_1 pseudo_e7 chemin_noir_pr !longueur_chemin_roi_noir_pr vect_fou_roque_noir_pr vect_cavalier_roque_noir 1)
+      if prn && (!tour_noire_pr_en_h || plateau.(7) < 4) && List.for_all (fun case -> plateau.(case) = 0) !vides_noir_pr && not (menaces_roques plateau (-1) !clouage_roi_noir_1 pseudo_e7 chemin_noir_pr !longueur_chemin_roi_noir_pr vect_fou_roque_noir_pr vect_cavalier_roque_noir 1)
           then l := Roque {sorte = 3} :: !l
       end;
       if grn && (!tour_noire_gr_en_a || gr_possible plateau false) && List.for_all (fun case -> plateau.(case) = 0) !vides_noir_gr && not (menaces_roques plateau (-1) !clouage_roi_noir_1 pseudo_e7 chemin_noir_gr !longueur_chemin_roi_noir_gr vect_fou_roque_noir_gr vect_cavalier_roque_noir !direction_gr_noir)

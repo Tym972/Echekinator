@@ -33,7 +33,7 @@ let annule_coup plateau trait_aux_blancs dernier_coup droit_au_roque releve_coup
   joue_liste ancien_historique plateau dernier_coup releve_coups releve_plateau droit_au_roque (ref trait_aux_blancs_initial);
   print_endline ("Annulation du dernier coup des " ^ affiche_joueur);
   joue plateau coup_intermediaire;
-  affiche_coup plateau !trait_aux_blancs !dernier_coup !droit_au_roque !releve_coups !releve_plateau;
+  affiche_coup plateau (not !trait_aux_blancs) coup_intermediaire (modification_roque coup_intermediaire !droit_au_roque) (coup_intermediaire :: !releve_coups) (nouveau_releve_plateau coup_intermediaire releve_plateau plateau !trait_aux_blancs !droit_au_roque);
   dejoue plateau coup_intermediaire
 
 (*Fonction permettant à un utilisateur connaissant la notation algébrique de jouer ses coups*)
@@ -42,8 +42,8 @@ let jeu_humain plateau regle_des_50_coups dernier_coup releve_coups releve_plate
   let affiche_joueur = if !trait_aux_blancs then "blancs" else "noirs" in
   print_string ("Au tour des " ^ affiche_joueur ^ " de jouer\n");
   let coups_valides_joueur = coups_valides plateau !trait_aux_blancs !dernier_coup !droit_au_roque in
-  let coup = supprimer (lire_entree "Entrez votre coup : ") in
-  if List.mem (String.lowercase_ascii coup) ["tb"; "x-x-x"; "reprendre"; "take back"] && (List.length (List.filter (fun coup -> coup <> Aucun) !releve_coups)) > 1 then begin
+  let coup = lire_entree "Entrez votre coup : " in
+  if List.mem (String.lowercase_ascii coup) ["tb"; "--"; "x-x-x"; "reprendre"; "take back"] && (List.length (List.filter (fun coup -> coup <> Aucun) !releve_coups)) > 1 then begin
     annule_coup plateau trait_aux_blancs dernier_coup droit_au_roque releve_coups releve_plateau affiche_joueur position_de_depart trait_aux_blancs_initial dernier_coup_initial droit_au_roque_initial releve_coups_initial releve_plateau_initial
   end
   else if List.mem (String.lowercase_ascii coup) ["abandon"; "resign"; "forfeit"; "forfait"] then begin

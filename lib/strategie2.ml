@@ -7,6 +7,12 @@ open Evaluations
 open Traduction3
 open Zobrist
 
+(*Affiche le plateau et l'enregistrement FEN*)
+let affiche_coup plateau trait_aux_blancs dernier_coup droit_au_roque releve_coups releve_plateau = 
+  affiche plateau;
+  print_endline (fen plateau trait_aux_blancs dernier_coup droit_au_roque releve_coups releve_plateau);
+  print_newline ()
+
 (*Fonction permettant d'afficher l'évaluation que fait le moteur d'une position*)
 let affiche_score score profondeur_initiale trait_aux_blancs =
   if trait_aux_blancs then begin
@@ -83,9 +89,7 @@ let algo_decisionnel plateau regle_des_50_coups dernier_coup releve_coups releve
   let phase3 = ref false in
   let ref_temps = ref 0. in
   if affichage then begin
-    affiche plateau;
-    print_endline (fen plateau !trait_aux_blancs !dernier_coup !droit_au_roque !releve_coups !releve_plateau);
-    print_newline ();
+    affiche_coup plateau !trait_aux_blancs !dernier_coup !droit_au_roque !releve_coups !releve_plateau
   end;
   let theorie = ref (List.length !releve_coups < duree_theorie && position_de_depart = echiquier)
   in if !theorie then begin
@@ -157,9 +161,7 @@ let algo_decisionnel plateau regle_des_50_coups dernier_coup releve_coups releve
 let algo_hasard plateau regle_des_50_coups dernier_coup releve_coups releve_plateau trait_aux_blancs verif partie_finie (profondeur : int) (profondeur_max : int) (duree_theorie : int) (duree_ouverture : int) (duree_finale : int) (temps_limite_court : float) (phase1 : bool ref) (position_de_depart : int array) (affichage : bool)  (evaluation_ouverture : int array -> bool -> int -> bool -> int -> int -> int) (evaluation_mdj : int array -> bool -> int -> bool -> int -> int -> int) (evaluation_finale : int array -> bool -> int -> bool -> int -> int -> int) droit_au_roque (recherche : int array -> bool -> mouvement -> bool * bool * bool * bool -> int list -> int -> (int array -> bool -> int -> bool -> int -> int -> int) -> (int * mouvement) * float) =
   let _ = profondeur, profondeur_max, duree_theorie, duree_ouverture, duree_finale, temps_limite_court, phase1, position_de_depart, affichage, evaluation_ouverture, evaluation_mdj, evaluation_finale, recherche in
   if affichage then begin
-    affiche plateau;
-    print_endline (fen plateau !trait_aux_blancs !dernier_coup !droit_au_roque !releve_coups !releve_plateau);
-    print_newline ();
+    affiche_coup plateau !trait_aux_blancs !dernier_coup !droit_au_roque !releve_coups !releve_plateau;
     print_endline "Hasard"
   end;
   let valides = coups_valides plateau !trait_aux_blancs !dernier_coup !droit_au_roque in

@@ -13,14 +13,14 @@ let tabfen_noir = [|"p"; "n"; "b"; "r"; "q"; "k"|]
 (*Tableau dont dont les élément sont le strind de l'indice*)
 let tabstring =
   [|
-  "0"; "1";"2";"3";"4";"5";"6";"7";
-  "8"; "9";"10";"11";"12";"13";"14";"15";
-  "16";"17";"18";"19";"20";"21";"22";"23";
-  "24";"25";"26";"27";"28";"29";"30";"31";
-  "32";"33";"34";"35";"36";"37";"38";"39";
-  "40";"41";"42";"43";"44";"45";"46";"47";
-  "48";"49";"50";"51";"52";"53";"54";"55";
-  "56";"57";"58";"59";"60";"61";"62";"63"
+  "0"; "1"; "2"; "3"; "4"; "5"; "6"; "7";
+  "8"; "9"; "10"; "11"; "12"; "13"; "14"; "15";
+  "16"; "17"; "18"; "19"; "20"; "21"; "22"; "23";
+  "24"; "25"; "26"; "27"; "28"; "29"; "30"; "31";
+  "32"; "33"; "34"; "35"; "36"; "37"; "38"; "39";
+  "40"; "41"; "42"; "43"; "44"; "45"; "46"; "47";
+  "48"; "49"; "50"; "51"; "52"; "53"; "54"; "55";
+  "56"; "57"; "58"; "59"; "60"; "61"; "62"; "63"
   |]
 
 (*Tableau utilisé pour expliciter la notation des roques dans la notation FEN en cas d'ambiguïté*)
@@ -163,7 +163,7 @@ let deduction_ep position_de_depart case_ep trait_aux_blancs =
 let dicoroque_xfend =
   let ht = Hashtbl.create 12 in
   List.iter (fun (key, value) -> Hashtbl.add ht key value)
-  [('q', 0); ('b', 1); ('c', 2); ('d', 3); ('e', 4); ('f', 5); ('g', 6); ('k', 7)];
+  [('q', 0); ('a', 0); ('b', 1); ('c', 2); ('d', 3); ('e', 4); ('f', 5); ('g', 6); ('k', 7); ('h', 7)];
   ht
 
 (*Fonction vérifiant la validité des roques d'une position XFEN*)
@@ -209,14 +209,14 @@ let roque_valide position_de_depart roques droit_au_roque =
   [(true, position_tours_blanches, position_roi_blanc); (false, position_tours_noires, position_roi_noir)];
   let indice = ref 0 in
   let aux_string position_roi nombres_roques trait_aux_blancs indice =
+  let increment = if trait_aux_blancs then 56 else 0 in
     if nombres_roques = 2 then begin
-      let result = Hashtbl.find dicoroque_xfend (Char.lowercase_ascii roques.[!indice]), Hashtbl.find dicoroque_xfend (Char.lowercase_ascii roques.[!indice + 1])
+      let result = (try Hashtbl.find dicoroque_xfend (Char.lowercase_ascii roques.[!indice]) + increment with _ -> (-2)), (try Hashtbl.find dicoroque_xfend (Char.lowercase_ascii roques.[!indice + 1]) + increment with _ -> (-2))
       in indice := !indice + 2;
       result
     end
     else if nombres_roques = 1 then begin
-      let increment = if trait_aux_blancs then 56 else 0 in
-      let depart_tour = Hashtbl.find dicoroque_xfend (Char.lowercase_ascii roques.[!indice]) + increment in
+      let depart_tour = (try Hashtbl.find dicoroque_xfend (Char.lowercase_ascii roques.[!indice]) + increment with _ -> (-2)) in
       incr indice;
       if depart_tour > position_roi then begin
         depart_tour, (-2)
@@ -246,7 +246,7 @@ let roque_valide position_de_depart roques droit_au_roque =
       prn := true
     end
   end;
-  droit_au_roque := !prb, !grn, !prn, !grn;
+  droit_au_roque := !prb, !grb, !prn, !grn;
   if !prb || !prn || !grb || !grn then begin
     let plateau_provisoire = Array.make 64 0
     in let depart_gr_blanc = ref (if grand_roque_blanc = (-2) then (-1) else if grand_roque_blanc = 56 then (List.hd (List.rev !position_tours_blanches)) else grand_roque_blanc) in
@@ -255,37 +255,23 @@ let roque_valide position_de_depart roques droit_au_roque =
     let depart_pr_noir = ref (if petit_roque_noir = (-2) then (-1) else if petit_roque_noir = 7 then (List.hd !position_tours_noires) else petit_roque_noir) in
     let liste_occupee_blanche = List.filter (fun case -> case > (-1)) [!depart_gr_blanc; !depart_pr_blanc; !position_roi_blanc] in
     let liste_occupee_noire = List.filter (fun case -> case > (-1)) [!depart_gr_noir; !depart_pr_noir; !position_roi_noir] in
-    let aux_depart depart trait_aux_blancs est_pr liste_occupee =
+    let aux_depart depart trait_aux_blancs liste_occupee =
       if !depart = (-1) then begin
         let increment = if trait_aux_blancs then 56 else 0 in
-        if est_pr then begin
-          let b = ref true in
-          let case = ref (increment + 7) in
-          while !b do
-            if List.mem !case liste_occupee then
-              decr case
-            else begin
-              depart := !case;
-              b := false
-            end
-          done
-        end
-        else begin
-          let b = ref true in
-          let case = ref increment in
-          while !b do
-            if List.mem !case liste_occupee then
-            incr case
-            else begin
-              depart := !case;
-              b := false
-            end
-          done
-        end
+        let b = ref true in
+        let case = ref (increment + 7) in
+        while !b do
+          if List.mem !case liste_occupee then
+            decr case
+          else begin
+            depart := !case;
+            b := false
+          end
+        done
       end
-    in List.iter (fun (depart, trait_aux_blancs, est_pr, liste_occupee) -> aux_depart depart trait_aux_blancs est_pr liste_occupee)
-    [(depart_gr_blanc, true, false, liste_occupee_blanche); (depart_pr_blanc, true, true, liste_occupee_blanche);
-    (depart_gr_noir, false, false, liste_occupee_noire) ;(depart_pr_noir, false, true, liste_occupee_noire)];
+    in List.iter (fun (depart, trait_aux_blancs, liste_occupee) -> aux_depart depart trait_aux_blancs liste_occupee)
+    [(depart_gr_blanc, true, liste_occupee_blanche); (depart_pr_blanc, true, liste_occupee_blanche); (position_roi_blanc, true, liste_occupee_blanche);
+    (depart_gr_noir, false, liste_occupee_noire); (depart_pr_noir, false, liste_occupee_noire); (position_roi_noir, false, liste_occupee_noire)];
     List.iter (fun (position, piece) -> plateau_provisoire.(position) <- piece)
     [(!position_roi_blanc, 6); (!position_roi_noir, (-6)); (!depart_gr_blanc, 4); (!depart_pr_blanc, 4); (!depart_gr_noir, (-4)); (!depart_pr_noir, (-4))];
     actualisation_roque plateau_provisoire
