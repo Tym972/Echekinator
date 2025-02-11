@@ -18,8 +18,7 @@ let plateau = Array.copy echiquier
 
 let releve_plateau = ref [zobrist plateau true !dernier_coup !droit_au_roque]
 
-let chaine_fen = test_fisher6
-
+let chaine_fen = test_fisher4
 let liste_coup = ""
 
 let trait_aux_blancs = ref true
