@@ -195,7 +195,7 @@ let dicofrench =
   ht
 
 (*Fonction interprétant la notation UCI*)
-let mouvement_of_uci uci plateau =
+let mouvement_of_uci uci plateau coups_valides_joueur =
   let coup = ref Aucun in
     let depart = Hashtbl.find dicocoord (String.sub uci 0 2) in
     let arrivee = Hashtbl.find dicocoord (String.sub uci 2 2) in
@@ -221,7 +221,12 @@ let mouvement_of_uci uci plateau =
     else begin
       coup := Classique {piece = plateau.(depart); depart; arrivee; prise = plateau.(arrivee)}
     end;
-  !coup
+    if not (List.mem !coup coups_valides_joueur) then begin
+      failwith "Coup invalide"
+    end
+    else begin
+      !coup
+    end
   
 (*Fonction permettant une tolérance à l'approximation de l'utilisateur dans sa saisie*)
 let tolerance plateau coup trait_aux_blancs coups_valides_joueur =
@@ -230,7 +235,7 @@ let tolerance plateau coup trait_aux_blancs coups_valides_joueur =
   try mouvement_of_algebric plateau (String.capitalize_ascii coup) trait_aux_blancs coups_valides_joueur with _ ->
   try mouvement_of_algebric plateau (Hashtbl.find dicofrench coup.[0] ^ String.sub coup 1 (String.length coup - 1)) trait_aux_blancs coups_valides_joueur with _ ->
   try mouvement_of_algebric plateau (Hashtbl.find dicofrench (Char.uppercase_ascii coup.[0]) ^ String.sub coup 1 (String.length coup - 1)) trait_aux_blancs coups_valides_joueur with _ ->
-  try mouvement_of_uci coup plateau with _ -> Aucun
+  try mouvement_of_uci coup plateau coups_valides_joueur with _ -> Aucun
 
 (*Fonction convertissant un relevé de coups notés algébriquement en un relevé de coups notés avec le type Mouvement*)
 let algebric_releve_to_type_mouvement algebric_list trait_aux_blancs dernier_coup droit_au_roque_initial position_de_depart =
@@ -245,7 +250,7 @@ let algebric_releve_to_type_mouvement algebric_list trait_aux_blancs dernier_cou
     let coup = List.hd !liste_algebric in
     let coups_valides_joueur = coups_valides plateau !white_to_move !last_move !right_to_castle in
     let coup_traduit = tolerance plateau coup !white_to_move coups_valides_joueur in
-    if coup_traduit <> Aucun && List.mem coup_traduit coups_valides_joueur then begin
+    if coup_traduit <> Aucun then begin
       liste_type_mouvement := coup_traduit :: !liste_type_mouvement;
       joue_coup_1 plateau coup_traduit white_to_move last_move right_to_castle;
       liste_algebric := List.tl !liste_algebric

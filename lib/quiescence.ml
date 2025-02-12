@@ -4,7 +4,6 @@ open Plateau
 open Generateur
 open Strategie1
 open Evaluations
-open Zobrist
 
 (*Fonction construisant une liste des captures possible d'une tour*)
 let captures_tour plateau case liste =
@@ -627,7 +626,7 @@ let rec negalphabeta_quiescent plateau trait_aux_blancs dernier_coup droit_au_ro
     best_score := traitement_quiescent_profondeur_0 evaluation plateau trait_aux_blancs dernier_coup alpha beta
   end
   else begin
-    let cp = ref (coups_joueur plateau profondeur trait_aux_blancs dernier_coup droit_au_roque releve_plateau evaluation negalphabeta)
+    let cp = ref (tab_tri.(profondeur - 1) plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau evaluation negalphabeta)
     in if !cp = [] then begin incr compteur_noeuds_terminaux;
       if (menacee plateau (index_tableau plateau (roi trait_aux_blancs)) trait_aux_blancs) then begin
         best_score := (profondeur_initiale - (profondeur + 99999))
@@ -644,21 +643,7 @@ let rec negalphabeta_quiescent plateau trait_aux_blancs dernier_coup droit_au_ro
         joue plateau coup;
         cp := List.tl !cp;
         let nouveau_droit_au_roque = modification_roque coup droit_au_roque in
-        let nouveau_releve =
-          if est_irremediable coup then begin
-            if profondeur < 8 then begin
-              []
-            end
-            else begin
-              [zobrist plateau (not trait_aux_blancs) coup nouveau_droit_au_roque]
-            end
-          end
-          else if List.length releve_plateau + profondeur < 8 then begin
-            []
-          end
-          else begin 
-            ((zobrist plateau (not trait_aux_blancs) coup nouveau_droit_au_roque) :: releve_plateau)
-          end
+        let nouveau_releve = adapte_releve plateau coup profondeur trait_aux_blancs nouveau_droit_au_roque releve_plateau
         in let score =
           let note, _ = negalphabeta_quiescent plateau (not trait_aux_blancs) coup nouveau_droit_au_roque nouveau_releve (profondeur - 1) profondeur_initiale (- beta) (- !alpha0) evaluation
           in - note 

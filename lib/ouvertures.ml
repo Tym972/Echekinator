@@ -3000,4 +3000,4 @@ let ouvertures_exhaustif = traduction chess_openings_exhaustif
 let ouvertures_efficaces = traduction chess_openings_efficace
 
 (*Echantillon d'ouvertures*)
-let ouvertures_echantillon = select (ouvertures_exhaustif) 10
+let ouvertures_echantillon = select (ouvertures_exhaustif) 100

@@ -19,7 +19,8 @@ let tri_algo plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau
     |coup :: liste_coup ->
       begin
         joue plateau coup;
-        let x, _ = algo plateau (not trait_aux_blancs) coup (modification_roque coup droit_au_roque) releve_plateau profondeur profondeur (-99999) 99999 evaluation in
+        let nouveau_droit_au_roque = modification_roque coup droit_au_roque in
+        let x, _ = algo plateau (not trait_aux_blancs) coup nouveau_droit_au_roque (adapte_releve plateau coup profondeur trait_aux_blancs nouveau_droit_au_roque releve_plateau) profondeur profondeur (-99999) 99999 evaluation in
         dejoue plateau coup;
         (- x, coup) :: association liste_coup
       end

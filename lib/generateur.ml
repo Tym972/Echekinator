@@ -937,10 +937,10 @@ let clouees plateau case_roi trait_aux_blancs =
 (*Fonction construisant une liste des coups légaux du joueur*)  
 let coups_valides plateau trait_aux_blancs dernier_coup (prb, grb, prn, grn) =
   let l = ref [] in
-  let cp = ref ((enpassant plateau trait_aux_blancs dernier_coup) @ deplacements_all plateau trait_aux_blancs) in
   let roi_joueur = roi trait_aux_blancs in
   let position_roi = index_tableau plateau roi_joueur in
   if menacee plateau position_roi trait_aux_blancs then begin
+    let cp = ref ((enpassant plateau trait_aux_blancs dernier_coup) @ deplacements_all plateau trait_aux_blancs) in
     while !cp <> [] do
       let coup = List.hd !cp in
       joue plateau coup;
@@ -960,8 +960,20 @@ let coups_valides plateau trait_aux_blancs dernier_coup (prb, grb, prn, grn) =
     !l
   end
   else begin
+    let cp = ref (deplacements_all plateau trait_aux_blancs) in
     let droit_au_roque = if trait_aux_blancs then prb || grb else prn || grn in
     let piece_clouees = clouees plateau position_roi trait_aux_blancs in
+    let rec aux_en_passant liste = match liste with
+      |[] -> ()
+      |coup :: liste_coup -> begin
+        joue plateau coup;
+        if not (menacee plateau position_roi trait_aux_blancs) then begin
+          l := coup :: !l
+        end;
+        dejoue plateau coup;
+        aux_en_passant liste_coup
+    end
+    in aux_en_passant (enpassant plateau trait_aux_blancs dernier_coup);
     if piece_clouees = [] then begin
       while !cp <> [] do
         let coup = List.hd !cp in

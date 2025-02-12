@@ -51,7 +51,7 @@ let rec negalphabeta_simple plateau trait_aux_blancs dernier_coup droit_au_roque
     best_score := traitement_profondeur_0 evaluation plateau trait_aux_blancs dernier_coup alpha beta
   end
   else begin
-    let cp = ref (coups_joueur plateau profondeur trait_aux_blancs dernier_coup droit_au_roque [] evaluation negalphabeta)
+    let cp = ref (tab_tri.(profondeur - 1) plateau trait_aux_blancs dernier_coup droit_au_roque [] evaluation negalphabeta)
     in if !cp = [] then begin
       if menacee plateau (index_tableau plateau (roi trait_aux_blancs)) trait_aux_blancs then begin
         best_score := (profondeur_initiale - (profondeur + 99999))
@@ -91,7 +91,7 @@ let rec pvs plateau trait_aux_blancs dernier_coup droit_au_roque profondeur prof
     alpha0 := traitement_profondeur_0 evaluation plateau trait_aux_blancs dernier_coup alpha beta
   end
   else begin
-    let cp = ref (coups_joueur plateau profondeur trait_aux_blancs dernier_coup droit_au_roque [] evaluation negalphabeta)
+    let cp = ref (tab_tri.(profondeur - 1) plateau trait_aux_blancs dernier_coup droit_au_roque [] evaluation negalphabeta)
     in if !cp = [] then begin
       if menacee plateau (index_tableau plateau (roi trait_aux_blancs)) trait_aux_blancs then begin
         alpha0 := (profondeur_initiale - (profondeur + 9999))
@@ -360,6 +360,7 @@ let main b1 b2 b3 b4 b5 b6 b7 b8 plateau =
   end;
   print_endline ("Noeuds explorés : " ^ string_of_int !compteur_recherche);
   print_endline ("Noeuds recherche quiescente : " ^ string_of_int !compteur_quiescent);
+  print_endline ("Noeuds hashtable : " ^ string_of_int !compteur_trans);
   print_endline ("EBF : " ^ string_of_float (float_of_int !compteur_recherche /. float_of_int (!compteur_recherche - !compteur_noeuds_terminaux)))
 
 let () = main false false true false false false false false plateau

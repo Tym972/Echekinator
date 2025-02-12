@@ -22,6 +22,29 @@ let traitement_profondeur_0 evaluation plateau trait_aux_blancs dernier_coup alp
     evaluation plateau trait_aux_blancs position_roi false alpha beta
   end
 
+(*Fonction indiquant si un coup est irrémédiable (poussée de pion ou capture)*)
+let est_irremediable coup = match coup with
+  |Enpassant _ | Promotion _ -> true
+  |Classique {piece; depart = _; arrivee = _; prise} when (abs piece = 1 || prise <> 0) -> true
+  |_ -> false
+
+(*Fonction adaptant le relevé des positions*)
+let adapte_releve plateau coup profondeur trait_aux_blancs nouveau_droit_au_roque releve_plateau =
+  if est_irremediable coup then begin
+    if profondeur < 8 then begin
+      []
+    end
+    else begin
+      [zobrist plateau (not trait_aux_blancs) coup nouveau_droit_au_roque]
+    end
+  end
+  else if List.length releve_plateau + profondeur < 8 then begin
+    []
+  end
+  else begin 
+    zobrist plateau (not trait_aux_blancs) coup nouveau_droit_au_roque :: releve_plateau
+  end
+
 (*Fonction triant une liste de coups selon leur potentiel*)
 let tri plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau profondeur evaluation algo =
   let rec association liste_coups =
@@ -30,7 +53,8 @@ let tri plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau prof
     |coup :: liste_coup ->
       begin
         joue plateau coup;
-        let x, _ = algo plateau (not trait_aux_blancs) coup (modification_roque coup droit_au_roque) releve_plateau profondeur profondeur (-99999) 99999 evaluation in
+        let nouveau_droit_au_roque = modification_roque coup droit_au_roque in
+        let x, _ = algo plateau (not trait_aux_blancs) coup nouveau_droit_au_roque (adapte_releve plateau coup profondeur trait_aux_blancs nouveau_droit_au_roque releve_plateau) profondeur profondeur (-99999) 99999 evaluation in
         dejoue plateau coup;
         (- x, coup) :: association liste_coup
       end
@@ -43,17 +67,17 @@ let mvvlva liste =
     |Classique {piece; depart; arrivee; prise} :: t ->
       ((tabvalue.(abs prise) - abs (piece)), Classique {piece; depart; arrivee; prise}) :: association t
     |Promotion {depart; arrivee; prise; promotion} :: t ->
-      ((tabvalue.(abs prise) + tabvalue.(abs promotion) - 1), Promotion {depart; arrivee; prise; promotion}) :: association t
+      ((tabvalue.(abs prise) + tabvalue.(abs promotion) - 10), Promotion {depart; arrivee; prise; promotion}) :: association t
     |h :: t -> (0, h) :: association t
   in List.map snd (tri_fusion (association liste))
 
 (*Fonction renvoyant la liste des coups après mvvlva*)
-let tri_mvvlva plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau (evaluation : int array -> bool -> int -> bool -> int -> int -> int) algo =
+let tri_mvvlva plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau evaluation algo =
   let _ = evaluation, releve_plateau, algo in
   mvvlva (coups_valides plateau trait_aux_blancs dernier_coup droit_au_roque)
 
 (*Fonction renvoyant la liste de coups non triée*)
-let non_tri plateau trait_aux_blancs dernier_coup (droit_au_roque : bool * bool * bool * bool) releve_plateau (evaluation : int array -> bool -> int -> bool -> int -> int -> int) algo =
+let non_tri plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau evaluation algo =
   let _ = evaluation, algo, releve_plateau in
   coups_valides plateau trait_aux_blancs dernier_coup droit_au_roque
 
@@ -79,9 +103,6 @@ let tri_4 plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau ev
 
 (*Tableaux contenant les stratégies d'ordonnancement des coups aux pofondeurs correspondant à l'index + 1*)
 let tab_tri = [|non_tri; tri_mvvlva; tri_0; tri_0; tri_1; tri_1; tri_2; tri_2; tri_2; tri_2|]
-(*Fonction générant les coups légaux du joueur dont le tri dépend de la profondeur*)
-let coups_joueur plateau profondeur trait_aux_blancs dernier_coup droit_au_roque releve_plateau evaluation =
-  tab_tri.(profondeur - 1) plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau evaluation
 
 let compteur_recherche = ref 0
 
@@ -136,12 +157,6 @@ let roi_seul plateau=
 let finale plateau =
   pieces_esseulee plateau || roi_seul plateau
 
-(*Fonction indiquant si un coup est irrémédiable (poussée de pion ou capture)*)
-let est_irremediable coup = match coup with
-  |Enpassant _ | Promotion _ -> true
-  |Classique {piece; depart = _; arrivee = _; prise} when (abs piece = 1 || prise <> 0) -> true
-  |_ -> false
-
 (*Implémentation d'un algorithme de recherche minimax avec élagage alpha-bêta et negamax, utilisé après l'ouverture. Les pat par répétitions sont pris en comptes*)
 let rec negalphabeta plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau profondeur profondeur_initiale alpha beta evaluation = incr compteur_recherche;
   let best_score = ref (-99999) in
@@ -153,11 +168,11 @@ let rec negalphabeta plateau trait_aux_blancs dernier_coup droit_au_roque releve
     best_score := traitement_profondeur_0 evaluation plateau trait_aux_blancs dernier_coup alpha beta
   end
   else begin
-    let cp = ref (coups_joueur plateau profondeur trait_aux_blancs dernier_coup droit_au_roque releve_plateau evaluation negalphabeta)
+    let cp = ref (tab_tri.(profondeur - 1) plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau evaluation negalphabeta)
     in if !cp = [] then begin incr compteur_noeuds_terminaux;
       if menacee plateau (index_tableau plateau (roi trait_aux_blancs)) trait_aux_blancs then begin
         best_score := profondeur_initiale - (profondeur + 99999)
-      end 
+      end
       else begin
         best_score := 0
       end
@@ -170,21 +185,7 @@ let rec negalphabeta plateau trait_aux_blancs dernier_coup droit_au_roque releve
         joue plateau coup;
         cp := List.tl !cp;
         let nouveau_droit_au_roque = modification_roque coup droit_au_roque in
-        let nouveau_releve =
-          if est_irremediable coup then begin
-            if profondeur < 8 then begin
-              []
-            end
-            else begin
-              [zobrist plateau (not trait_aux_blancs) coup nouveau_droit_au_roque]
-            end
-          end
-          else if List.length releve_plateau + profondeur < 8 then begin
-            []
-          end
-          else begin 
-            zobrist plateau (not trait_aux_blancs) coup nouveau_droit_au_roque :: releve_plateau
-          end
+        let nouveau_releve = adapte_releve plateau coup profondeur trait_aux_blancs nouveau_droit_au_roque releve_plateau
         in let score =
           let note, _ = negalphabeta plateau (not trait_aux_blancs) coup nouveau_droit_au_roque nouveau_releve (profondeur - 1) profondeur_initiale (- beta) (- !alpha0) evaluation
           in - note
@@ -340,19 +341,3 @@ let tours_connectees plateau joueur =
     done;
   end;
   !b
-
-(*Fonction indiquant s'il y'a un risque de triple répétition*)
-let rec risque_repetition plateau joueur adversaire ensembles_coups releve_plateau releve_coups coups droit_au_roque =
-  if coups < 3 then begin
-    match ensembles_coups with
-    |[] ->  false
-    |h::_ -> 
-      let plato = Array.copy plateau in
-      joue plato h;
-      repetition ((zobrist plato adversaire h droit_au_roque) :: releve_plateau) 3
-      || risque_repetition plato adversaire joueur (coups_valides plato adversaire h (modification_roque h droit_au_roque)) ((zobrist plato adversaire h droit_au_roque) :: releve_plateau) (h :: releve_coups) (coups + 1) droit_au_roque
-      || risque_repetition plateau joueur adversaire (List.tl ensembles_coups) releve_plateau releve_coups coups droit_au_roque
-  end
-  else begin
-    false
-  end

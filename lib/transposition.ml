@@ -26,7 +26,9 @@ let enfant noeud = match noeud with
 
 let (table : (noeuds * int * int * mouvement * int) ZobristHashtbl.t) =  ZobristHashtbl.create taille_transposition
 
-let traitement_hash (hash_node_type : noeuds) (hash_profondeur : int) (hash_valeur : int) (hash_best : mouvement) (profondeur : int) alpha beta valeur best continuation hash_depth =
+let compteur_trans = ref 0
+
+let traitement_hash (hash_node_type : noeuds) (hash_profondeur : int) (hash_valeur : int) (hash_best : mouvement) (profondeur : int) alpha beta valeur best continuation hash_depth = incr compteur_trans;
   if profondeur <= hash_profondeur then begin
     hash_depth := hash_profondeur;
     match hash_node_type with
@@ -52,7 +54,48 @@ let traitement_hash (hash_node_type : noeuds) (hash_profondeur : int) (hash_vale
 let actualise table n =
   ZobristHashtbl.iter (fun key value -> let _, _, _, _, coup = value in if coup < n then ZobristHashtbl.remove table key ) table
 
-let rec negalphabeta_trans plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau profondeur profondeur_initiale alpha beta evaluation node_type zobrist_position =
+let tri_trans plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau profondeur evaluation node_type algo =
+  let rec association liste_coups =
+    match liste_coups with
+    |[] -> []
+    |coup :: liste_coup ->
+      begin
+        joue plateau coup;
+        let nouveau_droit_au_roque = modification_roque coup droit_au_roque in
+        let x, _ = algo plateau (not trait_aux_blancs) coup nouveau_droit_au_roque (adapte_releve plateau coup profondeur trait_aux_blancs nouveau_droit_au_roque releve_plateau) profondeur profondeur (-99999) 99999 evaluation (enfant node_type) (zobrist plateau (not trait_aux_blancs) coup nouveau_droit_au_roque) in
+        dejoue plateau coup;
+        (- x, coup) :: association liste_coup
+      end
+  in List.map snd (tri_fusion (association (coups_valides plateau trait_aux_blancs dernier_coup droit_au_roque)))
+
+let tri_mvvlva_trans plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau evaluation algo node_type =
+  let _ = evaluation, releve_plateau, algo, node_type, nouveau_zobrist in
+  mvvlva (coups_valides plateau trait_aux_blancs dernier_coup droit_au_roque)
+
+(*Fonction renvoyant la liste de coups non triée*)
+let non_tri_trans plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau evaluation algo node_type =
+  let _ = evaluation, algo, releve_plateau, node_type, nouveau_zobrist in
+  coups_valides plateau trait_aux_blancs dernier_coup droit_au_roque
+
+let tri_0_trans plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau evaluation node_type =
+  tri_trans plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau 0 evaluation node_type
+
+let tri_1_trans plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau evaluation node_type =
+  tri_trans plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau 1 evaluation node_type
+
+let tri_2_trans plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau evaluation node_type =
+  tri_trans plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau 2 evaluation node_type
+
+let tri_3_trans plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau evaluation node_type =
+  tri_trans plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau 3 evaluation node_type
+
+let tri_4_trans plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau evaluation node_type =
+  tri_trans plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau 4 evaluation node_type
+
+(*Tableaux contenant les stratégies d'ordonnancement des coups aux pofondeurs correspondant à l'index + 1*)
+(*let tab_tri_trans = [|non_tri_trans; tri_mvvlva_trans; tri_0_trans; tri_0_trans; tri_1_trans; tri_1_trans; tri_2_trans; tri_2_trans; tri_2_trans; tri_2_trans|]*)
+
+let rec negalphabeta_trans plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau profondeur profondeur_initiale alpha beta evaluation node_type zobrist_position = incr compteur_recherche;
   let best_score = ref (-99999) in
   let best_move = ref Aucun in
   if repetition releve_plateau 3 then begin
@@ -72,11 +115,11 @@ let rec negalphabeta_trans plateau trait_aux_blancs dernier_coup droit_au_roque 
     end;
     if !continuation then begin
       if profondeur = 0 then begin
-        best_score := traitement_profondeur_0  evaluation plateau trait_aux_blancs dernier_coup !alpha0 !beta0;
+        best_score := traitement_profondeur_0 evaluation plateau trait_aux_blancs dernier_coup !alpha0 !beta0;
         ZobristHashtbl.add table zobrist_position (node_type, 0, !best_score, Aucun, 0)
       end
       else begin
-        let cp = ref (coups_joueur plateau profondeur trait_aux_blancs dernier_coup droit_au_roque releve_plateau evaluation negalphabeta)
+        let cp = ref (tab_tri(*_trans*).(profondeur - 1) plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau evaluation (*node_type*) negalphabeta(*_trans*))
         in if !cp = [] then begin
           if (menacee plateau (index_tableau plateau (roi trait_aux_blancs)) trait_aux_blancs) then begin
             best_score := (profondeur_initiale - (profondeur + 99999))
@@ -93,21 +136,7 @@ let rec negalphabeta_trans plateau trait_aux_blancs dernier_coup droit_au_roque 
             cp := List.tl !cp;
             let nouveau_droit_au_roque = modification_roque coup droit_au_roque in
             let nouveau_zobrist = zobrist plateau (not trait_aux_blancs) coup nouveau_droit_au_roque in
-            let nouveau_releve =
-              if est_irremediable coup then begin
-                if profondeur < 8 then begin
-                  []
-                end
-                else begin
-                  [nouveau_zobrist]
-                end
-              end
-              else if List.length releve_plateau + profondeur < 8 then begin
-                []
-              end
-              else begin
-                (nouveau_zobrist :: releve_plateau)
-              end
+            let nouveau_releve = adapte_releve plateau coup profondeur trait_aux_blancs nouveau_droit_au_roque releve_plateau
             in let score =
               let note, _ = negalphabeta_trans plateau (not trait_aux_blancs) coup nouveau_droit_au_roque nouveau_releve (profondeur - 1) profondeur_initiale (- !beta0) (- !alpha0) evaluation (enfant node_type) nouveau_zobrist
               in - note 
