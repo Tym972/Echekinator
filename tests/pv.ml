@@ -1,18 +1,20 @@
 open Libs.Plateau
 open Libs.Generateur
 open Libs.Strategie1
-open Libs.Zobrist
 open Config
 
 (*Implémentation d'un algorithme de recherche minimax avec élagage alpha-bêta et negamax*)
 let rec negalphabeta_pv plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau profondeur profondeur_initiale alpha beta evaluation =
   let best_score = ref (-99999) in
   let best_moves = ref [] in
-  if profondeur = 0 then begin
+  if repetition releve_plateau 3 then begin incr compteur_noeuds_terminaux;
+    best_score := 0
+  end
+  else if profondeur = 0 then begin
     best_score := traitement_profondeur_0 evaluation plateau trait_aux_blancs dernier_coup alpha beta
   end
   else begin
-    let cp = ref (coups_joueur plateau profondeur trait_aux_blancs dernier_coup droit_au_roque releve_plateau evaluation negalphabeta)
+    let cp = ref (tab_tri.(profondeur - 1) plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau evaluation negalphabeta)
     in if !cp = [] then begin
       if menacee plateau (index_tableau plateau (roi trait_aux_blancs)) trait_aux_blancs then begin
         best_score := (profondeur_initiale - (profondeur + 99999))
@@ -29,21 +31,7 @@ let rec negalphabeta_pv plateau trait_aux_blancs dernier_coup droit_au_roque rel
         joue plateau coup;
         cp := List.tl !cp;
         let nouveau_droit_au_roque = modification_roque coup droit_au_roque in
-        let nouveau_releve =
-          if est_irremediable coup then begin
-            if profondeur < 8 then begin
-              []
-            end
-            else begin
-              [zobrist plateau (not trait_aux_blancs) coup nouveau_droit_au_roque]
-            end
-          end
-          else if List.length releve_plateau + profondeur < 8 then begin
-            []
-          end
-          else begin 
-            ((zobrist plateau (not trait_aux_blancs) coup nouveau_droit_au_roque) :: releve_plateau)
-          end
+        let nouveau_releve = adapte_releve plateau coup profondeur trait_aux_blancs nouveau_droit_au_roque releve_plateau
         in let note, pv = negalphabeta_pv plateau (not trait_aux_blancs) coup nouveau_droit_au_roque nouveau_releve (profondeur - 1) profondeur_initiale (- beta) (- !alpha0) evaluation
           in let score = - note 
         in if score > !best_score then begin

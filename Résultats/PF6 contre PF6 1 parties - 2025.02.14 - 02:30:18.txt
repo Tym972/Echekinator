@@ -1,11 +1,16 @@
 [Event "?"]
 [Site "?"]
-[Date "2025.02.01"]
-[Heure "22:29:51"]
+[Date "2025.02.14"]
 [Round "1"]
 [White "PF6"]
 [Black "PF6"]
 [Result "1-0"]
+[CurrentPosition "3k3q/3Q2p1/2p1B2p/1p2B3/5p2/8/2KP2PP/7n b - - 1 31"]
+[Termination "PF6 won by checkmate"]
+[Timezone "UTC+1"]
+[Startime "02:29:39"]
+[EndDate "2025.02.14"]
+[Endtime "02:30:18"]
 
 1. a3 a5 2. b4 axb4 3. Bb2 Nc6 4. axb4 Rxa1 5. Bxa1 Nxb4 6. Nf3 d5 7. Bc3 Na2 
 8. Bd4 Bd7 9. c3 Qa8 10. Qb3 c6 11. Bc5 Bf5 12. Na3 Qa5 13. Bb6 Qa8 14. c4 dxc4 
@@ -24,5 +29,5 @@ Les blancs ont gagné 1 partie (100.00% des parties). Les noirs en ont gagné 0 
 
 0 parties avaient déjà était jouées, soit 0.00% des parties
 
-Temps d'exécution : 00:00:40.87
-Temps moyen d'exécution : 00:00:40.87
+Temps d'exécution : 00:00:38.82
+Temps moyen d'exécution : 00:00:38.82

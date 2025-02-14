@@ -253,7 +253,8 @@ let deplacements_dame plateau case liste =
   done
 
 (*Fonction construisant une liste des déplacements possible d'un roi*)
-let deplacements_roi plateau case liste =
+let deplacements_roi plateau case =
+  let liste = ref [] in
   let co = plateau.(case) in
   let r = tab64.(case) in
   for i = 0 to 7 do
@@ -265,7 +266,8 @@ let deplacements_roi plateau case liste =
         liste := Classique {piece = co; depart = case; arrivee = candidat; prise = dest} :: !liste
       end
     end
-  done
+  done;
+  !liste
 
 (*Fonction construisant une liste des déplacements possible d'un pion*)
 let deplacements_pion plateau case liste =
@@ -360,28 +362,69 @@ let deplacements_pion plateau case liste =
     end
   end
 
-let tabfun = [|deplacements_pion; deplacements_cavalier; deplacements_fou; deplacements_tour; deplacements_dame; deplacements_roi|]
+(*Tableau des fonctions à appliquer pour construire la liste de coups*)
+let tabfun = [|deplacements_pion; deplacements_cavalier; deplacements_fou; deplacements_tour; deplacements_dame|]
 
 (*Fonction construisant une liste des déplacements classique possibles d'un joueur*)
-let deplacements_all plateau trait_aux_blancs =
-  let liste = ref [] in
+let deplacements plateau trait_aux_blancs position_roi =
+  let liste_coups = ref [] in
+  let liste_coups_roi = deplacements_roi plateau position_roi in
   if trait_aux_blancs then begin
-    for i = 63 downto 0 do
-      let pl = plateau.(i) in
-      if pl > 0 then begin
-        (tabfun.(pl - 1) plateau i liste)
-      end
-    done
+    let aux depart arrive =
+      for i = depart downto arrive do
+        let piece = plateau.(i) in
+        if piece > 0 then begin
+          (tabfun.(piece - 1) plateau i liste_coups)
+        end
+      done
+    in List.iter (fun (a, b) -> aux a b) [63, position_roi + 1; position_roi - 1, 0]
   end
   else begin
-    for i = 0 to 63 do
-      let pl = plateau.(i) in
-      if pl < 0 then begin
-        (tabfun.(- pl - 1) plateau i liste)
-      end
-    done
+    let aux depart arrivee =
+      for i = depart to arrivee do
+        let piece = plateau.(i) in
+        if piece < 0 then begin
+          (tabfun.(- piece - 1) plateau i liste_coups)
+        end
+      done
+    in List.iter (fun (a, b) -> aux a b) [0, position_roi - 1; position_roi + 1, 63]
   end;
-  !liste
+  !liste_coups, liste_coups_roi
+
+let deplacements_clouage plateau trait_aux_blancs position_roi piece_clouees =
+  let liste_coups = ref [] in
+  let liste_coups_roi = deplacements_roi plateau position_roi in
+  let liste_coups_clouees = ref [] in
+  if trait_aux_blancs then begin
+    let aux depart arrivee = 
+    for i = depart downto arrivee do
+      if not (List.mem i piece_clouees) then begin
+        let piece = plateau.(i) in
+        if piece > 0 then begin
+          (tabfun.(piece - 1) plateau i liste_coups)
+        end
+      end
+      else begin
+        let piece = plateau.(i) in (tabfun.(piece - 1) plateau i liste_coups_clouees)
+      end
+    done in List.iter (fun (a, b) -> aux a b) [63, position_roi + 1; position_roi - 1, 0]
+  end
+  else begin
+    let aux depart arrivee =
+      for i = depart to arrivee do
+        if not (List.mem i piece_clouees) then begin
+          let piece = plateau.(i) in
+          if piece < 0 then begin
+            (tabfun.(- piece - 1) plateau i liste_coups)
+          end
+        end
+        else begin
+          let piece = plateau.(i) in (tabfun.(- piece - 1) plateau i liste_coups_clouees)
+        end
+      done
+    in List.iter (fun (a, b) -> aux a b) [0, position_roi - 1; position_roi + 1, 63]
+  end;
+  !liste_coups, liste_coups_roi, !liste_coups_clouees
 
 (*Variables indiquant la positions initiales des pièces impliquées dans un roque*)
 let depart_roi_blanc = ref 60
@@ -716,7 +759,7 @@ let enpassant plateau trait_aux_blancs dernier_coup =
       let gauche = arrivee - 1
       in if (gauche <> 23 && plateau.(gauche) = 1) then begin
         l := Enpassant {depart = gauche; arrivee = gauche - 7} :: !l
-      end;
+      end
     end
   end
   else begin
@@ -732,7 +775,7 @@ let enpassant plateau trait_aux_blancs dernier_coup =
       let gauche = arrivee - 1
       in if (gauche <> 31 && plateau.(gauche) = (-1)) then begin
         l := Enpassant {depart = gauche; arrivee = gauche + 9} :: !l
-      end;
+      end
     end
   end;
   !l
@@ -814,7 +857,8 @@ let depart coup = match coup with
 (*Fonction donnant la prise d'un coup*)
 let prise coup = match coup with
   |Classique {piece = _; depart = _; arrivee = _; prise} | Promotion {depart = _; arrivee = _; prise; promotion = _} -> prise
-  |_ -> (-1)
+  |Enpassant {depart = _; arrivee} -> if arrivee < 24 then (-1) else 1
+  |_ -> 0
 
 (*Fonction donnant la pièce d'un coup classique*)
 let piece coup = match coup with
@@ -939,114 +983,65 @@ let coups_valides plateau trait_aux_blancs dernier_coup (prb, grb, prn, grn) =
   let l = ref [] in
   let roi_joueur = roi trait_aux_blancs in
   let position_roi = index_tableau plateau roi_joueur in
+  let aux coup position_roi =
+    joue plateau coup;
+    if not (menacee plateau position_roi trait_aux_blancs) then begin
+      l := coup :: !l
+    end;
+    dejoue plateau coup
+  in
   if menacee plateau position_roi trait_aux_blancs then begin
-    let cp = ref ((enpassant plateau trait_aux_blancs dernier_coup) @ deplacements_all plateau trait_aux_blancs) in
-    while !cp <> [] do
-      let coup = List.hd !cp in
-      joue plateau coup;
-      if piece coup = roi_joueur then begin
-        if not (menacee plateau (arrivee coup) trait_aux_blancs) then begin
-          l := coup :: !l
-        end
-      end
-      else begin
-        if not (menacee plateau position_roi trait_aux_blancs) then begin
-          l := coup :: !l
-        end
-      end;
-      cp := List.tl !cp;
-      dejoue plateau coup
-    done;
+    let coups, coups_roi = deplacements plateau trait_aux_blancs position_roi in
+    List.iter (fun coup_roi -> aux coup_roi (arrivee coup_roi)) coups_roi;
+    List.iter (fun coup_autre -> aux coup_autre position_roi) (enpassant plateau trait_aux_blancs dernier_coup);
+    List.iter (fun coup_autre -> aux coup_autre position_roi) coups;
     !l
   end
   else begin
-    let cp = ref (deplacements_all plateau trait_aux_blancs) in
     let droit_au_roque = if trait_aux_blancs then prb || grb else prn || grn in
     let piece_clouees = clouees plateau position_roi trait_aux_blancs in
-    let rec aux_en_passant liste = match liste with
-      |[] -> ()
-      |coup :: liste_coup -> begin
-        joue plateau coup;
-        if not (menacee plateau position_roi trait_aux_blancs) then begin
-          l := coup :: !l
-        end;
-        dejoue plateau coup;
-        aux_en_passant liste_coup
-    end
-    in aux_en_passant (enpassant plateau trait_aux_blancs dernier_coup);
+    List.iter (fun prise_en_passant -> aux prise_en_passant position_roi) (enpassant plateau trait_aux_blancs dernier_coup);
     if piece_clouees = [] then begin
-      while !cp <> [] do
-        let coup = List.hd !cp in
-        if piece coup = roi_joueur then begin
-          joue plateau coup;
-          if not (menacee plateau (arrivee coup) trait_aux_blancs) then begin
-            l := coup :: !l
-          end;
-          dejoue plateau coup
-        end
-        else begin
-          l := coup :: !l
-        end;
-        cp := List.tl !cp
-      done;
-      if droit_au_roque then (roque plateau trait_aux_blancs (prb, grb, prn, grn)) @ !l else !l
+      let coups, coups_roi = deplacements plateau trait_aux_blancs position_roi in
+      List.iter (fun coup_roi -> aux coup_roi (arrivee coup_roi)) coups_roi;
+      if droit_au_roque then (roque plateau trait_aux_blancs (prb, grb, prn, grn)) @ !l @ coups else !l @ coups
     end
     else begin
-      while !cp <> [] do
-        let coup = List.hd !cp in
-        if piece coup = roi_joueur then begin
-          joue plateau coup;
-          if not (menacee plateau (arrivee coup) trait_aux_blancs) then begin
-            l := coup :: !l
-          end;
-          dejoue plateau coup
-        end
-        else begin
-            if not (List.mem (depart coup) piece_clouees) then begin
-              l := coup :: !l
-            end
-            else begin
-              joue plateau coup;
-              if not (menacee plateau position_roi trait_aux_blancs) then begin
-                l := coup :: !l
-              end;
-              dejoue plateau coup
-            end
-          end;
-        cp := List.tl !cp
-      done;
-      if droit_au_roque then (roque plateau trait_aux_blancs (prb, grb, prn, grn)) @ !l else !l
+      let coups, coups_roi, coups_clouees = deplacements_clouage plateau trait_aux_blancs position_roi piece_clouees in
+      List.iter (fun coup_roi -> aux coup_roi (arrivee coup_roi)) coups_roi;
+      List.iter (fun coup_clouees -> aux coup_clouees position_roi) coups_clouees;
+      if droit_au_roque then (roque plateau trait_aux_blancs (prb, grb, prn, grn)) @ !l @ coups else !l @ coups
     end
   end
 
 (*Fonction indiquant si un coup est valide*)
-let est_valide plateau coup joueur =
+let est_valide plateau coup trait_aux_blancs =
   let b = ref true in
   joue plateau coup;
-  if piece coup = (roi joueur) then begin
-    if (menacee plateau (arrivee coup) (plateau.(arrivee coup) > 0)) then begin
+  if piece coup = (roi trait_aux_blancs) then begin
+    if menacee plateau (arrivee coup) trait_aux_blancs then begin
       b := false
     end
   end
-  else if (menacee plateau (index_tableau plateau (roi joueur)) (plateau.(arrivee coup) > 0)) then begin
+  else if menacee plateau (index_tableau plateau (roi trait_aux_blancs)) trait_aux_blancs then begin
     b := false
   end;
   dejoue plateau coup;
   !b
 
 (*Fonction indiquant efficacement si un coup est valide, utilisée uniquement pour des coups classiques, hors roi*)
-let est_valide_efficace plateau coup position_roi roi_en_echec piece_clouees =
+let est_valide_efficace plateau coup trait_aux_blancs position_roi roi_en_echec piece_clouees =
   let b = ref true in
   if roi_en_echec then begin
     joue plateau coup;
-    if (menacee plateau position_roi (plateau.(position_roi) > 0)) then begin
+    if menacee plateau position_roi trait_aux_blancs then begin
       b := false
     end;
     dejoue plateau coup
   end
   else if List.mem (depart coup) piece_clouees then begin
     joue plateau coup;
-    if menacee plateau position_roi (plateau.(position_roi) > 0) then begin
+    if menacee plateau position_roi trait_aux_blancs then begin
       b := false
     end;
     dejoue plateau coup

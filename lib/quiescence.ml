@@ -309,12 +309,12 @@ let captures plateau trait_aux_blancs dernier =
     !l
   end
 
-let smaller_attaquer plateau case =
+let smaller_attaquer plateau case trait_aux_blancs =
   let coup = ref Aucun in
   let b = ref false in
   let m = tab64.(case) in
   let piece = plateau.(case) in
-  if piece > 0 then begin
+  if trait_aux_blancs then begin
     let vect_pion = [|(-9); (-11)|] in
     let i = ref 0 in
     while (not !b && !i < 2) do
@@ -506,17 +506,17 @@ let smaller_attaquer plateau case =
   end;
   !coup
 
-let rec see plateau case =
+let rec see plateau case trait_aux_blancs =
   let value = ref 0 in
-  let coup = (smaller_attaquer plateau case) in
+  let coup = (smaller_attaquer plateau case trait_aux_blancs) in
   if coup <> Aucun then begin
     joue plateau coup;
-    value := max 0 (tabvalue.(abs (prise coup) - 1) - see plateau case);
+    value := max 0 (tabvalue.(abs (prise coup) - 1) - see plateau case (not trait_aux_blancs));
     dejoue plateau coup
   end;
   !value
 
-let tri_see liste plateau =
+let tri_see liste plateau trait_aux_blancs =
   if List.length liste < 2 then begin 
     liste
   end
@@ -524,26 +524,20 @@ let tri_see liste plateau =
     let rec association liste_coups =
       match liste_coups with
       |[] -> []
-      |Classique {piece; depart; arrivee; prise} :: t ->
-        joue plateau (Classique {piece; depart; arrivee; prise});
-        let note = see plateau (arrivee) in
-        dejoue plateau (Classique {piece; depart; arrivee; prise});
-        ((tabvalue.(abs prise) - note), Classique {piece; depart; arrivee; prise}) :: association t
-      |Enpassant {depart; arrivee} :: t ->
-        joue plateau (Enpassant {depart; arrivee});
-        let note = see plateau (arrivee) in
-        dejoue plateau (Enpassant {depart; arrivee});
-        ((tabvalue.(1) - note), Enpassant {depart; arrivee}) :: association t
-      |Promotion {depart; arrivee; promotion; prise} :: t ->
-        joue plateau (Promotion {depart; arrivee; promotion; prise});
-        let note = see plateau (arrivee) in
-        dejoue plateau (Promotion {depart; arrivee; promotion; prise});
-        ((tabvalue.(abs promotion) + tabvalue.(abs prise) - note), Promotion {depart; arrivee; promotion; prise}) :: association t
-      |h :: t -> (0, h) :: association t
+      |Promotion {depart = _; arrivee; promotion; prise} as coup :: t ->
+        joue plateau coup;
+        let note = see plateau arrivee trait_aux_blancs in
+        dejoue plateau coup;
+        ((tabvalue.(abs promotion) + tabvalue.(abs prise) - note), coup) :: association t
+      |coup :: t ->
+        joue plateau coup;
+        let note = see plateau (arrivee coup) trait_aux_blancs in
+        dejoue plateau coup;
+        ((tabvalue.(abs (prise coup)) - note), coup) :: association t
     in List.map snd (tri_fusion (association liste))
   end
 
-let rec detecte_captures listes_coups = match listes_coups with
+  let rec detecte_captures listes_coups = match listes_coups with
   |[] -> []
   |Classique {piece; depart; arrivee; prise} :: t when prise <> 0 -> Classique {piece; depart; arrivee; prise} :: detecte_captures t
   |Promotion x :: t -> Promotion x :: detecte_captures t
@@ -553,9 +547,7 @@ let rec detecte_captures listes_coups = match listes_coups with
 let compteur_quiescent = ref 0
 
 (*Fonction implémentant la recherche quiescente*)
-let rec recherche_quiescente plateau trait_aux_blancs alpha beta evaluation cap profondeur = incr compteur_quiescent;
-  let position_roi = index_tableau plateau (roi trait_aux_blancs) in
-  let roi_en_echec = (menacee plateau position_roi trait_aux_blancs) in
+let rec recherche_quiescente plateau trait_aux_blancs alpha beta evaluation cap profondeur position_roi roi_en_echec = incr compteur_quiescent;
   let best_score = ref (-99999) in
   let delta = evaluation plateau trait_aux_blancs position_roi roi_en_echec alpha beta in
   if profondeur = 0 then begin
@@ -580,7 +572,9 @@ let rec recherche_quiescente plateau trait_aux_blancs alpha beta evaluation cap 
         let coup = List.hd !cps in
         joue plateau coup;
         cps := List.tl !cps;
-        let score = - recherche_quiescente plateau (not trait_aux_blancs) (- beta) (- !alpha0) evaluation (captures plateau (not trait_aux_blancs) coup) (profondeur - 1)
+        let nouveau_trait = not trait_aux_blancs in
+        let position_roi_adverse = index_tableau plateau (roi nouveau_trait) in
+        let score = - recherche_quiescente plateau (not trait_aux_blancs) (- beta) (- !alpha0) evaluation (captures plateau nouveau_trait coup) (profondeur - 1) position_roi_adverse (menacee plateau position_roi_adverse nouveau_trait) 
         in if score > !best_score then begin
           best_score := score;
           alpha0 := max !alpha0 !best_score;
@@ -608,11 +602,12 @@ let traitement_quiescent_profondeur_0 evaluation plateau trait_aux_blancs dernie
   end
   else begin
     let cap = detecte_captures cp in
+    let roi_en_echec = menacee plateau position_roi trait_aux_blancs in
     if cap = [] then begin
-      evaluation plateau trait_aux_blancs position_roi (menacee plateau position_roi trait_aux_blancs) alpha beta
+      evaluation plateau trait_aux_blancs position_roi roi_en_echec alpha beta
     end
     else begin
-      recherche_quiescente plateau trait_aux_blancs alpha beta evaluation cap 1000
+      recherche_quiescente plateau trait_aux_blancs alpha beta evaluation cap 1000 position_roi roi_en_echec
     end
   end
 

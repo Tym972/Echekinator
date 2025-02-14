@@ -4,7 +4,6 @@ open Libs.Generateur
 open Libs.Strategie1
 open Libs.Strategie2
 open Libs.Traduction2
-open Libs.Zobrist
 open Libs.Quiescence
 open Libs.Transposition
 open Libs.Total
@@ -178,21 +177,7 @@ let rec negalphabeta_idd plateau trait_aux_blancs dernier_coup droit_au_roque re
         joue plateau coup;
         cp := List.tl !cp;
         let nouveau_droit_au_roque = modification_roque coup droit_au_roque in
-        let nouveau_releve =
-          if est_irremediable coup then begin
-            if profondeur < 8 then begin
-              []
-            end
-            else begin
-              [zobrist plateau (not trait_aux_blancs) coup nouveau_droit_au_roque]
-            end
-          end
-          else if List.length releve_plateau + profondeur < 8 then begin
-            []
-          end
-          else begin 
-            ((zobrist plateau (not trait_aux_blancs) coup nouveau_droit_au_roque) :: releve_plateau)
-          end
+        let nouveau_releve = adapte_releve plateau coup profondeur trait_aux_blancs nouveau_droit_au_roque releve_plateau
         in let score =
           let note, _ = negalphabeta_idd plateau (not trait_aux_blancs) coup nouveau_droit_au_roque nouveau_releve (profondeur - 1) profondeur_initiale (- beta) (- !alpha0) evaluation Aucun
           in - note
@@ -328,19 +313,19 @@ let main b1 b2 b3 b4 b5 b6 b7 b8 plateau =
   affiche plateau;
   if b1 then begin
     print_endline "Negamax";
-    runnegamax  true (Array.copy plateau) (ref !trait_aux_blancs) (ref !dernier_coup) (ref !droit_au_roque)
+    runnegamax true (Array.copy plateau) (ref !trait_aux_blancs) (ref !dernier_coup) (ref !droit_au_roque)
   end;
   if b2 then begin
     print_endline "Negalphabeta sans releve_plateau";
-    runnegalphabeta_simple  true (Array.copy plateau) (ref !trait_aux_blancs) (ref !dernier_coup) (ref !droit_au_roque)
+    runnegalphabeta_simple true (Array.copy plateau) (ref !trait_aux_blancs) (ref !dernier_coup) (ref !droit_au_roque)
   end;
   if b3 then begin
     print_endline "Negalphabeta";
-    runnegalphabeta  true (Array.copy plateau) (ref !trait_aux_blancs) (ref !dernier_coup) (ref !droit_au_roque)
+    runnegalphabeta true (Array.copy plateau) (ref !trait_aux_blancs) (ref !dernier_coup) (ref !droit_au_roque)
   end;
   if b4 then begin
     print_endline "PVS";
-    runpvs  true (Array.copy plateau) (ref !trait_aux_blancs) (ref !dernier_coup) (ref !droit_au_roque)
+    runpvs true (Array.copy plateau) (ref !trait_aux_blancs) (ref !dernier_coup) (ref !droit_au_roque)
   end;
   if b5 then begin
     print_endline "Negalphabeta transposition";

@@ -7,7 +7,7 @@ let bug_0_1 = "8/8/8/3p4/3kp1RP/3p2P1/5P2/2B3K1 w - - 1 53"
 let bug_0_2 = "8/8/8/3p4/3kpPRP/3p2P1/8/2B3K1 b - - 0 53"
 
 (*Kiwipete*)
-let kiwipete = "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - "
+let kiwipete = "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1"
 
 (*Test du roque*)
 let test_roque = "rnbq1bnr/pppppppp/8/8/8/8/Pk2PPPP/R3KBNR w KQ - 0 1"

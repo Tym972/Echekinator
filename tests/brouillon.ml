@@ -35,6 +35,42 @@ let () = main plateau
 (*
 
 
+let deplacements_all2 plateau trait_aux_blancs position_roi piece_clouees =
+  let liste_coups = ref [] in
+  let liste_coups_roi = deplacements_roi2 plateau position_roi in
+  let liste_coups_clouees = ref [] in
+  if trait_aux_blancs then begin
+    let aux depart arrivee = 
+    for i = depart downto arrivee do
+      if not (List.mem i piece_clouees) then begin
+        let piece = plateau.(i) in
+        if piece > 0 then begin
+          (tabfun.(piece - 1) plateau i liste_coups)
+        end
+      end
+      else begin
+        let piece = plateau.(i) in (tabfun.(piece - 1) plateau i liste_coups_clouees)
+      end
+    done in List.iter (fun (a, b) -> aux a b) [63, position_roi + 1; position_roi - 1, 0]
+  end
+  else begin
+    let aux depart arrivee =
+      for i = depart to arrivee do
+        if not (List.mem i piece_clouees) then begin
+          let piece = plateau.(i) in
+          if piece < 0 then begin
+            (tabfun.(- piece - 1) plateau i liste_coups)
+          end
+        end
+        else begin
+          let piece = plateau.(i) in (tabfun.(- piece - 1) plateau i liste_coups_clouees)
+        end
+      done
+    in List.iter (fun (a, b) -> aux a b) [0, position_roi - 1; position_roi + 1, 63]
+  end;
+  !liste_coups, liste_coups_roi, !liste_coups_clouees
+
+
 
   let roi_blanc_roque = position_de_depart.(!depart_roi_blanc) = 6 in
   let roi_noir_roque = position_de_depart.(!depart_roi_noir) = (-6) in

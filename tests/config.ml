@@ -18,7 +18,7 @@ let plateau = Array.copy echiquier
 
 let releve_plateau = ref [zobrist plateau true !dernier_coup !droit_au_roque]
 
-let chaine_fen = test_fisher20
+let chaine_fen = kiwipete
 let liste_coup = ""
 
 let trait_aux_blancs = ref true
@@ -29,9 +29,9 @@ let () =
 
 let evaluation = evalue_ouverture
 
-let profondeur = 4
+let profondeur = 7
 
-let profondeur_perft = 6
+let profondeur_perft = 5
 
 let coups_valides_joueur = coups_valides plateau !trait_aux_blancs !dernier_coup !droit_au_roque
 

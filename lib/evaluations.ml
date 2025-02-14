@@ -339,7 +339,7 @@ let evalue_tour plateau case trait_aux_blancs defendues attaquee position_roi ro
           s := false
         end
         else begin
-          if trait_aux_blancs && (est_valide_efficace plateau (Classique {piece = co; depart = case; arrivee = candidat; prise = dest}) position_roi roi_en_echec piece_clouees) then begin
+          if trait_aux_blancs && (est_valide_efficace plateau (Classique {piece = co; depart = case; arrivee = candidat; prise = dest}) trait_aux_blancs position_roi roi_en_echec piece_clouees) then begin
             if List.mem candidat !defendues then begin
               let difference = tabvalue.(co) - tabvalue.(- dest) in
               if difference < 0 then begin
@@ -375,7 +375,7 @@ let evalue_tour plateau case trait_aux_blancs defendues attaquee position_roi ro
           s := false
         end
         else begin
-          if not trait_aux_blancs && (est_valide_efficace plateau (Classique {piece = co; depart = case; arrivee = candidat; prise = dest}) position_roi roi_en_echec piece_clouees) then begin
+          if not trait_aux_blancs && (est_valide_efficace plateau (Classique {piece = co; depart = case; arrivee = candidat; prise = dest}) trait_aux_blancs position_roi roi_en_echec piece_clouees) then begin
             if List.mem candidat !defendues then begin
               let difference = - tabvalue.(- co) + tabvalue.(dest) in
               if difference > 0 then begin
@@ -418,7 +418,7 @@ let evalue_fou plateau case trait_aux_blancs defendues attaquee position_roi roi
           s := false
         end
         else begin
-          if trait_aux_blancs && (est_valide_efficace plateau (Classique {piece = co; depart = case; arrivee = candidat; prise = dest}) position_roi roi_en_echec piece_clouees) then begin
+          if trait_aux_blancs && (est_valide_efficace plateau (Classique {piece = co; depart = case; arrivee = candidat; prise = dest}) trait_aux_blancs position_roi roi_en_echec piece_clouees) then begin
             if List.mem candidat !defendues then begin
               let difference = tabvalue.(co) - tabvalue.(- dest) in
               if difference < 0 then begin
@@ -454,7 +454,7 @@ let evalue_fou plateau case trait_aux_blancs defendues attaquee position_roi roi
           s := false
         end
         else begin
-          if not trait_aux_blancs && (est_valide_efficace plateau (Classique {piece = co; depart = case; arrivee = candidat; prise = dest}) position_roi roi_en_echec piece_clouees) then begin
+          if not trait_aux_blancs && (est_valide_efficace plateau (Classique {piece = co; depart = case; arrivee = candidat; prise = dest}) trait_aux_blancs position_roi roi_en_echec piece_clouees) then begin
             if List.mem candidat !defendues then begin
               let difference = - tabvalue.(- co) + tabvalue.(dest) in
               if difference > 0 then begin
@@ -487,7 +487,7 @@ let evalue_cavalier plateau case trait_aux_blancs defendues attaquee position_ro
           if dest = 0 then begin
             compteur := !compteur + 1
           end
-          else if trait_aux_blancs && (est_valide_efficace plateau (Classique {piece = co; depart = case; arrivee = candidat; prise = dest}) position_roi roi_en_echec piece_clouees) then begin
+          else if trait_aux_blancs && (est_valide_efficace plateau (Classique {piece = co; depart = case; arrivee = candidat; prise = dest}) trait_aux_blancs position_roi roi_en_echec piece_clouees) then begin
             if List.mem candidat !defendues then begin
               let difference = tabvalue.(co) - tabvalue.(- dest) in
               if difference < 0 then begin
@@ -518,7 +518,7 @@ let evalue_cavalier plateau case trait_aux_blancs defendues attaquee position_ro
           if dest = 0 then begin
             compteur := !compteur + 1
           end
-          else if not trait_aux_blancs && (est_valide_efficace plateau (Classique {piece = co; depart = case; arrivee = candidat; prise = dest}) position_roi roi_en_echec piece_clouees) then begin
+          else if not trait_aux_blancs && (est_valide_efficace plateau (Classique {piece = co; depart = case; arrivee = candidat; prise = dest}) trait_aux_blancs position_roi roi_en_echec piece_clouees) then begin
             if List.mem candidat !defendues then begin
               let difference = - tabvalue.(- co) + tabvalue.(dest) in
               if difference > 0 then begin
@@ -566,7 +566,7 @@ let evalue_dame plateau case trait_aux_blancs defendues attaquee position_roi ro
           s := false
         end
         else begin
-          if trait_aux_blancs && (est_valide_efficace plateau (Classique {piece = co; depart = case; arrivee = candidat; prise = dest}) position_roi roi_en_echec piece_clouees) then begin
+          if trait_aux_blancs && (est_valide_efficace plateau (Classique {piece = co; depart = case; arrivee = candidat; prise = dest}) trait_aux_blancs position_roi roi_en_echec piece_clouees) then begin
             if List.mem candidat !defendues then begin
               let difference = tabvalue.(co) - tabvalue.(- dest) in
               if difference < 0 then begin
@@ -602,7 +602,7 @@ let evalue_dame plateau case trait_aux_blancs defendues attaquee position_roi ro
           s := false
         end
         else begin
-          if not trait_aux_blancs && (est_valide_efficace plateau (Classique {piece = co; depart = case; arrivee = candidat; prise = dest}) position_roi roi_en_echec piece_clouees) then begin
+          if not trait_aux_blancs && (est_valide_efficace plateau (Classique {piece = co; depart = case; arrivee = candidat; prise = dest}) trait_aux_blancs position_roi roi_en_echec piece_clouees) then begin
             if List.mem candidat !defendues then begin
               let difference = - tabvalue.(- co) + tabvalue.(dest) in
               if difference > 0 then begin
@@ -692,7 +692,7 @@ let evalue_pion plateau case trait_aux_blancs defendues attaquee position_roi ro
         if dest1 = 0 then begin
           compteur := !compteur + 1
         end
-        else if trait_aux_blancs && (est_valide_efficace plateau (Classique {piece = co; depart = case; arrivee = candidat1; prise = dest1}) position_roi roi_en_echec piece_clouees) then begin
+        else if trait_aux_blancs && (est_valide_efficace plateau (Classique {piece = co; depart = case; arrivee = candidat1; prise = dest1}) trait_aux_blancs position_roi roi_en_echec piece_clouees) then begin
           if List.mem candidat1 !defendues then begin
             let difference = tabvalue.(co) - tabvalue.(- dest1) in
             if difference < 0 then begin
@@ -718,7 +718,7 @@ let evalue_pion plateau case trait_aux_blancs defendues attaquee position_roi ro
         if dest2 = 0 then begin
           compteur := !compteur + 1
         end
-        else if trait_aux_blancs && (est_valide_efficace plateau (Classique {piece = co; depart = case; arrivee = candidat2; prise = dest2}) position_roi roi_en_echec piece_clouees) then begin
+        else if trait_aux_blancs && (est_valide_efficace plateau (Classique {piece = co; depart = case; arrivee = candidat2; prise = dest2}) trait_aux_blancs position_roi roi_en_echec piece_clouees) then begin
           if List.mem candidat2 !defendues then begin
             let difference = tabvalue.(co) - tabvalue.(- dest2) in
             if difference < 0 then begin
@@ -746,7 +746,7 @@ let evalue_pion plateau case trait_aux_blancs defendues attaquee position_roi ro
         if dest1 = 0 then begin
           compteur := !compteur + 1
         end
-        else if not trait_aux_blancs && (est_valide_efficace plateau (Classique {piece = co; depart = case; arrivee = candidat1; prise = dest1}) position_roi roi_en_echec piece_clouees) then begin
+        else if not trait_aux_blancs && (est_valide_efficace plateau (Classique {piece = co; depart = case; arrivee = candidat1; prise = dest1}) trait_aux_blancs position_roi roi_en_echec piece_clouees) then begin
           if List.mem candidat1 !defendues then begin
             let difference = - tabvalue.(- co) + tabvalue.(dest1) in
             if difference > 0 then begin
@@ -772,7 +772,7 @@ let evalue_pion plateau case trait_aux_blancs defendues attaquee position_roi ro
         if dest2 = 0 then begin
           compteur := !compteur + 1
         end
-        else if not trait_aux_blancs && (est_valide_efficace plateau (Classique {piece = co; depart = case; arrivee = candidat2; prise = dest2}) position_roi roi_en_echec piece_clouees) then begin
+        else if not trait_aux_blancs && (est_valide_efficace plateau (Classique {piece = co; depart = case; arrivee = candidat2; prise = dest2}) trait_aux_blancs position_roi roi_en_echec piece_clouees) then begin
           if List.mem candidat2 !defendues then begin
             let difference = - tabvalue.(- co) + tabvalue.(dest2) in
             if difference > 0 then begin
