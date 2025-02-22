@@ -1,6 +1,5 @@
 (*Module implémentant une fonction de hachage de*)
 open Plateau
-open Generateur
 
 (*Création d'un tableau de nombres pseudo aléatoires. 12 * 64 cases
   pour chaque pièce de chaque case, + 1 case pour indiquer le trait + 4 cases
@@ -13,41 +12,9 @@ let () =
   done
 
 (*Indique la colonne d'une prise en passant potentielle*)
-let colonne_ep_1 coup plateau = match coup with
-  |Classique {piece; depart; arrivee; prise} when (piece = 1 && prise = 0 && (depart > 47) && (arrivee < 40)) ->
-    let droite = arrivee + 1 in
-    if  droite <> 40 && plateau.(droite) = (-1) then begin
-      (depart - 8) mod 8
-    end
-    else begin
-      let gauche = arrivee - 1 in
-      if (gauche <> 31 && plateau.(gauche) = (-1)) then begin
-        (depart - 8) mod 8
-      end
-      else begin
-        -1
-      end
-    end
-  |Classique {piece; depart; arrivee; prise} when (piece = (-1) && prise = 0 && (depart < 16) && (arrivee > 23)) -> 
-    let droite = arrivee + 1 in
-    if  droite <> 32 && plateau.(droite) = 1 then begin
-      (depart + 8) mod 8
-    end
-    else begin
-      let gauche = arrivee - 1 in
-      if (gauche <> 23 && plateau.(gauche) = 1) then begin
-        (depart + 8) mod 8
-      end
-      else begin
-        -1
-      end
-    end
+let colonne_ep coup = match coup with
+  |Classique {piece; depart; arrivee; prise = _} when (abs piece = 1 && abs (depart - arrivee) = 16) -> depart mod 8
   |_ -> -1
-
-(*Fonction indiquant la colonne d'une prise en passant jouée*)
-let colonne_ep_2 coup = match coup with
-  |Enpassant {depart = _; arrivee} -> arrivee mod 8
-  |_ -> (-1)
 
 (*Fonction de hachage*)
 let zobrist plateau trait_aux_blancs dernier_coup (prb, grb, prn, grn) =
@@ -76,34 +43,36 @@ let zobrist plateau trait_aux_blancs dernier_coup (prb, grb, prn, grn) =
   if grn then begin
     h := !h lxor tab_zobrist.(772)
   end;
-  let pep = colonne_ep_1 dernier_coup plateau in
+  let pep = colonne_ep dernier_coup in
   if pep <> (-1) then begin
     h := !h lxor tab_zobrist.(773 + pep)
   end;
   !h
 
 (*Fonction caulculant la valeur de la fonction de zobrist en fonction de la précédente et du coup joué. Non utilisée.*)
-let nouveau_zobrist plateau coup ancien_zobrist (prb, grb, prn, grn) =
+let nouveau_zobrist coup avant_dernier_coup ancien_zobrist (aprb, agrb, aprn, agrn) (nprb, ngrb, nprn, ngrn) =
   let h = ref (ancien_zobrist lxor tab_zobrist.(768)) in
-  let pep_joueur = colonne_ep_1 coup plateau in
-  if pep_joueur <> (-1) then begin
-    h := !h lxor tab_zobrist.(773 + pep_joueur)
+  let pep_adversaire = colonne_ep avant_dernier_coup in
+  if pep_adversaire <> (-1) then begin
+    h := !h lxor tab_zobrist.(773 + pep_adversaire)
   end;
-  let nprb, ngrb, nprn, ngrn = modification_roque coup (prb, grb, prn, grn) in
-  if prb <> nprb then begin
+  if aprb <> nprb then begin
     h:= !h lxor tab_zobrist.(769)
   end;
-  if grb <> ngrb then begin
+  if agrb <> ngrb then begin
     h:= !h lxor tab_zobrist.(770)
   end;
-  if prn <> nprn then begin
+  if aprn <> nprn then begin
     h:= !h lxor tab_zobrist.(771)
   end;
-  if grn <> ngrn then begin
+  if agrn <> ngrn then begin
     h:= !h lxor tab_zobrist.(772)
   end;
   let aux coup = match coup with
     |Classique {piece; depart; arrivee; prise} -> begin
+      if (abs piece = 1 && abs (depart - arrivee) = 16) then begin
+        h := !h lxor tab_zobrist.(773 + (depart mod 8))
+      end;
       if piece > 0 then begin
         if prise = 0 then begin
           tab_zobrist.(12 * depart + (piece - 1)) lxor tab_zobrist.(12 * arrivee + (piece - 1))
@@ -130,10 +99,10 @@ let nouveau_zobrist plateau coup ancien_zobrist (prb, grb, prn, grn) =
     end
     |Enpassant {depart; arrivee} -> begin
       if depart < 32 then begin
-        tab_zobrist.(12 * depart) lxor tab_zobrist.(12 * arrivee) lxor tab_zobrist.(12 * (arrivee + 8) + 6) lxor tab_zobrist.(773 + (colonne_ep_2 coup))
+        tab_zobrist.(12 * depart) lxor tab_zobrist.(12 * arrivee) lxor tab_zobrist.(12 * (arrivee + 8) + 6)
       end
       else begin
-        tab_zobrist.(12 * depart + 6) lxor tab_zobrist.(12 * arrivee + 6) lxor tab_zobrist.(12 * (arrivee - 8)) lxor tab_zobrist.(773 + (colonne_ep_2 coup))
+        tab_zobrist.(12 * depart + 6) lxor tab_zobrist.(12 * arrivee + 6) lxor tab_zobrist.(12 * (arrivee - 8))
       end
     end
     |Promotion {depart; arrivee; promotion; prise} -> begin

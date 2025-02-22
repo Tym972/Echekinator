@@ -32,17 +32,17 @@ let rec association liste_coups =
   |[] -> []
   |Classique {piece; depart; arrivee; prise} :: t ->
     joue plateau (Classique {piece; depart; arrivee; prise});
-    let note = see plateau (arrivee) in
+    let note = see plateau arrivee trait_aux_blancs in
     dejoue plateau (Classique {piece; depart; arrivee; prise});
     ((tabvalue.(abs prise) - note), Classique {piece; depart; arrivee; prise}) :: association t
   |Enpassant {depart; arrivee} :: t ->
     joue plateau (Enpassant {depart; arrivee});
-    let note = see plateau (arrivee) in
+    let note = see plateau arrivee trait_aux_blancs in
     dejoue plateau (Enpassant {depart; arrivee});
     ((tabvalue.(1) - note), Enpassant {depart; arrivee}) :: association t
   |Promotion {depart; arrivee; promotion; prise} :: t ->
     joue plateau (Promotion {depart; arrivee; promotion; prise});
-    let note = see plateau (arrivee) in
+    let note = see plateau arrivee trait_aux_blancs in
     dejoue plateau (Promotion {depart; arrivee; promotion; prise});
     ((tabvalue.(abs promotion) + tabvalue.(abs prise) - note), Promotion {depart; arrivee; promotion; prise}) :: association t
   |h :: t -> (0, h) :: association t
@@ -90,4 +90,4 @@ let main b1 b2 b3 =
     do_tri_see ();
   end
 
-let () = main true false false
+let () = main false true false

@@ -11,6 +11,7 @@ open Strategie2
 open Evaluations
 open Ouvertures
 open Config
+open Transposition
 
 (*Fonction permettant de traiter une proposition de coup du joueur*)
 let traitement choix coups_valides_joueur plateau dernier_coup releve_coups releve_plateau trait_aux_blancs verif partie_finie regle_des_50_coups proposition_invalide droit_au_roque =
@@ -469,13 +470,11 @@ let ensemble_aleatoire k n =
   end
 
 (*Permet de lancer un ensemble de partie en consignant le résultat*)
-let ensemble all_openings anti_repet nombre affichage =
+let ensemble all_openings anti_repet nombre affichage config_j1 config_j2 =
   let heure_debut = Sys.time () in
   let repertoire_ouverture = ouvertures_echantillon in
   let nombre_ouvertures = List.length repertoire_ouverture in
   let doc = ref "" in
-  let config_j1 = config_pf 4 in
-  let config_j2 = config_pf 4 in
   let nom_j1, algo_j1, profondeur_j1, profondeur_max_j1, temps_limite_court_j1, duree_theorie_j1, duree_ouverture_j1, duree_finale_j1, phase1_j1, evaluation_ouverture_j1, evaluation_mdj_j1, evaluation_finale_j1, recherche_j1 = config_j1 in
   let nom_j2, algo_j2, profondeur_j2, profondeur_max_j2, temps_limite_court_j2, duree_theorie_j2, duree_ouverture_j2, duree_finale_j2, phase1_j2, evaluation_ouverture_j2, evaluation_mdj_j2, evaluation_finale_j2, recherche_j2 = config_j2 in
   let init_phase1_j1 = !phase1_j1 in
@@ -538,7 +537,7 @@ let ensemble all_openings anti_repet nombre affichage =
           algo_j1 plateau regle_des_50_coups dernier_coup releve_coups releve_plateau trait_aux_blancs verif partie_finie profondeur_j1 profondeur_max_j1 duree_theorie_j1 duree_ouverture_j1 duree_finale_j1 temps_limite_court_j1 phase1_j1 position_de_depart affichage evaluation_ouverture_j1 evaluation_mdj_j1 evaluation_finale_j1 droit_au_roque recherche_j1
         end
       end
-    done;
+    done; actualise table 1000;
     fin_de_partie2 plateau !dernier_coup !droit_au_roque !releve_coups !releve_plateau regle_des_50_coups !verif position_de_depart dernier_coup_initial droit_au_roque_initial doc victoires_blanches_j1 victoires_noires_j1 victoires_blanches_j2 victoires_noires_j2 manque_materiel pat triple_repetition coups50 i m nom_j1 nom_j2 affichage htbl date_debut heure_debut fen_initial
   done;
   let temps = Sys.time () -. heure_debut in
@@ -589,7 +588,7 @@ let ensemble all_openings anti_repet nombre affichage =
   close_out fichier_sortie
 
 (*Fonction gérant le lancement d'un ensemble de parties*)
-let partie_multiple () =
+let partie_multiple config_j1 config_j2 =
   let all_openings = est_oui (lire_entree "Voulez vous tester chaque ouverture du répertoire désigné? : ") in
     let nombre = ref 0 in
     let anti_repet = ref false in
@@ -600,4 +599,4 @@ let partie_multiple () =
       end
     end;
     let affichage = est_oui (lire_entree "Voulez vous afficher les coups? : ") in
-    ensemble all_openings !anti_repet !nombre affichage
+    ensemble all_openings !anti_repet !nombre affichage config_j1 config_j2

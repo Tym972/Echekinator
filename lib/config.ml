@@ -304,7 +304,7 @@ let config_transpo_pf n =
   let duree_ouverture = 30 in
   let duree_finale = 90 in
   let phase_1 = ref true in
-  let recherche = negalphabeta_trans in
+  let recherche = negalphabetime_trans in
   nom, algo, profondeur, profondeur_max, temps_limite_court, duree_theorie, duree_ouverture, duree_finale, phase_1, evaluation_ouverture, evaluation_mdj, evaluation_finale, recherche
 
 (*Configuration pour une profondeur fixée n*)
@@ -324,9 +324,25 @@ let config_pf_nve n =
   let recherche = negalphabetime in
   nom, algo, profondeur, profondeur_max, temps_limite_court, duree_theorie, duree_ouverture, duree_finale, phase_1, evaluation_ouverture, evaluation_mdj, evaluation_finale, recherche
 
+let config_pf_quiescent_nve n =
+  let nom = Printf.sprintf "PF%i, RQ, N.E" n in
+  let algo = algo_decisionnel in
+  let evaluation_ouverture = eval1_q in
+  let evaluation_mdj = eval2_q in
+  let evaluation_finale = eval3_q in
+  let profondeur = n in
+  let profondeur_max = n in
+  let temps_limite_court = 1.5 in
+  let duree_theorie = 40 in
+  let duree_ouverture = 30 in
+  let duree_finale = 90 in
+  let phase_1 = ref true in
+  let recherche = negalphabetime_quiescent in
+  nom, algo, profondeur, profondeur_max, temps_limite_court, duree_theorie, duree_ouverture, duree_finale, phase_1, evaluation_ouverture, evaluation_mdj, evaluation_finale, recherche
+
 (*Configuration pour une profondeur fixée n*)
 let config_pf_totale n =
-  let nom = Printf.sprintf "PF%i, A" n in
+  let nom = Printf.sprintf "PF%i, Totale" n in
   let algo = algo_decisionnel in
   let evaluation_ouverture = evalue_ouverture in
   let evaluation_mdj = evalue_mdj in
@@ -339,4 +355,38 @@ let config_pf_totale n =
   let duree_finale = 90 in
   let phase_1 = ref true in
   let recherche = negalphabetime_total in
+  nom, algo, profondeur, profondeur_max, temps_limite_court, duree_theorie, duree_ouverture, duree_finale, phase_1, evaluation_ouverture, evaluation_mdj, evaluation_finale, recherche
+
+(*Configuration pour une profondeur fixée n*)
+let config_pf_iid_transpo n =
+  let nom = Printf.sprintf "PF%i, IID Totale" n in
+  let algo = algo_decisionnel in
+  let evaluation_ouverture = evalue_ouverture in
+  let evaluation_mdj = evalue_mdj in
+  let evaluation_finale = evalue_finale in
+  let profondeur = n in
+  let profondeur_max = n in
+  let temps_limite_court = 1.5 in
+  let duree_theorie = 40 in
+  let duree_ouverture = 30 in
+  let duree_finale = 90 in
+  let phase_1 = ref true in
+  let recherche = iid_time_trans in
+  nom, algo, profondeur, profondeur_max, temps_limite_court, duree_theorie, duree_ouverture, duree_finale, phase_1, evaluation_ouverture, evaluation_mdj, evaluation_finale, recherche
+
+(*Configuration pour une profondeur fixée n*)
+let config_pf_iid_totale n =
+  let nom = Printf.sprintf "PF%i, IID Totale" n in
+  let algo = algo_decisionnel in
+  let evaluation_ouverture = eval1_q in
+  let evaluation_mdj = eval2_q in
+  let evaluation_finale = eval3_q in
+  let profondeur = n in
+  let profondeur_max = n in
+  let temps_limite_court = 1.5 in
+  let duree_theorie = 40 in
+  let duree_ouverture = 30 in
+  let duree_finale = 90 in
+  let phase_1 = ref true in
+  let recherche = iid_time_total in
   nom, algo, profondeur, profondeur_max, temps_limite_court, duree_theorie, duree_ouverture, duree_finale, phase_1, evaluation_ouverture, evaluation_mdj, evaluation_finale, recherche

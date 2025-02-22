@@ -23,6 +23,9 @@ let affiche_score score profondeur_initiale trait_aux_blancs =
       if score = -99950 then begin
         print_endline (Printf.sprintf "Score : #-%i" (profondeur_initiale / 2))
       end
+      else if score = 99950 then begin
+        print_endline (Printf.sprintf "Score : #%i" (profondeur_initiale / 2))
+      end
       else if score = 99998 then begin
         print_endline "Score : -"
       end
@@ -41,6 +44,9 @@ let affiche_score score profondeur_initiale trait_aux_blancs =
     else begin
       if score = -99950 then begin
         print_endline (Printf.sprintf "Score : #%i" (profondeur_initiale / 2))
+      end
+      else if score = 99950 then begin
+        print_endline (Printf.sprintf "Score : #-%i" (profondeur_initiale / 2))
       end
       else if score = 99998 then begin
         print_endline "Score : -"

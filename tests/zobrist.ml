@@ -36,7 +36,7 @@ let droit_au_roque = roques_possibles !releve_coups
 
 let i = zobrist plateau_apres (not !trait_aux_blancs) !dernier_coup droit_au_roque
 
-let j = nouveau_zobrist plateau_apres coup k (modification_roque coup droit_au_roque)
+let j = nouveau_zobrist coup !dernier_coup k droit_au_roque (modification_roque coup droit_au_roque)
 
 let main  b2 =
   if b2 then begin

@@ -8,10 +8,13 @@ open Libs.Quiescence
 open Libs.Transposition
 open Libs.Total
 
-let rec negamax plateau trait_aux_blancs dernier_coup droit_au_roque profondeur evaluation =
+let rec negamax plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau profondeur evaluation = incr compteur_recherche;
   let best_score = ref (-99999) in
   let best_move = ref Aucun in
-  if profondeur = 0 then begin
+  if repetition releve_plateau 3 then begin incr compteur_noeuds_terminaux;
+    best_score := 0
+  end
+  else if profondeur = 0 then begin incr compteur_noeuds_terminaux;
     best_score := traitement_profondeur_0 evaluation plateau trait_aux_blancs dernier_coup (-99999) 99999
   end
   else begin
@@ -29,8 +32,10 @@ let rec negamax plateau trait_aux_blancs dernier_coup droit_au_roque profondeur 
         let coup = List.hd !cp in
         joue plateau coup;
         cp := List.tl !cp;
-        let score =
-          let note, _ = negamax plateau (not trait_aux_blancs) coup (modification_roque coup droit_au_roque) (profondeur - 1) evaluation
+        let nouveau_droit_au_roque = modification_roque coup droit_au_roque in
+        let nouveau_releve = adapte_releve plateau coup profondeur trait_aux_blancs nouveau_droit_au_roque releve_plateau
+        in let score =
+          let note, _ = negamax plateau (not trait_aux_blancs) coup nouveau_droit_au_roque nouveau_releve (profondeur - 1) evaluation
           in - note
         in if score > !best_score then begin
           best_score := score;
@@ -43,10 +48,13 @@ let rec negamax plateau trait_aux_blancs dernier_coup droit_au_roque profondeur 
   !best_score, !best_move
 
 (*Implémentation d'un algorithme de recherche minimax avec élagage alpha-bêta et negamax*)
-let rec negalphabeta_simple plateau trait_aux_blancs dernier_coup droit_au_roque profondeur profondeur_initiale alpha beta evaluation = incr compteur_recherche;
+let rec negalphabeta_simple plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau profondeur profondeur_initiale alpha beta evaluation = incr compteur_recherche;
   let best_score = ref (-99999) in
   let best_move = ref Aucun in
-  if profondeur = 0 then begin incr compteur_noeuds_terminaux;
+  if repetition releve_plateau 3 then begin incr compteur_noeuds_terminaux;
+    best_score := 0
+  end
+  else if profondeur = 0 then begin incr compteur_noeuds_terminaux;
     best_score := traitement_profondeur_0 evaluation plateau trait_aux_blancs dernier_coup alpha beta
   end
   else begin
@@ -66,15 +74,19 @@ let rec negalphabeta_simple plateau trait_aux_blancs dernier_coup droit_au_roque
         let coup = List.hd !cp in
         joue plateau coup;
         cp := List.tl !cp;
-        let score =
-          let note, _ = negalphabeta_simple plateau (not trait_aux_blancs) coup (modification_roque coup droit_au_roque) (profondeur - 1) profondeur_initiale (- beta) (- !alpha0) evaluation
+        let nouveau_droit_au_roque = modification_roque coup droit_au_roque in
+        let nouveau_releve = adapte_releve plateau coup profondeur trait_aux_blancs nouveau_droit_au_roque releve_plateau
+        in let score =
+          let note, _ = negalphabeta_simple plateau (not trait_aux_blancs) coup nouveau_droit_au_roque nouveau_releve (profondeur - 1) profondeur_initiale (- beta) (- !alpha0) evaluation
           in - note 
         in if score > !best_score then begin
           best_score := score;
           best_move := coup;
-          alpha0 := max !alpha0 !best_score;
-          if !alpha0 >= beta then begin
+          if score >= beta then begin
             b := false
+          end
+          else begin
+            alpha0 := max !alpha0 score
           end
         end;
         dejoue plateau coup
@@ -83,10 +95,13 @@ let rec negalphabeta_simple plateau trait_aux_blancs dernier_coup droit_au_roque
   end;
   !best_score, !best_move
 
-let rec pvs plateau trait_aux_blancs dernier_coup droit_au_roque profondeur profondeur_initiale alpha beta evaluation =
+let rec pvs plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau profondeur profondeur_initiale alpha beta evaluation =
   let alpha0 = ref alpha in
   let best_move = ref Aucun in
-  if profondeur = 0 then begin
+  if repetition releve_plateau 3 then begin incr compteur_noeuds_terminaux;
+    alpha0 := 0
+  end
+  else if profondeur = 0 then begin
     alpha0 := traitement_profondeur_0 evaluation plateau trait_aux_blancs dernier_coup alpha beta
   end
   else begin
@@ -108,21 +123,22 @@ let rec pvs plateau trait_aux_blancs dernier_coup droit_au_roque profondeur prof
         joue plateau coup;
         cp := List.tl !cp;
         let nouveau_droit_au_roque = (modification_roque coup droit_au_roque) in
+        let nouveau_releve = adapte_releve plateau coup profondeur trait_aux_blancs nouveau_droit_au_roque releve_plateau in
         if !first then begin
           score := begin
-            let note, _ = pvs plateau (not trait_aux_blancs) coup nouveau_droit_au_roque (profondeur - 1) profondeur_initiale (- beta) (- !alpha0) evaluation
+            let note, _ = pvs plateau (not trait_aux_blancs) coup nouveau_droit_au_roque nouveau_releve (profondeur - 1) profondeur_initiale (- beta) (- !alpha0) evaluation
             in - note
           end;
           first := false
         end
         else begin
           score := begin
-            let note, _ = pvs plateau (not trait_aux_blancs) coup nouveau_droit_au_roque (profondeur - 1) profondeur_initiale (- (!alpha0 + 1)) (- !alpha0) evaluation
+            let note, _ = pvs plateau (not trait_aux_blancs) coup nouveau_droit_au_roque nouveau_releve (profondeur - 1) profondeur_initiale (- (!alpha0 + 1)) (- !alpha0) evaluation
             in - note
           end;
           if alpha < !score && !score < beta then begin
             score := begin
-              let note, _ = pvs plateau (not trait_aux_blancs) coup nouveau_droit_au_roque (profondeur - 1) profondeur_initiale (- beta) (- !alpha0) evaluation
+              let note, _ = pvs plateau (not trait_aux_blancs) coup nouveau_droit_au_roque nouveau_releve (profondeur - 1) profondeur_initiale (- beta) (- !alpha0) evaluation
               in - note
             end;
           end
@@ -140,17 +156,13 @@ let rec pvs plateau trait_aux_blancs dernier_coup droit_au_roque profondeur prof
   end;
   !alpha0, !best_move
 
-let rec supprime element liste = match liste with
-  |[] -> []
-  |h::t -> if h = element then t else h :: supprime element t
-
-let coups_joueur_idd plateau profondeur profondeur_initiale trait_aux_blancs dernier_coup droit_au_roque releve_plateau evaluation idd_candidat algo =
+let coups_joueur_idd_simple plateau profondeur profondeur_initiale trait_aux_blancs dernier_coup droit_au_roque releve_plateau evaluation idd_candidat algo =
   if profondeur <> profondeur_initiale then
     tab_tri.(profondeur - 1) plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau evaluation algo
   else
-    idd_candidat :: supprime idd_candidat (tab_tri.(profondeur - 1) plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau evaluation algo)
+    idd_candidat :: List.filter (fun coup -> coup <> idd_candidat) (tab_tri.(profondeur - 1) plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau evaluation algo)
 
-let rec negalphabeta_idd plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau profondeur profondeur_initiale alpha beta evaluation idd_candidat =
+let rec negalphabeta_idd_simple plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau profondeur profondeur_initiale alpha beta evaluation idd_candidat = incr compteur_recherche;
   let best_score = ref (-99999) in
   let best_move = ref Aucun in
   if repetition releve_plateau 3 then begin
@@ -160,7 +172,7 @@ let rec negalphabeta_idd plateau trait_aux_blancs dernier_coup droit_au_roque re
     best_score := traitement_profondeur_0 evaluation plateau trait_aux_blancs dernier_coup alpha beta
   end
   else begin
-    let cp = ref (coups_joueur_idd plateau profondeur profondeur_initiale trait_aux_blancs dernier_coup droit_au_roque releve_plateau evaluation idd_candidat negalphabeta)
+    let cp = ref (coups_joueur_idd_simple plateau profondeur profondeur_initiale trait_aux_blancs dernier_coup droit_au_roque releve_plateau evaluation idd_candidat negalphabeta)
     in if !cp = [] then begin
       if menacee plateau (index_tableau plateau (roi trait_aux_blancs)) trait_aux_blancs then begin
         best_score := (profondeur_initiale - (profondeur + 99999))
@@ -179,14 +191,16 @@ let rec negalphabeta_idd plateau trait_aux_blancs dernier_coup droit_au_roque re
         let nouveau_droit_au_roque = modification_roque coup droit_au_roque in
         let nouveau_releve = adapte_releve plateau coup profondeur trait_aux_blancs nouveau_droit_au_roque releve_plateau
         in let score =
-          let note, _ = negalphabeta_idd plateau (not trait_aux_blancs) coup nouveau_droit_au_roque nouveau_releve (profondeur - 1) profondeur_initiale (- beta) (- !alpha0) evaluation Aucun
+          let note, _ = negalphabeta_idd_simple plateau (not trait_aux_blancs) coup nouveau_droit_au_roque nouveau_releve (profondeur - 1) profondeur_initiale (- beta) (- !alpha0) evaluation Aucun
           in - note
         in if score > !best_score then begin
           best_score := score;
           best_move := coup;
-          alpha0 := max !alpha0 !best_score;
-          if !alpha0 >= beta then begin
+          if score >= beta then begin
             b := false
+          end
+          else begin
+            alpha0 := max !alpha0 score
           end
         end;
         dejoue plateau coup
@@ -195,40 +209,88 @@ let rec negalphabeta_idd plateau trait_aux_blancs dernier_coup droit_au_roque re
   end;
   !best_score, !best_move
 
-let idd plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau profondeur alpha beta evaluation =
+let idd_basique_print plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau profondeur alpha beta evaluation =
   let move = ref (List.hd (coups_valides plateau trait_aux_blancs dernier_coup droit_au_roque)) in
   let score = ref 0 in
   for i = 1 to profondeur do
-    let new_score, new_move = negalphabeta_idd plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau i i alpha beta evaluation !move in
+    let new_score, new_move = negalphabeta plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau i i alpha beta evaluation in
     move := new_move;
     score := new_score;
     print_endline (algebric_of_mouvement !move plateau coups_valides_joueur ^ " " ^ string_of_int !score ^ " " ^  string_of_int i) 
   done;
   !score, !move
 
-let negatime plateau trait_aux_blancs dernier_coup droit_au_roque profondeur evaluation  =
+let idd_simple_print plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau profondeur alpha beta evaluation =
+  let move = ref (List.hd (coups_valides plateau trait_aux_blancs dernier_coup droit_au_roque)) in
+  let score = ref 0 in
+  for i = 1 to profondeur do
+    let new_score, new_move = negalphabeta_idd_simple plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau i i alpha beta evaluation !move in
+    move := new_move;
+    score := new_score;
+    print_endline (algebric_of_mouvement !move plateau coups_valides_joueur ^ " " ^ string_of_int !score ^ " " ^  string_of_int i) 
+  done;
+  !score, !move
+
+let idd_trans_print plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau profondeur alpha beta evaluation =
+  let score = ref 0 in
+  let move = ref Aucun in
+  for i = 1 to profondeur do
+    let new_score, new_move = negalphabeta_trans plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau i i alpha beta evaluation (List.hd releve_plateau) in
+    move := new_move;
+    score := new_score;
+    print_endline (algebric_of_mouvement !move plateau coups_valides_joueur ^ " " ^ string_of_int !score ^ " " ^  string_of_int i) 
+  done;
+  !score, !move
+
+let idd_total_print plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau profondeur alpha beta evaluation =
+  let score = ref 0 in
+  let move = ref Aucun in
+  for i = 1 to profondeur do
+    let new_score, new_move = negalphabeta_total plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau i i alpha beta evaluation (List.hd releve_plateau) in
+    move := new_move;
+    score := new_score;
+    print_endline (algebric_of_mouvement !move plateau coups_valides_joueur ^ " " ^ string_of_int !score ^ " " ^  string_of_int i)
+  done;
+  !score, !move
+
+let negatime plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau profondeur evaluation =
   let t = Sys.time () in
-  let fx = negamax plateau trait_aux_blancs dernier_coup droit_au_roque profondeur evaluation in
+  let fx = negamax plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau profondeur evaluation in
   fx, (Sys.time () -. t)
 
 (*Fonction renvoyant un appel à la fonction alphabeta ansi que le temps nécessaire à l'éxécution*)
-let negalphabetime_simple plateau trait_aux_blancs dernier_coup droit_au_roque profondeur evaluation =
+let negalphabetime_simple plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau profondeur evaluation =
   let t = Sys.time () in
-  let fx = negalphabeta_simple plateau trait_aux_blancs dernier_coup droit_au_roque profondeur profondeur (-99999) 99999 evaluation in
+  let fx = negalphabeta_simple plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau profondeur profondeur (-99999) 99999 evaluation in
   fx, (Sys.time () -. t)
 
-let pvstime plateau trait_aux_blancs dernier_coup droit_au_roque profondeur evaluation =
+let pvstime plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau profondeur evaluation =
   let t = Sys.time () in
-  let fx = pvs plateau trait_aux_blancs dernier_coup droit_au_roque profondeur profondeur (-99999) 99999 evaluation in
+  let fx = pvs plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau profondeur profondeur (-99999) 99999 evaluation in
   fx, (Sys.time () -. t)
 
-let idd_time plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau profondeur evaluation =
+let idd_time_basique_print plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau profondeur evaluation =
   let t = Sys.time () in
-  let fx = idd plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau profondeur (-99999) 99999 evaluation in
+  let fx = idd_basique_print plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau profondeur (-99999) 99999 evaluation in
   fx, (Sys.time () -. t)
 
-let run affichage plateau trait_aux_blancs dernier_coup droit_au_roque algo =
-  let (a, coup), c = algo plateau !trait_aux_blancs !dernier_coup !droit_au_roque profondeur evaluation in
+let idd_time_simple_print plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau profondeur evaluation =
+  let t = Sys.time () in
+  let fx = idd_simple_print plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau profondeur (-99999) 99999 evaluation in
+  fx, (Sys.time () -. t)
+
+let idd_time_trans_print plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau profondeur evaluation =
+  let t = Sys.time () in
+  let fx = idd_trans_print plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau profondeur (-99999) 99999 evaluation in
+  fx, (Sys.time () -. t)
+
+let idd_time_total_print plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau profondeur evaluation =
+  let t = Sys.time () in
+  let fx = idd_total_print plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau profondeur (-99999) 99999 evaluation in
+  fx, (Sys.time () -. t)
+
+let run affichage plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau profondeur evaluation algo =
+  let (a, coup), c = algo plateau !trait_aux_blancs !dernier_coup !droit_au_roque !releve_plateau profondeur evaluation in
   if affichage then begin
     print_endline ("Matériel : " ^ (string_of_int a));
     print_endline ("Temps : " ^ (string_of_float c))
@@ -239,113 +301,107 @@ let run affichage plateau trait_aux_blancs dernier_coup droit_au_roque algo =
     print_endline (algebric_of_mouvement !dernier_coup plateau coups_valides_joueur);
   end
 
-let runnegamax affichage plateau trait_aux_blancs dernier_coup droit_au_roque =
-  run affichage plateau trait_aux_blancs dernier_coup droit_au_roque negatime
+let runnegamax affichage plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau profondeur evaluation =
+  run affichage plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau profondeur evaluation negatime
 
-let runnegalphabeta_simple affichage plateau trait_aux_blancs dernier_coup droit_au_roque =
-  run affichage plateau trait_aux_blancs dernier_coup droit_au_roque negalphabetime_simple
+let runnegalphabeta_simple affichage plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau profondeur evaluation =
+  run affichage plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau profondeur evaluation negalphabetime_simple
 
-let runpvs affichage plateau trait_aux_blancs dernier_coup droit_au_roque =
-  run affichage plateau trait_aux_blancs dernier_coup droit_au_roque pvstime
+let runpvs affichage plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau profondeur evaluation =
+  run affichage plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau profondeur evaluation pvstime
 
-let runnegalphabeta affichage plateau trait_aux_blancs dernier_coup droit_au_roque =
-  let (a, coup), c = negalphabetime plateau !trait_aux_blancs !dernier_coup !droit_au_roque !releve_plateau profondeur evaluation in
-  if affichage then begin
-    print_endline ("Matériel : " ^ (string_of_int a));
-    print_endline ("Temps : " ^ (string_of_float c))
-  end; 
-  joue_coup_2 plateau coup trait_aux_blancs dernier_coup droit_au_roque releve_coups releve_plateau;
-  if affichage then begin
-    affiche plateau;
-    print_endline (algebric_of_mouvement !dernier_coup plateau coups_valides_joueur);
-  end
+let runnegalphabeta affichage plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau profondeur evaluation =
+  run affichage plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau profondeur evaluation negalphabetime
 
-let runnegalphabeta_trans affichage plateau trait_aux_blancs dernier_coup droit_au_roque =
-  let (a, coup), c = negalphabetime_trans plateau !trait_aux_blancs !dernier_coup !droit_au_roque !releve_plateau profondeur profondeur evaluation in
-  if affichage then begin
-    print_endline ("Matériel : " ^ (string_of_int a)); 
-    print_endline ("Temps : " ^ (string_of_float c))
-  end; 
-  joue_coup_2 plateau coup trait_aux_blancs dernier_coup droit_au_roque releve_coups releve_plateau;
-  if affichage then begin
-    affiche plateau;
-    print_endline (algebric_of_mouvement !dernier_coup plateau coups_valides_joueur);
-  end
+let runnegalphabeta_trans affichage plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau profondeur evaluation =
+  run affichage plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau profondeur evaluation negalphabetime_trans
 
-let runnegalphabeta_quiescent affichage plateau trait_aux_blancs dernier_coup droit_au_roque =
-  let (a, coup), c = negalphabetime_quiescent plateau !trait_aux_blancs !dernier_coup !droit_au_roque !releve_plateau profondeur evaluation in
-  if affichage then begin
-    print_endline ("Matériel : " ^ (string_of_int a));
-    print_endline ("Temps : " ^ (string_of_float c))
-  end;
-  joue_coup_2 plateau coup trait_aux_blancs dernier_coup droit_au_roque releve_coups releve_plateau;
-  if affichage then begin
-    affiche plateau;
-    print_endline (algebric_of_mouvement !dernier_coup plateau coups_valides_joueur);
-  end
+let runnegalphabeta_quiescent affichage plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau profondeur evaluation =
+  run affichage plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau profondeur evaluation negalphabetime_quiescent
 
-let runidd affichage plateau trait_aux_blancs dernier_coup droit_au_roque =
-  let (a, coup), c = idd_time plateau !trait_aux_blancs !dernier_coup !droit_au_roque !releve_plateau profondeur evaluation in
-  if affichage then begin
-    print_endline ("Matériel : " ^ (string_of_int a));
-    print_endline ("Temps : " ^ (string_of_float c))
-  end;
-  joue_coup_2 plateau coup trait_aux_blancs dernier_coup droit_au_roque releve_coups releve_plateau;
-  if affichage then begin
-    affiche plateau;
-    print_endline (algebric_of_mouvement !dernier_coup plateau coups_valides_joueur);
-  end
+let runidd_basique affichage plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau profondeur evaluation =
+  run affichage plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau profondeur evaluation idd_time_basique_print
 
-let runnegalphabeta_fp affichage plateau trait_aux_blancs dernier_coup droit_au_roque =
-  let (a, coup), c = negalphabetime_total plateau! trait_aux_blancs !dernier_coup !droit_au_roque !releve_plateau profondeur evaluation in
-  if affichage then begin
-    print_endline ("Matériel : " ^ (string_of_int a));
-    print_endline ("Temps : " ^ (string_of_float c))
-  end; 
-  joue_coup_2 plateau coup trait_aux_blancs dernier_coup droit_au_roque releve_coups releve_plateau;
-  if affichage then begin
-    affiche plateau;
-    print_endline (algebric_of_mouvement !dernier_coup plateau coups_valides_joueur);
-  end
+let runidd_simple affichage plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau profondeur evaluation =
+  run affichage plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau profondeur evaluation idd_time_simple_print
 
-let main b1 b2 b3 b4 b5 b6 b7 b8 plateau =
+let runidd_trans affichage plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau profondeur evaluation =
+  run affichage plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau profondeur evaluation idd_time_trans_print
+
+let runidd_total affichage plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau profondeur evaluation =
+  run affichage plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau profondeur evaluation idd_time_total_print
+
+let runnegalphabeta_fp affichage plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau profondeur evaluation =
+  run affichage plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau profondeur evaluation negalphabetime_total
+
+(*let stat tableau_1 tableau_2 tableau_3 =
+  let taille_tableau = Array.length tableau_1 - 1 in
+  let n1 = ref 0 in
+  let n2 = ref 0 in
+  let n3 = tableau_3.(0) + tableau_3.(1) in
+  print_endline (Printf.sprintf "Hash = Best : %f et Hash <> Best : %f" ((float_of_int tableau_3.(0)) /. (float_of_int n3)) ((float_of_int tableau_3.(1)) /. (float_of_int n3)));
+  for i = 0 to taille_tableau do
+    n1:= !n1 + tableau_1.(i);
+    n2 := !n2 + tableau_2.(i)
+  done;
+  print_endline (Printf.sprintf "Hash_best : %i et Best_move %i" !n1 !n2);
+  for i = 0 to taille_tableau do
+    let k1 = (float_of_int tableau_1.(i)) /. (float_of_int !n1) in
+    let k2 = (float_of_int tableau_2.(i)) /. (float_of_int !n2) in
+    print_endline (Printf.sprintf "Index_%i - Hash_best : %f et Best_move : %f" i k1 k2);
+  done*)
+
+let main b1 b2 b3 b4 b5 b6 b7 b8 b9 b10 b11 plateau =
   print_endline ("\nProfondeur " ^ (string_of_int profondeur));
   affiche plateau;
   if b1 then begin
     print_endline "Negamax";
-    runnegamax true (Array.copy plateau) (ref !trait_aux_blancs) (ref !dernier_coup) (ref !droit_au_roque)
+    runnegamax true (Array.copy plateau) (ref !trait_aux_blancs) (ref !dernier_coup) (ref !droit_au_roque) (ref !releve_plateau) profondeur evaluation
   end;
   if b2 then begin
     print_endline "Negalphabeta sans releve_plateau";
-    runnegalphabeta_simple true (Array.copy plateau) (ref !trait_aux_blancs) (ref !dernier_coup) (ref !droit_au_roque)
+    runnegalphabeta_simple true (Array.copy plateau) (ref !trait_aux_blancs) (ref !dernier_coup) (ref !droit_au_roque) (ref !releve_plateau) profondeur evaluation
   end;
   if b3 then begin
     print_endline "Negalphabeta";
-    runnegalphabeta true (Array.copy plateau) (ref !trait_aux_blancs) (ref !dernier_coup) (ref !droit_au_roque)
+    runnegalphabeta true (Array.copy plateau) (ref !trait_aux_blancs) (ref !dernier_coup) (ref !droit_au_roque) (ref !releve_plateau) profondeur evaluation
   end;
   if b4 then begin
     print_endline "PVS";
-    runpvs true (Array.copy plateau) (ref !trait_aux_blancs) (ref !dernier_coup) (ref !droit_au_roque)
+    runpvs true (Array.copy plateau) (ref !trait_aux_blancs) (ref !dernier_coup) (ref !droit_au_roque) (ref !releve_plateau) profondeur evaluation
   end;
   if b5 then begin
     print_endline "Negalphabeta transposition";
-    runnegalphabeta_trans true (Array.copy plateau) (ref !trait_aux_blancs) (ref !dernier_coup) (ref !droit_au_roque)
+    runnegalphabeta_trans true (Array.copy plateau) (ref !trait_aux_blancs) (ref !dernier_coup) (ref !droit_au_roque) (ref !releve_plateau) profondeur evaluation
   end;
   if b6 then begin
     print_endline "Negalphabeta quiescent";
-    runnegalphabeta_quiescent true (Array.copy plateau) (ref !trait_aux_blancs) (ref !dernier_coup) (ref !droit_au_roque)
+    runnegalphabeta_quiescent true (Array.copy plateau) (ref !trait_aux_blancs) (ref !dernier_coup) (ref !droit_au_roque) (ref !releve_plateau) profondeur evaluation
   end;
   if b7 then begin
-    print_endline "IDD";
-    runidd true (Array.copy plateau) (ref !trait_aux_blancs) (ref !dernier_coup) (ref !droit_au_roque)
+    print_endline "Negalphabeta total";
+    runnegalphabeta_fp true (Array.copy plateau) (ref !trait_aux_blancs) (ref !dernier_coup) (ref !droit_au_roque) (ref !releve_plateau) profondeur evaluation
   end;
   if b8 then begin
-    print_endline "Negalphabeta futility pruning";
-    runnegalphabeta_fp true (Array.copy plateau) (ref !trait_aux_blancs) (ref !dernier_coup) (ref !droit_au_roque)
+    print_endline "IDD Basique";
+    runidd_basique true (Array.copy plateau) (ref !trait_aux_blancs) (ref !dernier_coup) (ref !droit_au_roque) (ref !releve_plateau) profondeur evaluation
+  end;
+  if b9 then begin
+    print_endline "IDD Simple";
+    runidd_simple true (Array.copy plateau) (ref !trait_aux_blancs) (ref !dernier_coup) (ref !droit_au_roque) (ref !releve_plateau) profondeur evaluation
+  end;
+  if b10 then begin
+    print_endline "IDD Trans";
+    runidd_trans true (Array.copy plateau) (ref !trait_aux_blancs) (ref !dernier_coup) (ref !droit_au_roque) (ref !releve_plateau) profondeur evaluation
+  end;
+  if b11 then begin
+    print_endline "IDD Total";
+    runidd_total true (Array.copy plateau) (ref !trait_aux_blancs) (ref !dernier_coup) (ref !droit_au_roque) (ref !releve_plateau) profondeur evaluation
   end;
   print_endline ("Noeuds explorés : " ^ string_of_int !compteur_recherche);
   print_endline ("Noeuds recherche quiescente : " ^ string_of_int !compteur_quiescent);
   print_endline ("Noeuds hashtable : " ^ string_of_int !compteur_trans);
-  print_endline ("EBF : " ^ string_of_float (float_of_int !compteur_recherche /. float_of_int (!compteur_recherche - !compteur_noeuds_terminaux)))
+  print_endline ("EBF : " ^ string_of_float (float_of_int !compteur_recherche /. float_of_int (!compteur_recherche - !compteur_noeuds_terminaux)));
+  actualise table 10 (*;stat tab_hash_1 tab_hash_2 tab_hash_best*)
 
-let () = main false false true false false false false false plateau
+let () = main false false false false false false true false false false false plateau

@@ -10,6 +10,6 @@ let arrivee = Hashtbl.find dicocoord "d2"
 
 let main =
   affiche plateau;
-  print_endline ("SEE : " ^ string_of_int (see plateau arrivee))
+  print_endline ("SEE : " ^ string_of_int (see plateau arrivee !trait_aux_blancs))
 
 let () = main

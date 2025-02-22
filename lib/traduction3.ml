@@ -249,10 +249,10 @@ let roque_valide position_de_depart roques droit_au_roque =
   droit_au_roque := !prb, !grb, !prn, !grn;
   if !prb || !prn || !grb || !grn then begin
     let plateau_provisoire = Array.make 64 0
-    in let depart_gr_blanc = ref (if grand_roque_blanc = (-2) then (-2) else if grand_roque_blanc = 56 then (List.hd (List.rev !position_tours_blanches)) else grand_roque_blanc) in
-    let depart_pr_blanc = ref (if petit_roque_blanc = (-2) then (-1) else if petit_roque_blanc = 63 then (List.hd !position_tours_blanches) else petit_roque_blanc) in
-    let depart_gr_noir = ref (if grand_roque_noir = (-2) then (-2) else if grand_roque_noir = 0 then (List.hd (List.rev !position_tours_noires)) else grand_roque_noir) in
-    let depart_pr_noir = ref (if petit_roque_noir = (-2) then (-1) else if petit_roque_noir = 7 then (List.hd !position_tours_noires) else petit_roque_noir) in
+    in let depart_gr_blanc = ref (if grand_roque_blanc = (-2) || not !grb then (-2) else if grand_roque_blanc = 56 then (List.hd (List.rev !position_tours_blanches)) else grand_roque_blanc) in
+    let depart_pr_blanc = ref (if petit_roque_blanc = (-2) || not !prb then (-1) else if petit_roque_blanc = 63 then (List.hd !position_tours_blanches) else petit_roque_blanc) in
+    let depart_gr_noir = ref (if grand_roque_noir = (-2) || not !grn then (-2) else if grand_roque_noir = 0 then (List.hd (List.rev !position_tours_noires)) else grand_roque_noir) in
+    let depart_pr_noir = ref (if petit_roque_noir = (-2) || not !prn then (-1) else if petit_roque_noir = 7 then (List.hd !position_tours_noires) else petit_roque_noir) in
     let liste_occupee_blanche = List.filter (fun case -> case > (-1)) [!depart_gr_blanc; !depart_pr_blanc; !position_roi_blanc] in
     let liste_occupee_noire = List.filter (fun case -> case > (-1)) [!depart_gr_noir; !depart_pr_noir; !position_roi_noir] in
     let aux_depart depart trait_aux_blancs liste_occupee =

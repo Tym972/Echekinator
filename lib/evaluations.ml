@@ -2,6 +2,7 @@
 
 open Plateau
 open Generateur
+open Piece_square_tables
 
 let mobilite_tour plateau case compteur =
   let co = plateau.(case) in
@@ -213,7 +214,7 @@ let pion_passe plateau case =
     end;
     let k = ref 1 in
     while (tab120.(t + (!k * (-10))) <> (-1) && !b) do
-      compteur := !compteur + 1;
+    incr compteur;
       let candidat1 = tab120.(t + (!k * (-10))) in
       let dest1 = plateau.(candidat1) in
       if dest1 = (-1) then begin
@@ -247,7 +248,7 @@ let pion_passe plateau case =
     end;
     let k = ref 1 in
     while (tab120.(t + (!k * 10)) <> (-1) && !b) do
-      compteur := !compteur + 1;
+    incr compteur;
       let candidat1 = tab120.(t + (!k * 10)) in
       let dest1 = plateau.(candidat1) in
       if dest1 = 1 then begin
@@ -290,7 +291,7 @@ let manque_de_materiel_approximatif plateau =
         b := false
       end
       else if abs case <> 6 then begin
-        compteur := !compteur + 1;
+        incr compteur;
         if !compteur > 2 then begin
           b := false
         end
@@ -328,7 +329,7 @@ let evalue_tour plateau case trait_aux_blancs defendues attaquee position_roi ro
         let candidat = tab120.(t + (!k * dir)) in
         let dest = plateau.(candidat) in
         if dest = 0 then begin
-          compteur := !compteur + 1;
+          incr compteur;
           k := !k + 1
         end
         else if dest > 0 then begin
@@ -364,7 +365,7 @@ let evalue_tour plateau case trait_aux_blancs defendues attaquee position_roi ro
         let candidat = tab120.(t + (!k * dir)) in
         let dest = plateau.(candidat) in
         if dest = 0 then begin
-          compteur := !compteur + 1;
+          incr compteur;
           k := !k + 1
         end
         else if dest < 0 then begin
@@ -407,7 +408,7 @@ let evalue_fou plateau case trait_aux_blancs defendues attaquee position_roi roi
         let candidat = tab120.(t + (!k * dir)) in
         let dest = plateau.(candidat) in
         if dest = 0 then begin
-          compteur := !compteur + 1;
+          incr compteur;
           k := !k + 1
         end
         else if dest > 0 then begin
@@ -443,7 +444,7 @@ let evalue_fou plateau case trait_aux_blancs defendues attaquee position_roi roi
         let candidat = tab120.(t + (!k * dir)) in
         let dest = plateau.(candidat) in
         if dest = 0 then begin
-          compteur := !compteur + 1;
+          incr compteur;
           k := !k + 1
         end
         else if dest < 0 then begin
@@ -555,7 +556,7 @@ let evalue_dame plateau case trait_aux_blancs defendues attaquee position_roi ro
         let candidat = tab120.(t + (!k * dir)) in
         let dest = plateau.(candidat) in
         if dest = 0 then begin
-          compteur := !compteur + 1;
+          incr compteur;
           k := !k + 1
         end
         else if dest > 0 then begin
@@ -591,7 +592,7 @@ let evalue_dame plateau case trait_aux_blancs defendues attaquee position_roi ro
         let candidat = tab120.(t + (!k * dir)) in
         let dest = plateau.(candidat) in
         if dest = 0 then begin
-          compteur := !compteur + 1;
+          incr compteur;
           k := !k + 1
         end
         else if dest < 0 then begin
@@ -639,7 +640,7 @@ let evalue_roi plateau case trait_aux_blancs defendues attaquee position_roi roi
             if trait_aux_blancs && not (List.mem candidat !defendues) then begin
               attaquee := max !attaquee tabvalue.(- dest)
             end;
-            compteur := !compteur + 1;
+          incr compteur;
           end
         end
         else begin
@@ -665,7 +666,7 @@ let evalue_roi plateau case trait_aux_blancs defendues attaquee position_roi roi
             if not (trait_aux_blancs || List.mem candidat !defendues) then begin
               attaquee := max !attaquee tabvalue.(dest)
             end;
-            compteur := !compteur + 1;
+          incr compteur;
           end
         end
         else begin
@@ -1070,16 +1071,12 @@ let evaluation_double plateau trait_aux_blancs position_roi roi_en_echec materie
   let attaque_noirs = ref 0 in
   if trait_aux_blancs then begin
     eval_noirs_sl plateau trait_aux_blancs piece_clouees defendues pieces_joueur attaque_noirs position_roi roi_en_echec materiel position;
-    eval_blancs !pieces_joueur plateau trait_aux_blancs defendues attaque_blancs position_roi roi_en_echec piece_clouees materiel position
-  end
-  else begin
-    eval_blancs_sl plateau trait_aux_blancs piece_clouees defendues pieces_joueur attaque_blancs position_roi roi_en_echec materiel position;
-    eval_noirs !pieces_joueur plateau trait_aux_blancs defendues attaque_noirs position_roi roi_en_echec piece_clouees materiel position
-  end;
-  if trait_aux_blancs then begin
+    eval_blancs !pieces_joueur plateau trait_aux_blancs defendues attaque_blancs position_roi roi_en_echec piece_clouees materiel position;
     materiel := !materiel + !attaque_blancs
   end
   else begin
+    eval_blancs_sl plateau trait_aux_blancs piece_clouees defendues pieces_joueur attaque_blancs position_roi roi_en_echec materiel position;
+    eval_noirs !pieces_joueur plateau trait_aux_blancs defendues attaque_noirs position_roi roi_en_echec piece_clouees materiel position;
     materiel := !materiel - !attaque_noirs
   end
 
@@ -1114,7 +1111,8 @@ let evaluation_double_finale plateau trait_aux_blancs position_roi roi_en_echec 
                 materiel := !materiel + tabvalue.(case);
                 position:= !position + eval_piece;
                 eval_blancs t
-    in eval_blancs !pieces_joueur
+    in eval_blancs !pieces_joueur;
+    materiel := !materiel + !attaque_blancs
   end
   else begin
     for i = 0 to 63 do
@@ -1141,12 +1139,7 @@ let evaluation_double_finale plateau trait_aux_blancs position_roi roi_en_echec 
                 materiel := !materiel - tabvalue.(- case);
                 position:= !position - eval_piece;
                 eval_noirs t
-    in eval_noirs !pieces_joueur
-  end;
-  if trait_aux_blancs then begin
-    materiel := !materiel + !attaque_blancs
-  end
-  else begin
+    in eval_noirs !pieces_joueur;
     materiel := !materiel - !attaque_noirs
   end
 
@@ -1202,221 +1195,6 @@ let evalue_simple plateau trait_aux_blancs (position_roi : int) (roi_en_echec : 
   end;
   note_provisoire + !position
 
-let tab_pion_blanc = 
-  [| 0;  0;  0;  0;  0;  0;  0;  0;
-    50; 50; 50; 50; 50; 50; 50; 50;
-    10; 10; 20; 30; 30; 20; 10; 10;
-     5;  5; 10; 25; 25; 10;  5;  5;
-     0;  0;  0; 20; 20;  0;  0;  0;
-     5; -5;-10;  0;  0;-10; -5;  5;
-     5; 10; 10;-20;-20; 10; 10;  5;
-     0;  0;  0;  0;  0;  0;  0;  0
-  |]
-
-let tab_pion_noir =
-  [| 0;  0;  0;  0;  0;  0;  0;  0;
-     5; 10; 10;-20;-20; 10; 10;  5;
-     5; -5;-10;  0;  0;-10; -5;  5;
-     0;  0;  0; 20; 20;  0;  0;  0;
-     5;  5; 10; 25; 25; 10;  5;  5;
-    10; 10; 20; 30; 30; 20; 10; 10;
-    50; 50; 50; 50; 50; 50; 50; 50;
-     0;  0;  0;  0;  0;  0;  0;  0
-  |]
-
-let tab_chevalier_blanc = 
-  [|-50;-40;-30;-30;-30;-30;-40;-50;
-    -40;-20;  0;  0;  0;  0;-20;-40;
-    -30;  0; 10; 15; 15; 10;  0;-30;
-    -30;  5; 15; 20; 20; 15;  5;-30;
-    -30;  0; 15; 20; 20; 15;  0;-30;
-    -30;  5; 10; 15; 15; 10;  5;-30;
-    -40;-20;  0;  5;  5;  0;-20;-40;
-    -50;-40;-30;-30;-30;-30;-40;-50;
-  |]
-
-let tab_chevalier_noir =
-  [|-50;-40;-30;-30;-30;-30;-40;-50;
-    -40;-20;  0;  5;  5;  0;-20;-40;
-    -30;  5; 10; 15; 15; 10;  5;-30;
-    -30;  0; 15; 20; 20; 15;  0;-30;
-    -30;  5; 15; 20; 20; 15;  5;-30;
-    -30;  0; 10; 15; 15; 10;  0;-30;
-    -40;-20;  0;  0;  0;  0;-20;-40;
-    -50;-40;-30;-30;-30;-30;-40;-50;
-  |]
-
-let tab_fou_blanc =
-  [|-20;-10;-10;-10;-10;-10;-10;-20;
-    -10;  0;  0;  0;  0;  0;  0;-10;
-    -10;  0;  5; 10; 10;  5;  0;-10;
-    -10;  5;  5; 10; 10;  5;  5;-10;
-    -10;  0; 10; 10; 10; 10;  0;-10;
-    -10; 10; 10; 10; 10; 10; 10;-10;
-    -10;  5;  0;  0;  0;  0;  5;-10;
-    -20;-10;-10;-10;-10;-10;-10;-20;
-  |]
-
-let tab_fou_noir =
-  [|-20;-10;-10;-10;-10;-10;-10;-20;
-    -10;  5;  0;  0;  0;  0;  5;-10;
-    -10; 10; 10; 10; 10; 10; 10;-10;
-    -10;  0; 10; 10; 10; 10;  0;-10;
-    -10;  5;  5; 10; 10;  5;  5;-10;
-    -10;  0;  5; 10; 10;  5;  0;-10;
-    -10;  0;  0;  0;  0;  0;  0;-10;
-    -20;-10;-10;-10;-10;-10;-10;-20
-  |]
-
-let tab_tour_blanche_ouverture =
-  [| 10; 0;  0; 10; 10;  0;  0; 10;
-     5; 10; 10; 10; 10; 10; 10;  5;
-    -5;  0;  0;  0;  0;  0;  0; -5;
-    -5;  0;  0;  0;  0;  0;  0; -5;
-    -5;  0;  0;  0;  0;  0;  0; -5;
-    -5;  0;  0;  0;  0;  0;  0; -5;
-    -5;  0;  0;  0;  0;  0;  0; -5;
-     0;  0;  0;  5;  5;  0;  0;  0;
-  |]
-
-let tab_tour_noire_ouverture =
-  [| 0;  0;  0;  5;  5;  0;  0;  0;
-    -5;  0;  0;  0;  0;  0;  0; -5;
-    -5;  0;  0;  0;  0;  0;  0; -5;
-    -5;  0;  0;  0;  0;  0;  0; -5;
-    -5;  0;  0;  0;  0;  0;  0; -5;
-    -5;  0;  0;  0;  0;  0;  0; -5;
-     5; 10; 10; 10; 10; 10; 10;  5;
-     10; 0; 0;  10; 10;  0;  0;  10
-  |]
-
-let tab_tour_blanche_mdg =
-  [| 0;  0;  0;  0;  0;  0;  0;  0;
-     5; 10; 10; 10; 10; 10; 10;  5;
-    -5;  0;  0;  0;  0;  0;  0; -5;
-    -5;  0;  0;  0;  0;  0;  0; -5;
-    -5;  0;  0;  0;  0;  0;  0; -5;
-    -5;  0;  0;  0;  0;  0;  0; -5;
-    -5;  0;  0;  0;  0;  0;  0; -5;
-     0;  0;  0;  5;  5;  0;  0;  0;
-  |]
-
-let tab_tour_noire_mdg =
-  [| 0;  0;  0;  5;  5;  0;  0;  0;
-    -5;  0;  0;  0;  0;  0;  0; -5;
-    -5;  0;  0;  0;  0;  0;  0; -5;
-    -5;  0;  0;  0;  0;  0;  0; -5;
-    -5;  0;  0;  0;  0;  0;  0; -5;
-    -5;  0;  0;  0;  0;  0;  0; -5;
-     5; 10; 10; 10; 10; 10; 10;  5;
-     0;  0;  0;  0;  0;  0;  0;  0
-  |]
-
-let tab_dame_blanche_ouverture =
-  [|-20;-10;-10; -5; -5;-10;-10;-20;
-    -10;  0;  0;  0;  0;  0;  0;-10;
-    -10;  0;  5;  5;  5;  5;  0;-10;
-     -5;  0;  5;  5;  5;  5;  0; -5;
-      0;  0;  5;  5;  5;  5;  0; -5;
-    -10;  5;  5;  5;  5;  5;  0;-10;
-    -10;  0;  5;  0;  0;  0;  0;-10;
-    -20;-10;-10; 20; -5;-10;-10;-20;
-  |]
-
-let tab_dame_noire_ouverture =
-  [|-20;-10;-10; -5; 20;-10;-10;-20;
-    -10;  0;  0;  0;  0;  5;  0;-10;
-    -10;  0;  5;  5;  5;  5;  5;-10;
-     -5;  0;  5;  5;  5;  5;  0;  0;
-     -5;  0;  5;  5;  5;  5;  0; -5;
-    -10;  0;  5;  5;  5;  5;  0;-10;
-    -10;  0;  0;  0;  0;  0;  0;-10;
-    -20;-10;-10; -5; -5;-10;-10;-20
-  |]
-
-let tab_dame_blanche_mdg =
-  [|-20;-10;-10; -5; -5;-10;-10;-20;
-    -10;  0;  0;  0;  0;  0;  0;-10;
-    -10;  0;  5;  5;  5;  5;  0;-10;
-     -5;  0;  5;  5;  5;  5;  0; -5;
-      0;  0;  5;  5;  5;  5;  0; -5;
-    -10;  5;  5;  5;  5;  5;  0;-10;
-    -10;  0;  5;  0;  0;  0;  0;-10;
-    -20;-10;-10; -5; -5;-10;-10;-20;
-  |]
-
-let tab_dame_noire_mdg =
-  [|-20;-10;-10; -5; -5;-10;-10;-20;
-    -10;  0;  0;  0;  0;  5;  0;-10;
-    -10;  0;  5;  5;  5;  5;  5;-10;
-     -5;  0;  5;  5;  5;  5;  0;  0;
-     -5;  0;  5;  5;  5;  5;  0; -5;
-    -10;  0;  5;  5;  5;  5;  0;-10;
-    -10;  0;  0;  0;  0;  0;  0;-10;
-    -20;-10;-10; -5; -5;-10;-10;-20
-  |]
-
-let tab_roi_blanc_mdg =
-  [|-30;-40;-40;-50;-50;-40;-40;-30;
-    -30;-40;-40;-50;-50;-40;-40;-30;
-    -30;-40;-40;-50;-50;-40;-40;-30;
-    -30;-40;-40;-50;-50;-40;-40;-30;
-    -20;-30;-30;-40;-40;-30;-30;-20;
-    -10;-20;-20;-20;-20;-20;-20;-10;
-     20; 20;  0;  0;  0;  0; 20; 20;
-     20; 30; 10;  0;  0; 10; 30; 20
-  |]
-
-let tab_roi_noir_mdg =
-  [| 20; 30; 10;  0;  0; 10; 30; 20;
-     20; 20;  0;  0;  0;  0; 20; 20;
-    -10;-20;-20;-20;-20;-20;-20;-10;
-    -20;-30;-30;-40;-40;-30;-30;-20;
-    -30;-40;-40;-50;-50;-40;-40;-30;
-    -30;-40;-40;-50;-50;-40;-40;-30;
-    -30;-40;-40;-50;-50;-40;-40;-30;
-    -30;-40;-40;-50;-50;-40;-40;-30
-  |]
-
-let tab_roi_blanc_finale =
-  [|-50;-40;-30;-20;-20;-30;-40;-50;
-    -30;-20;-10;  0;  0;-10;-20;-30;
-    -30;-10; 20; 30; 30; 20;-10;-30;
-    -30;-10; 30; 40; 40; 30;-10;-30;
-    -30;-10; 30; 40; 40; 30;-10;-30;
-    -30;-10; 20; 30; 30; 20;-10;-30;
-    -30;-30;  0;  0;  0;  0;-30;-30;
-    -50;-30;-30;-30;-30;-30;-30;-50
-  |]
-
-let tab_roi_noir_finale =
-  [|-50;-30;-30;-30;-30;-30;-30;-50;
-    -30;-30;  0;  0;  0;  0;-30;-30;
-    -30;-10; 20; 30; 30; 20;-10;-30;
-    -30;-10; 30; 40; 40; 30;-10;-30;
-    -30;-10; 30; 40; 40; 30;-10;-30;
-    -30;-10; 20; 30; 30; 20;-10;-30;
-    -30;-20;-10;  0;  0;-10;-20;-30;
-    -50;-40;-30;-20;-20;-30;-40;-50|]
-
-let tab_pieces_blanches_ouverture = [|tab_pion_blanc; tab_chevalier_blanc; tab_fou_blanc; tab_tour_blanche_mdg; tab_dame_blanche_mdg; tab_roi_blanc_mdg|]
-
-let tab_pieces_blanches_mdg = [|tab_pion_blanc; tab_chevalier_blanc; tab_fou_blanc; tab_tour_blanche_mdg; tab_dame_blanche_mdg; tab_roi_blanc_mdg|]
-
-let tab_pieces_blanches_finale = [|tab_pion_blanc; tab_chevalier_blanc; tab_fou_blanc; tab_tour_blanche_mdg; tab_dame_blanche_mdg; tab_roi_blanc_finale|]
-
-let tab_pieces_noires_ouverture = [|tab_pion_noir; tab_chevalier_noir; tab_fou_noir; tab_tour_noire_mdg; tab_dame_noire_mdg; tab_roi_noir_mdg|]
-
-let tab_pieces_noires_mdg = [|tab_pion_noir; tab_chevalier_noir; tab_fou_noir; tab_tour_noire_mdg; tab_dame_noire_mdg; tab_roi_noir_mdg|]
-
-let tab_pieces_noires_finale = [|tab_pion_noir; tab_chevalier_noir; tab_fou_noir; tab_tour_noire_mdg; tab_dame_noire_mdg; tab_roi_noir_finale|]
-
-let tab_ouverture = tab_pieces_blanches_ouverture, tab_pieces_noires_ouverture
-
-let tab_mdg = tab_pieces_blanches_mdg, tab_pieces_noires_mdg
-
-let tab_finale = tab_pieces_blanches_finale, tab_pieces_noires_finale
-
 let fp plateau position table =
   let note = ref 0 in
   let tb, tn = table in
@@ -1453,4 +1231,25 @@ let eval3 plateau trait_aux_blancs position_roi roi_en_echec (alpha : int) (beta
   let position = ref 0 in
   fp plateau position tab_finale;
   evaluation_double plateau trait_aux_blancs position_roi roi_en_echec materiel position;
+  traitement trait_aux_blancs !materiel !position
+
+let eval1_q plateau trait_aux_blancs position_roi roi_en_echec (alpha : int) (beta : int) =
+  let _ = alpha, beta, position_roi, roi_en_echec in
+  let materiel = ref (2 * (doublees plateau) + eval_materiel plateau) in
+  let position = ref 0 in
+  fp plateau position tab_ouverture;
+  traitement trait_aux_blancs !materiel !position
+
+let eval2_q plateau trait_aux_blancs position_roi roi_en_echec (alpha : int) (beta : int) =
+  let _ = alpha, beta, position_roi, roi_en_echec in
+  let materiel = ref (2 * (doublees plateau) + eval_materiel plateau) in
+  let position = ref 0 in
+  fp plateau position tab_mdg;
+  traitement trait_aux_blancs !materiel !position
+
+let eval3_q plateau trait_aux_blancs position_roi roi_en_echec (alpha : int) (beta : int) =
+  let _ = alpha, beta, position_roi, roi_en_echec in
+  let materiel = ref (2 * (doublees plateau) + eval_materiel plateau) in
+  let position = ref 0 in
+  fp plateau position tab_finale;
   traitement trait_aux_blancs !materiel !position

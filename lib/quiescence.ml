@@ -5,162 +5,107 @@ open Generateur
 open Strategie1
 open Evaluations
 
-(*Fonction construisant une liste des captures possible d'une tour*)
+(*Fonction construisant une liste des déplacements possible d'une tour*)
 let captures_tour plateau case liste =
   let co = plateau.(case) in
   let t = tab64.(case) in
-  if co > 0 then begin
-    for i = 0 to 3 do
-      let dir = vect_tour.(i) in
-      let k = ref 1 in
-      let s = ref true in
-      while (tab120.(t + (!k * dir)) <> (-1) && !s) do
-        let candidat = tab120.(t + (!k * dir)) in
-        let dest = plateau.(candidat) in
-        if dest = 0 then begin
-          incr k
-        end
-        else if dest > 0 then begin
-          s :=  false
-        end
-        else begin 
-          liste := Classique {piece = co; depart = case; arrivee = candidat; prise = dest} :: !liste;
-          s :=  false
-        end
-      done
+  for i = 0 to 3 do
+    let dir = vect_tour.(i) in
+    let k = ref 1 in
+    let s = ref true in
+    while (!s && tab120.(t + (!k * dir)) <> (-1)) do
+      let candidat = tab120.(t + (!k * dir)) in
+      let dest = plateau.(candidat) in
+      if dest = 0 then begin
+        incr k
+      end
+      else if co * dest > 0 then begin
+        s :=  false
+      end
+      else begin 
+        liste := Classique {piece = co; depart = case; arrivee = candidat; prise = dest} :: !liste;
+        s :=  false
+      end
     done
-  end
-  else begin
-    for i = 0 to 3 do
-      let dir = vect_tour.(i) in
-      let k = ref 1 in
-      let s = ref true in
-      while (tab120.(t + (!k * dir)) <> (-1) && !s) do
-        let candidat = tab120.(t + (!k * dir)) in
-        let dest = plateau.(candidat) in
-        if dest = 0 then begin
-          incr k
-        end
-        else if dest < 0 then begin
-          s :=  false
-        end
-        else begin 
-          liste := Classique {piece = co; depart = case; arrivee = candidat; prise = dest} :: !liste;
-          s :=  false
-        end
-      done
-    done
-  end
+  done
 
-(*Fonction construisant une liste des captures possible d'un fou*)
+(*Fonction construisant une liste des déplacements possible d'un fou*)
 let captures_fou plateau case liste =
   let co = plateau.(case) in
   let f = tab64.(case) in
-  if co > 0 then begin
-    for i = 0 to 3 do
-      let dir = vect_fou.(i) in
-      let k = ref 1 in
-      let s = ref true in
-      while (tab120.(f + (!k * dir)) <> (-1) && !s) do
-        let candidat = tab120.(f + (!k * dir)) in
-        let dest = plateau.(candidat) in
-        if dest = 0 then begin
-          incr k
-        end
-        else if dest > 0 then begin
-          s :=  false
-        end
-        else begin
-          liste := Classique {piece = co; depart = case; arrivee = candidat; prise = dest} :: !liste;
-          s :=  false
-        end
-      done
+  for i = 0 to 3 do
+    let dir = vect_fou.(i) in
+    let k = ref 1 in
+    let s = ref true in
+    while (!s && tab120.(f + (!k * dir)) <> (-1)) do
+      let candidat = tab120.(f + (!k * dir)) in
+      let dest = plateau.(candidat) in
+      if dest = 0 then begin
+        incr k
+      end
+      else if co * dest > 0 then begin
+        s :=  false
+      end
+      else begin
+        liste := Classique {piece = co; depart = case; arrivee = candidat; prise = dest} :: !liste;
+        s :=  false
+      end
     done
-  end
-  else begin
-    for i = 0 to 3 do
-      let dir = vect_fou.(i) in
-      let k = ref 1 in
-      let s = ref true in
-      while (tab120.(f + (!k * dir)) <> (-1) && !s) do
-        let candidat = tab120.(f + (!k * dir)) in
-        let dest = plateau.(candidat) in
-        if dest = 0 then begin
-          incr k
-        end
-        else if dest < 0 then begin
-          s :=  false
-        end
-        else begin
-          liste := Classique {piece = co; depart = case; arrivee = candidat; prise = dest} :: !liste;
-          s :=  false
-        end
-      done
-    done
-  end
+  done
 
-(*Fonction construisant une liste des captures possible d'un cavalier*)
+(*Fonction construisant une liste des déplacements possible d'un cavalier*)
 let captures_cavalier plateau case liste =
   let co = plateau.(case) in
   let c = tab64.(case) in
-  if co > 0 then begin
-    for i = 0 to 7 do
-      let dir = vect_cavalier.(i) in
-      if tab120.(c + dir) <> (-1) then begin
-        let candidat = tab120.(c + dir) in
-        let dest = plateau.(candidat) in
-        if dest < 0 then begin
-          liste := Classique {piece = 2; depart = case; arrivee = candidat; prise = dest} :: !liste
-        end
+  for i = 0 to 7 do
+    let dir = vect_cavalier.(i) in
+    if tab120.(c + dir) <> (-1) then begin
+      let candidat = tab120.(c + dir) in
+      let dest = plateau.(candidat) in
+      if co * dest < 0 then begin
+        liste := Classique {piece = co; depart = case; arrivee = candidat; prise = dest} :: !liste
       end
-    done
-  end
-  else begin
-    for i = 0 to 7 do
-      let dir = vect_cavalier.(i) in
-      if tab120.(c + dir) <> (-1) then begin
-        let candidat = tab120.(c + dir) in
-        let dest = plateau.(candidat) in
-        if dest > 0 then begin
-          liste := Classique {piece = (-2); depart = case; arrivee = candidat; prise = dest} :: !liste
-        end
-      end
-    done
-  end
+    end
+  done
 
-(*Fonction construisant une liste des captures possible d'une dame*)
+(*Fonction construisant une liste des déplacements possible d'une dame*)
 let captures_dame plateau case liste =
-  (captures_tour plateau case liste);
-  (captures_fou plateau case liste)
+  let co = plateau.(case) in
+  let f = tab64.(case) in
+  for i = 0 to 7 do
+    let dir = vect_roi.(i) in
+    let k = ref 1 in
+    let s = ref true in
+    while (!s && tab120.(f + (!k * dir)) <> (-1)) do
+      let candidat = tab120.(f + (!k * dir)) in
+      let dest = plateau.(candidat) in
+      if dest = 0 then begin
+        incr k
+      end
+      else if co * dest > 0 then begin
+        s :=  false
+      end
+      else begin
+        liste := Classique {piece = co; depart = case; arrivee = candidat; prise = dest} :: !liste;
+        s :=  false
+      end
+    done
+  done
 
-(*Fonction construisant une liste des captures possible d'un roi*)
+(*Fonction construisant une liste des déplacements possible d'un roi*)
 let captures_roi plateau case liste =
   let co = plateau.(case) in
   let r = tab64.(case) in
-  if co > 0 then begin
-    for i = 0 to 7 do
-      let dir = vect_roi.(i) in
-      if tab120.(r + dir) <> (-1) then begin
-        let candidat = tab120.(r + dir) in
-        let dest = plateau.(candidat) in
-        if dest < 0 then begin
-          liste := Classique {piece = 6; depart = case; arrivee = candidat; prise = dest} :: !liste
-        end
+  for i = 0 to 7 do
+    let dir = vect_roi.(i) in
+    if tab120.(r + dir) <> (-1) then begin
+      let candidat = tab120.(r + dir) in
+      let dest = plateau.(candidat) in
+      if co * dest < 0 then begin
+        liste := Classique {piece = co; depart = case; arrivee = candidat; prise = dest} :: !liste
       end
-    done
-  end
-  else begin
-    for i = 0 to 7 do
-      let dir = vect_roi.(i) in
-      if tab120.(r + dir) <> (-1) then begin
-        let candidat = tab120.(r + dir) in
-        let dest = plateau.(candidat) in
-        if dest > 0 then begin
-          liste := Classique {piece = (-6); depart = case; arrivee = candidat; prise = dest} :: !liste
-        end
-      end
-    done
-  end
+    end
+  done
 
 (*Fonction construisant une liste des captures/ promotions possible d'un pion*)
 let captures_pion plateau case liste =
@@ -577,9 +522,11 @@ let rec recherche_quiescente plateau trait_aux_blancs alpha beta evaluation cap 
         let score = - recherche_quiescente plateau (not trait_aux_blancs) (- beta) (- !alpha0) evaluation (captures plateau nouveau_trait coup) (profondeur - 1) position_roi_adverse (menacee plateau position_roi_adverse nouveau_trait) 
         in if score > !best_score then begin
           best_score := score;
-          alpha0 := max !alpha0 !best_score;
-          if !alpha0 >= beta then begin
+          if score >= beta then begin
             b := false
+          end
+          else begin
+            alpha0 := max !alpha0 score
           end
         end;
         dejoue plateau coup
@@ -604,10 +551,10 @@ let traitement_quiescent_profondeur_0 evaluation plateau trait_aux_blancs dernie
     let cap = detecte_captures cp in
     let roi_en_echec = menacee plateau position_roi trait_aux_blancs in
     if cap = [] then begin
-      evaluation plateau trait_aux_blancs position_roi roi_en_echec alpha beta
+      recherche_quiescente plateau trait_aux_blancs alpha beta evaluation cap 0 position_roi roi_en_echec
     end
     else begin
-      recherche_quiescente plateau trait_aux_blancs alpha beta evaluation cap 1000 position_roi roi_en_echec
+      recherche_quiescente plateau trait_aux_blancs alpha beta evaluation cap (-1) position_roi roi_en_echec
     end
   end
 
@@ -645,9 +592,11 @@ let rec negalphabeta_quiescent plateau trait_aux_blancs dernier_coup droit_au_ro
         in if score > !best_score then begin
           best_score := score;
           best_move := coup;
-          alpha0 := max !alpha0 !best_score;
-          if !alpha0 >= beta then begin
+          if score >= beta then begin
             b := false
+          end
+          else begin
+            alpha0 := max !alpha0 score
           end
         end;
         dejoue plateau coup

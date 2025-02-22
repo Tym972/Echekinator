@@ -6,159 +6,81 @@ open Plateau
 let menacee plateau case trait_aux_blancs =
   let b = ref false in
   let m = tab64.(case) in
-  if trait_aux_blancs then begin
-    let vect_pion = [|(-9); (-11)|] in
+  let signe_joueur = if trait_aux_blancs then 1 else (-1) in
+  let vect_pion = [|(-9) * signe_joueur; (-11) * signe_joueur|] in
+  let i = ref 0 in
+  while (not !b && !i < 2) do
+    let dir = vect_pion.(!i) in
+    if tab120.(m + dir) <> (-1) then begin
+      let candidat = tab120.(m + dir) in
+      if plateau.(candidat) = (- signe_joueur) then begin
+        b := true
+      end
+    end;
+    incr i
+  done;
+  if not !b then begin
     let i = ref 0 in
-    while (not !b && !i < 2) do
-      let dir = vect_pion.(!i) in
+    while (not !b && !i < 8) do
+      let dir = vect_cavalier.(!i) in
       if tab120.(m + dir) <> (-1) then begin
         let candidat = tab120.(m + dir) in
-        if plateau.(candidat) = (-1) then begin
+        if plateau.(candidat) = (-2) * signe_joueur then begin
           b := true
         end
       end;
       incr i
-    done;
-    if not !b then begin
-      let i = ref 0 in
-      while (not !b && !i < 8) do
-        let dir = vect_cavalier.(!i) in
-        if tab120.(m + dir) <> (-1) then begin
-          let candidat = tab120.(m + dir) in
-          if plateau.(candidat) = (-2) then begin
-            b := true
-          end
-        end;
-        incr i
-      done
-    end;
-    if not !b then begin
-      let i = ref 0 in
-      while (not !b && !i < 4) do
-        let dir = vect_fou.(!i) in
-        let k = ref 1 in
-        let s = ref true in
-        while (tab120.(m + (!k * dir)) <> (-1) && !s) do
-          let candidat = tab120.(m + (!k * dir)) in
-          let dest = plateau.(candidat) in
-          if dest = 0 then begin
-            incr k
-          end
-          else if dest > 0 then begin
-            s :=  false
-          end
-          else begin
-            if dest = (-3) || dest = (-5) || (dest = (-6) && !k = 1) then begin
-              b := true
-            end;
-            s :=  false
-          end
-        done;
-        incr i
-      done
-    end;
-    if not !b then begin
-      let i = ref 0 in
-      while (not !b && !i < 4) do
-        let dir = vect_tour.(!i) in
-        let k = ref 1 in
-        let s = ref true in
-        while (tab120.(m + (!k * dir)) <> (-1) && !s) do
-          let candidat = tab120.(m + (!k * dir)) in
-          let dest = plateau.(candidat) in
-          if dest = 0 then begin
-            incr k
-          end
-          else if dest > 0 then begin
-            s :=  false
-          end
-          else begin
-            if dest = (-4) || dest = (-5) || (dest = (-6) && !k = 1) then begin
-              b := true
-            end;
-            s :=  false
-          end
-        done;
-        incr i
-      done
-    end
-  end
-  else begin
-    let vect_pion = [|9; 11|] in
+    done
+  end;
+  if not !b then begin
     let i = ref 0 in
-    while (not !b && !i < 2) do
-      let dir = vect_pion.(!i) in
-      if tab120.(m + dir) <> (-1) then begin
-        let candidat = tab120.(m + dir) in
-        if plateau.(candidat) = 1 then begin
-          b := true
+    while (not !b && !i < 4) do
+      let dir = vect_fou.(!i) in
+      let k = ref 1 in
+      let s = ref true in
+      while (tab120.(m + (!k * dir)) <> (-1) && !s) do
+        let candidat = tab120.(m + (!k * dir)) in
+        let dest = plateau.(candidat) * signe_joueur in
+        if dest = 0 then begin
+          incr k
         end
-      end;
-      incr i
-    done;
-    if not !b then begin
-      let i = ref 0 in
-      while (not !b && !i < 8) do
-        let dir = vect_cavalier.(!i) in
-        if tab120.(m + dir) <> (-1) then begin
-          let candidat = tab120.(m + dir) in
-          if plateau.(candidat) = 2 then begin
+        else if dest > 0 then begin
+          s :=  false
+        end
+        else begin
+          if dest = (-3) || dest = (-5) || (dest = (-6) && !k = 1) then begin
             b := true
-          end
-        end;
-        incr i
-      done
-    end;
-    if not !b then begin
-      let i = ref 0 in
-      while (not !b && !i < 4) do
-        let dir = vect_fou.(!i) in
-        let k = ref 1 in
-        let s = ref true in
-        while (tab120.(m + (!k * dir)) <> (-1) && !s) do
-          let candidat = tab120.(m + (!k * dir)) in
-          let dest = plateau.(candidat) in
-          if dest = 0 then begin
-            incr k
-          end
-          else if dest < 0 then begin
-            s :=  false
-          end
-          else begin
-            if dest = 3 || dest = 5 || (dest = 6 && !k = 1) then begin
-              b := true
-            end;
-            s :=  false
-          end
-        done;
-        incr i
-      done
-    end;
-    if not !b then begin
-      let i = ref 0 in
-      while (not !b && !i < 4) do
-        let dir = vect_tour.(!i) in
-        let k = ref 1 in
-        let s = ref true in
-        while (tab120.(m + (!k * dir)) <> (-1) && !s) do
-          let candidat = tab120.(m + (!k * dir)) in
-          let dest = plateau.(candidat) in
-          if dest = 0 then begin
-            incr k
-          end
-          else if dest < 0 then begin
-            s :=  false
-          end
-          else begin
-            if dest = 4 || dest = 5 || (dest = 6 && !k = 1) then begin
-              b := true
-            end;
-            s :=  false
-          end
-        done;
-        incr i
-      done
-    end
+          end;
+          s :=  false
+        end
+      done;
+      incr i
+    done
+  end;
+  if not !b then begin
+    let i = ref 0 in
+    while (not !b && !i < 4) do
+      let dir = vect_tour.(!i) in
+      let k = ref 1 in
+      let s = ref true in
+      while (tab120.(m + (!k * dir)) <> (-1) && !s) do
+        let candidat = tab120.(m + (!k * dir)) in
+        let dest = plateau.(candidat) * signe_joueur in
+        if dest = 0 then begin
+          incr k
+        end
+        else if dest > 0 then begin
+          s :=  false
+        end
+        else begin
+          if dest = (-4) || dest = (-5) || (dest = (-6) && !k = 1) then begin
+            b := true
+          end;
+          s :=  false
+        end
+      done;
+      incr i
+    done
   end;
   !b
 
@@ -391,6 +313,7 @@ let deplacements plateau trait_aux_blancs position_roi =
   end;
   !liste_coups, liste_coups_roi
 
+(*Fonction construisant une liste des déplacements classique possibles d'un joueur*)
 let deplacements_clouage plateau trait_aux_blancs position_roi piece_clouees =
   let liste_coups = ref [] in
   let liste_coups_roi = deplacements_roi plateau position_roi in
@@ -980,37 +903,35 @@ let clouees plateau case_roi trait_aux_blancs =
 
 (*Fonction construisant une liste des coups légaux du joueur*)  
 let coups_valides plateau trait_aux_blancs dernier_coup (prb, grb, prn, grn) =
-  let l = ref [] in
+  let liste_coups = ref [] in
   let roi_joueur = roi trait_aux_blancs in
   let position_roi = index_tableau plateau roi_joueur in
   let aux coup position_roi =
     joue plateau coup;
     if not (menacee plateau position_roi trait_aux_blancs) then begin
-      l := coup :: !l
+      liste_coups := coup :: !liste_coups
     end;
     dejoue plateau coup
-  in
+  in List.iter (fun prise_en_passant -> aux prise_en_passant position_roi) (enpassant plateau trait_aux_blancs dernier_coup);
   if menacee plateau position_roi trait_aux_blancs then begin
     let coups, coups_roi = deplacements plateau trait_aux_blancs position_roi in
     List.iter (fun coup_roi -> aux coup_roi (arrivee coup_roi)) coups_roi;
-    List.iter (fun coup_autre -> aux coup_autre position_roi) (enpassant plateau trait_aux_blancs dernier_coup);
     List.iter (fun coup_autre -> aux coup_autre position_roi) coups;
-    !l
+    !liste_coups
   end
   else begin
     let droit_au_roque = if trait_aux_blancs then prb || grb else prn || grn in
     let piece_clouees = clouees plateau position_roi trait_aux_blancs in
-    List.iter (fun prise_en_passant -> aux prise_en_passant position_roi) (enpassant plateau trait_aux_blancs dernier_coup);
     if piece_clouees = [] then begin
       let coups, coups_roi = deplacements plateau trait_aux_blancs position_roi in
       List.iter (fun coup_roi -> aux coup_roi (arrivee coup_roi)) coups_roi;
-      if droit_au_roque then (roque plateau trait_aux_blancs (prb, grb, prn, grn)) @ !l @ coups else !l @ coups
+      if droit_au_roque then (roque plateau trait_aux_blancs (prb, grb, prn, grn)) @ !liste_coups @ coups else !liste_coups @ coups
     end
     else begin
       let coups, coups_roi, coups_clouees = deplacements_clouage plateau trait_aux_blancs position_roi piece_clouees in
       List.iter (fun coup_roi -> aux coup_roi (arrivee coup_roi)) coups_roi;
       List.iter (fun coup_clouees -> aux coup_clouees position_roi) coups_clouees;
-      if droit_au_roque then (roque plateau trait_aux_blancs (prb, grb, prn, grn)) @ !l @ coups else !l @ coups
+      if droit_au_roque then (roque plateau trait_aux_blancs (prb, grb, prn, grn)) @ !liste_coups @ coups else !liste_coups @ coups
     end
   end
 

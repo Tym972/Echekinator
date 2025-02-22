@@ -1,0 +1,260 @@
+[Event "?"]
+[Site "?"]
+[Date "2025.02.19"]
+[Round "1"]
+[White "PF5"]
+[Black "PF5, IID Totale"]
+[Result "1/2-1/2"]
+[CurrentPosition "4r1k1/1pp2ppp/8/3p4/rPb4P/2n1P1P1/p1N2PK1/R1N5 w - - 16 39"]
+[Termination "Game drawn by repetition"]
+[Timezone "UTC+1"]
+[Startime "04:30:20"]
+[EndDate "2025.02.19"]
+[Endtime "04:30:46"]
+
+1. a3 a5 2. b4 axb4 3. d4 Nf6 4. Nf3 d5 5. Qd3 e6 6. Nbd2 Qe7 7. Bb2 bxa3 
+8. Ra2 Ne4 9. h4 Nc6 10. Qb3 Qb4 11. Bc1 Nc3 12. Ra1 a2 13. Bb2 Ne4 14. e3 Qxb3 
+15. cxb3 Bb4 16. Rd1 Bc3 17. Bxc3 Nxc3 18. Ra1 Nb4 19. Bb5+ Nxb5 20. 0-0 Nc2 
+21. Rfc1 Nxa1 22. Rxa1 Nd6 23. Ne5 0-0 24. Ndf3 Re8 25. Nd3 Ne4 26. Nc1 Nc3 
+27. g3 Bd7 28. b4 Bb5 29. Ne1 e5 30. dxe5 Rxe5 31. Nf3 Re4 32. Nd4 Bc4 
+33. Kg2 Ra4 34. Nc2 Re8 35. Kh2 Rd8 36. Kg2 Re8 37. Kh2 Rd8 38. Kg2 Re8 1/2-1/2
+
+[Event "?"]
+[Site "?"]
+[Date "2025.02.19"]
+[Round "2"]
+[White "PF5"]
+[Black "PF5, IID Totale"]
+[Result "0-1"]
+[CurrentPosition "r3r1k1/ppp2ppp/1b1n4/8/8/PP3bP1/7P/R1B2N1K w - - 0 24"]
+[Termination "PF5, IID Totale won by checkmate"]
+[Timezone "UTC+1"]
+[Startime "04:30:46"]
+[EndDate "2025.02.19"]
+[Endtime "04:30:56"]
+
+1. a3 e5 2. b3 d5 3. c3 Nf6 4. d3 Nc6 5. e3 Bd6 6. f3 0-0 7. g3 Bf5 8. Ne2 Re8 
+9. Bg2 Qe7 10. e4 Bg6 11. 0-0 Bc5+ 12. d4 Bb6 13. Qd3 dxe4 14. fxe4 exd4 
+15. cxd4 Nxe4 16. Re1 Nd6 17. Qc3 Nxd4 18. Kh1 Nxe2 19. Rxe2 Qxe2 20. Nd2 Qe1+ 
+21. Bf1 Be4+ 22. Qf3 Qxf1+ 23. Nxf1 Bxf3# 0-1
+
+[Event "?"]
+[Site "?"]
+[Date "2025.02.19"]
+[Round "3"]
+[White "PF5"]
+[Black "PF5, IID Totale"]
+[Result "1-0"]
+[CurrentPosition "4Q3/1R5k/8/P5Bp/7P/8/2K5/8 b - - 4 67"]
+[Termination "PF5 won by checkmate"]
+[Timezone "UTC+1"]
+[Startime "04:30:56"]
+[EndDate "2025.02.19"]
+[Endtime "04:31:18"]
+
+1. a3 e5 2. g3 d5 3. Bg2 Nf6 4. d3 Nc6 5. Nd2 Bd6 6. e3 0-0 7. h3 Bf5 
+8. Ngf3 Re8 9. 0-0 h5 10. Ng5 Bc5 11. e4 Bg6 12. Nb3 Bb6 13. Bd2 Nd4 
+14. Nxd4 Bxd4 15. exd5 Bxb2 16. Ra2 Bd4 17. Qb1 Rb8 18. c4 Qd6 19. Bb4 Qb6 
+20. Ne4 Bxe4 21. Bxe4 a5 22. c5 Qa6 23. Bd2 Nxe4 24. dxe4 Bxc5 25. Rc1 Qb6 
+26. Qxb6 Bxb6 27. Rc4 Rbc8 28. Ra4 Bxf2+ 29. Kxf2 b6 30. Rc4 Red8 31. Rac2 f5 
+32. Ke3 h4 33. gxh4 fxe4 34. Kxe4 Rd7 35. Bg5 b5 36. Rc5 b4 37. Rxa5 b3 
+38. Rc3 Rb8 39. Rc1 b2 40. Rb1 Rf7 41. h5 Rf2 42. Kxe5 Re8+ 43. Kd4 Rf5 
+44. h4 Re2 45. Ra8+ Kh7 46. Rb8 Rff2 47. a4 Rc2 48. a5 Rg2 49. Rb7 Rg4+ 
+50. Ke3 Rg3+ 51. Ke4 Re2+ 52. Kd4 Rg4+ 53. Kd3 Rg3+ 54. Kxe2 Rg2+ 55. Kf3 Rc2 
+56. R7xb2 Rc5 57. Rb5 Rc3+ 58. Ke4 c6 59. Kd4 Rc2 60. Kd3 cxb5 61. Kxc2 Kg8 
+62. d6 g6 63. Rxb5 Kf7 64. d7 gxh5 65. d8=Q Kg7 66. Qe8 Kh7 67. Rb7# 1-0
+
+[Event "?"]
+[Site "?"]
+[Date "2025.02.19"]
+[Round "4"]
+[White "PF5"]
+[Black "PF5, IID Totale"]
+[Result "1/2-1/2"]
+[CurrentPosition "8/pk3p1p/1p4p1/1Pp5/R2n4/1PN5/2P5/1K4r1 w - - 10 45"]
+[Termination "Game drawn by repetition"]
+[Timezone "UTC+1"]
+[Startime "04:31:18"]
+[EndDate "2025.02.19"]
+[Endtime "04:31:33"]
+
+1. a3 e5 2. h3 d5 3. d4 exd4 4. Qxd4 Nc6 5. Qd3 Nge7 6. Nd2 Bf5 7. e4 dxe4 
+8. Nxe4 Qd5 9. Qxd5 Nxd5 10. Bd3 Nd4 11. Bd2 c5 12. g4 Bg6 13. b3 0-0-0 
+14. h4 Re8 15. f3 Nf6 16. 0-0-0 Nxe4 17. fxe4 Bxe4 18. Re1 Bxh1 19. Rxe8+ Kd7 
+20. Re1 Be7 21. g5 Bc6 22. Bc4 Rf8 23. Rf1 Ke8 24. a4 g6 25. Bc3 Nf5 
+26. Re1 Nxh4 27. Bf6 Nf5 28. Re5 b6 29. Bb5 Bxb5 30. axb5 Kd7 31. Bxe7 Nxe7 
+32. Re4 Nf5 33. Ra4 Ra8 34. Ne2 Kc8 35. Nc3 Kb7 36. Nd5 Nd4 37. Nc3 Re8 
+38. Kb1 Re5 39. Ra2 Rxg5 40. Ra4 Rg1+ 41. Kb2 Rg2 42. Kb1 Rg1+ 43. Kb2 Rg2 
+44. Kb1 Rg1+ 1/2-1/2
+
+[Event "?"]
+[Site "?"]
+[Date "2025.02.19"]
+[Round "5"]
+[White "PF5"]
+[Black "PF5, IID Totale"]
+[Result "0-1"]
+[CurrentPosition "8/8/1p6/8/8/3bk3/8/1r1K4 w - - 4 58"]
+[Termination "PF5, IID Totale won by checkmate"]
+[Timezone "UTC+1"]
+[Startime "04:31:33"]
+[EndDate "2025.02.19"]
+[Endtime "04:32:04"]
+
+1. a3 g6 2. g4 d5 3. h3 e5 4. d4 Nc6 5. dxe5 Nxe5 6. Nc3 Be6 7. Be3 Ne7 
+8. Bd4 f6 9. e3 N7c6 10. Qe2 Nc4 11. Bg2 Nxd4 12. exd4 Kf7 13. Ra2 Bh6 
+14. Kd1 Re8 15. Qd3 Kg8 16. b3 Nb6 17. Nge2 f5 18. f4 fxg4 19. hxg4 Bg7 
+20. f5 Bf7 21. Qh3 h6 22. fxg6 Bxg6 23. a4 Qg5 24. a5 Re3 25. Qh4 Qxh4 
+26. Rxh4 Nd7 27. Bxd5+ Kh7 28. Kd2 Rae8 29. Bxb7 Bf6 30. Rh1 c5 31. dxc5 Nxc5 
+32. Bc6 R8e6 33. Bd5 R6e5 34. Rh2 Na6 35. Ra4 Bg5 36. Kd1 Be7 37. Rc4 Nb4 
+38. Rd4 Nxc2 39. Rf4 Rxc3 40. Nxc3 Ne3+ 41. Kc1 Ba3+ 42. Kd2 Nxd5 43. Rd4 Bb4 
+44. Rxh6+ Kxh6 45. Rxb4 Nxb4 46. Ne2 Kg5 47. Nd4 Rxa5 48. Kc3 Nd3 49. b4 Ra3+ 
+50. Nb3 Kxg4 51. b5 Nc1 52. Kb2 Rxb3+ 53. Kxc1 Kf4 54. Kd2 Bd3 55. b6 axb6 
+56. Ke1 Ke3 57. Kd1 Rb1# 0-1
+
+[Event "?"]
+[Site "?"]
+[Date "2025.02.19"]
+[Round "6"]
+[White "PF5, IID Totale"]
+[Black "PF5"]
+[Result "0-1"]
+[CurrentPosition "8/8/8/7p/4pk2/8/3K2r1/q7 w - - 4 59"]
+[Termination "PF5 won by checkmate"]
+[Timezone "UTC+1"]
+[Startime "04:32:04"]
+[EndDate "2025.02.19"]
+[Endtime "04:32:26"]
+
+1. a4 b5 2. axb5 Bb7 3. Nc3 e5 4. d4 exd4 5. Qxd4 a6 6. e4 c6 7. bxa6 Nxa6 
+8. Nf3 Nf6 9. Bg5 Be7 10. e5 Nd5 11. Bxe7 Qxe7 12. Nxd5 cxd5 13. Bxa6 Rxa6 
+14. Rxa6 Bxa6 15. Qb6 Bc8 16. 0-0 0-0 17. Rd1 Qe6 18. Qb3 Rd8 19. Rxd5 Ba6 
+20. Nd4 Qh6 21. h3 Qd2 22. Qb6 Ra8 23. Nf3 Qxd5 24. Qd6 Qb5 25. Nd4 Qxb2 
+26. Qd5 Qb1+ 27. Kh2 Qb7 28. Qd6 Bf1 29. Nf3 Bc4 30. Nd4 Bd5 31. Nf5 Bxg2 
+32. Qd1 Ra3 33. Nh6+ Kh8 34. Nxf7+ Kg8 35. Nh6+ Kh8 36. Nf7+ Kg8 37. Nh6+ gxh6 
+38. Qg4+ Kf7 39. Qxg2 Qxg2+ 40. Kxg2 Rc3 41. f4 Kg6 42. Kf2 Rxc2+ 43. Kf3 Kf5 
+44. Kg3 Rc3+ 45. Kf2 Kxf4 46. e6 dxe6 47. Kg2 e5 48. Kh2 h5 49. Kg2 h4 
+50. Kf2 Rxh3 51. Ke2 h5 52. Kd2 e4 53. Kc2 Rg3 54. Kc1 h3 55. Kc2 h2 
+56. Kd2 h1=Q 57. Kc2 Qa1 58. Kd2 Rg2# 0-1
+
+[Event "?"]
+[Site "?"]
+[Date "2025.02.19"]
+[Round "7"]
+[White "PF5, IID Totale"]
+[Black "PF5"]
+[Result "1/2-1/2"]
+[CurrentPosition "8/8/k7/2K5/4B3/8/1PP3P1/8 b - - 11 72"]
+[Termination "Game drawn by repetition"]
+[Timezone "UTC+1"]
+[Startime "04:32:26"]
+[EndDate "2025.02.19"]
+[Endtime "04:32:37"]
+
+1. a4 b6 2. d4 d5 3. Nc3 Nd7 4. Nxd5 Bb7 5. Nc3 e5 6. dxe5 Nxe5 7. Qxd8+ Kxd8 
+8. Bf4 Ng6 9. Bg5+ Kc8 10. 0-0-0 f6 11. Bd2 Bc5 12. e3 Nh6 13. Nge2 Ng4 
+14. Be1 Nh4 15. h3 Ne5 16. e4 Rb8 17. f4 Neg6 18. f5 Bxe4 19. Nxe4 Be3+ 
+20. Kb1 Nxf5 21. N2g3 Nd6 22. Nxd6+ cxd6 23. Nf5 Bf4 24. Nxd6+ Bxd6 25. Rxd6 Kc7 
+26. Bg3 Ne5 27. Rd5 Rbe8 28. Bb5 Re7 29. Bxe5+ fxe5 30. Re1 e4 31. Rd4 e3 
+32. Rd3 e2 33. Rd2 Kb8 34. Rdxe2 Rxe2 35. Rxe2 h6 36. Re7 g5 37. Bc6 a5 
+38. Rb7+ Kc8 39. Ra7 Rd8 40. Rb7 Rd6 41. Bf3 Kd8 42. Ka2 Re6 43. Kb3 Re3+ 
+44. Kc4 Re6 45. Kb5 Re5+ 46. Kxb6 Re6+ 47. Kxa5 Re5+ 48. Kb4 Re7 49. Rb6 Rc7 
+50. Be4 Rd7 51. Kc4 h5 52. Rg6 Re7 53. Bf3 Rc7+ 54. Kb3 g4 55. hxg4 hxg4 
+56. Bxg4 Rb7+ 57. Kc3 Rc7+ 58. Kd3 Rb7 59. Rg8+ Kc7 60. Rg7+ Kb6 61. a5+ Ka7 
+62. Rxb7+ Kxb7 63. Bd7 Kc7 64. Bf5 Kc6 65. Ke4 Kb5 66. Kd4 Kxa5 67. Kc5 Ka6 
+68. Be4 Ka7 69. Kc6 Ka6 70. Kc5 Ka7 71. Kc6 Ka6 72. Kc5 1/2-1/2
+
+[Event "?"]
+[Site "?"]
+[Date "2025.02.19"]
+[Round "8"]
+[White "PF5, IID Totale"]
+[Black "PF5"]
+[Result "1-0"]
+[CurrentPosition "8/2R5/1k1Q4/p1pK4/P1P5/8/7P/8 b - - 4 66"]
+[Termination "PF5, IID Totale won by checkmate"]
+[Timezone "UTC+1"]
+[Startime "04:32:37"]
+[EndDate "2025.02.19"]
+[Endtime "04:32:58"]
+
+1. a4 d5 2. Nf3 Bg4 3. Ne5 Be6 4. d4 Nf6 5. Nc3 g6 6. Bg5 h6 7. Bf4 g5 
+8. Be3 Qd6 9. Nb5 Qd8 10. Nc3 Qd6 11. Nb5 Qb6 12. Nc4 dxc4 13. d5 Qa5+ 
+14. Bd2 Qb6 15. dxe6 fxe6 16. e3 Qc6 17. Qe2 e5 18. Qxc4 Kd7 19. Ba5 b6 
+20. Bb4 Kc8 21. Rd1 a6 22. Nc3 a5 23. Ba3 Ra7 24. e4 Nfd7 25. Qb5 h5 26. Bc4 Rh6 
+27. Qd5 h4 28. Nb5 Rb7 29. 0-0 Qxd5 30. exd5 h3 31. gxh3 Rh4 32. Bb3 Rxh3 
+33. Rfe1 Rh4 34. Nc3 Rg4+ 35. Kh1 Rd4 36. Ne4 g4 37. c3 Rxd1 38. Bxd1 c6 
+39. dxc6 Nxc6 40. Bxg4 Bh6 41. Bxe7 Rc7 42. Bd6 Ra7 43. Nf6 Bd2 44. Rd1 Bg5 
+45. Bxd7+ Rxd7 46. Nxd7 Kxd7 47. Bxe5+ Kc8 48. Bg3 Kb7 49. Kg2 Bd8 50. Kf3 Ka6 
+51. Rd6 Kb7 52. Ke4 Kc7 53. c4 Be7 54. Rd1+ Kc8 55. f4 Bf8 56. f5 Bg7 
+57. Rd6 Bxb2 58. Rxc6+ Kb7 59. Kd5 Ba3 60. Bf2 Bc5 61. Bxc5 bxc5 62. f6 Ka7 
+63. f7 Kb7 64. f8=Q Ka7 65. Rc7+ Kb6 66. Qd6# 1-0
+
+[Event "?"]
+[Site "?"]
+[Date "2025.02.19"]
+[Round "9"]
+[White "PF5, IID Totale"]
+[Black "PF5"]
+[Result "1-0"]
+[CurrentPosition "4k3/4Q3/8/3N4/8/4K3/5P2/8 b - - 6 70"]
+[Termination "PF5, IID Totale won by checkmate"]
+[Timezone "UTC+1"]
+[Startime "04:32:58"]
+[EndDate "2025.02.19"]
+[Endtime "04:33:20"]
+
+1. a4 e5 2. a5 d5 3. e3 f5 4. a6 Nxa6 5. d4 Bd6 6. Bxa6 bxa6 7. dxe5 Bxe5 
+8. Nf3 Bf6 9. 0-0 Ne7 10. Qd3 c6 11. Qa3 0-0 12. Nc3 Qb6 13. Na4 Qb8 14. Nc5 Qb5 
+15. Nxa6 Qb6 16. Nc5 a5 17. Nd4 Be5 18. Nd3 Bf6 19. Nb3 a4 20. Nbc5 Qb5 
+21. Bd2 Qc4 22. Rfc1 Ng6 23. Qb4 Qxb4 24. Bxb4 Be7 25. b3 Rb8 26. Rxa4 f4 
+27. e4 dxe4 28. Nxe4 Bxb4 29. Nxb4 Rb6 30. Nd3 Ra6 31. Rxa6 Bxa6 32. Ra1 Bc8 
+33. Ra8 h5 34. Nd6 Be6 35. Rxf8+ Kxf8 36. Nc5 Bg8 37. b4 Ba2 38. Nf5 Kg8 
+39. h3 Bd5 40. h4 f3 41. gxf3 Kf7 42. Ne4 Kg8 43. Kh1 Kh7 44. Kg2 Kh8 
+45. Kg3 Kg8 46. Nc5 Kf8 47. f4 Ne7 48. Ne3 Bg8 49. f5 Bh7 50. Kf4 Bxf5 
+51. Nxf5 Nd5+ 52. Ke4 Nxb4 53. Ne6+ Kf7 54. Nexg7 Nxc2 55. Nxh5 Nb4 56. Nf4 c5 
+57. h5 Kf6 58. h6 Na2 59. h7 Nc3+ 60. Kd3 Kxf5 61. h8=Q Ne4 62. Ke3 Nf6 
+63. Qf8 Kg5 64. Qxc5+ Kh6 65. Qf5 Kg7 66. Qg6+ Kf8 67. Qxf6+ Ke8 68. Qg7 Kd8 
+69. Nd5 Ke8 70. Qe7# 1-0
+
+[Event "?"]
+[Site "?"]
+[Date "2025.02.19"]
+[Round "10"]
+[White "PF5, IID Totale"]
+[Black "PF5"]
+[Result "1-0"]
+[CurrentPosition "5r1k/1R6/8/3BP3/3K4/7Q/7p/8 b - - 4 76"]
+[Termination "PF5, IID Totale won by checkmate"]
+[Timezone "UTC+1"]
+[Startime "04:33:20"]
+[EndDate "2025.02.19"]
+[Endtime "04:33:48"]
+
+1. a4 e5 2. e4 Nc6 3. Nc3 Nf6 4. Nf3 a6 5. Qe2 Bc5 6. Qc4 d6 7. h3 0-0 
+8. Nd5 Be6 9. d3 Kh8 10. Bg5 Kg8 11. Bxf6 gxf6 12. Qb3 Ra7 13. g4 Re8 
+14. Bg2 Nb8 15. c4 b6 16. Qc3 c6 17. Nb4 a5 18. Nc2 Bd7 19. 0-0 Qc7 20. d4 exd4 
+21. Nfxd4 Re5 22. Qf3 Bxd4 23. Nxd4 c5 24. Nb5 Bxb5 25. axb5 Nd7 26. Rfe1 Ra8 
+27. Qd3 Rae8 28. f4 R5e6 29. Bf3 Rb8 30. Qd5 Nf8 31. f5 Re5 32. Qc6 Qxc6 
+33. bxc6 Rc8 34. c7 Rxc7 35. Red1 Rc6 36. Rd2 Nd7 37. Rad1 a4 38. Rxd6 Rxd6 
+39. Rxd6 Re7 40. Bd1 Nf8 41. Bc2 Rb7 42. Bxa4 Re7 43. Bc6 Kg7 44. g5 Ra7 
+45. gxf6+ Kg8 46. Rd1 Rc7 47. Bb5 Ra7 48. Kf2 Ra2 49. Rb1 h5 50. Rg1+ Kh7 
+51. Rg7+ Kh6 52. Ke3 Rxb2 53. Rxf7 Nh7 54. Rb7 Rb3+ 55. Kf4 Nxf6 56. Ke5 Ng8 
+57. Rxb6+ Kh7 58. Rb7+ Kh8 59. f6 Rxh3 60. f7 Rf3 61. fxg8=Q+ Kxg8 62. Kd5 h4 
+63. Kxc5 h3 64. Bc6 h2 65. Bd5+ Kh8 66. Rb1 Re3 67. Kd4 Rh3 68. e5 Rh4+ 
+69. Be4 Rh3 70. c5 Kg7 71. c6 Rh6 72. Rb7+ Kg8 73. c7 Rf6 74. c8=Q+ Rf8 
+75. Bd5+ Kh8 76. Qh3# 1-0
+
+PF5 a gagné 2 parties, soit 20.00% des parties. 1 l'ont été avec les blancs (50.00% des victoires). 1 l'ont été avec les noirs (50.00% des victoires). 
+
+PF5, IID Totale a gagné 5 parties, soit 50.00% des parties. 3 l'ont été avec les blancs (60.00% des victoires). 2 l'ont été avec les noirs (40.00% des victoires). 
+
+3 parties sont nulles, soit 30.00% des parties. 0 l'ont été par manque de matériel (0.00% des nulles). 0 l'ont été par pat (0.00% des nulles). 
+3 l'ont été par triple répétition (100.00% des nulles). 0 l'ont été par la règle des 50 coups (0.00% des nulles). 
+
+Les blancs ont gagné 4 partie (40.00% des parties). Les noirs en ont gagné 3 (30.00%).
+
+0 parties avaient déjà était jouées, soit 0.00% des parties
+
+Temps d'exécution : 00:03:28.15
+Temps moyen d'exécution : 00:00:20.81

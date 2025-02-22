@@ -9,8 +9,27 @@ let bug_0_2 = "8/8/8/3p4/3kpPRP/3p2P1/8/2B3K1 b - - 0 53"
 (*Kiwipete*)
 let kiwipete = "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1"
 
+(*Lasker-Reichhelm*)
+let lasker = "8/k7/3p4/p2P1p2/P2P1P2/8/8/K7 w - -"
+
+(*Test Mat*)
+let tour_et_roi = "8/7K/8/8/8/8/R7/7k w - - 0 1"
+let deux_fous_et_roi = "8/8/8/3k4/8/3K4/3BB3/8 w - - 0 1"
+
+(*Puzzles Chess.com*)
+let puzzle_0 = "5k2/6P1/5P1P/8/8/p7/8/6K1 b - - 0 1"
+
 (*Test du roque*)
 let test_roque = "rnbq1bnr/pppppppp/8/8/8/8/Pk2PPPP/R3KBNR w KQ - 0 1"
+
+(*Erreurs fâcheuses*)
+let discorde_0 = "r2qr1k1/ppp2ppp/2nb4/3n2NQ/8/P2pP1PP/1P1N1P2/R1B2RK1 b - - 1 14"
+let discorde_1 = "r3k2r/pBpp1pb1/1n3np1/3pq3/4PB2/2p2Q1p/PPP2PPP/R3K2R w KQkq - 0 1"
+let discorde_2 = "r3k2r/pBpp1pb1/1n3np1/3p4/5B2/2p2q1p/PPP2PPP/3R1K1R b kq - 0 1"
+let discorde_3 = "2b1k2r/1pp2ppp/2nqpn2/3p4/3P4/2PBPN2/1B3PPP/Q3K2R b Kk - 0 1"
+let discorde_4 = "Q1bk3r/1pp2ppp/2nq1n2/1B1p4/3P4/4PN2/1B3PPP/4K2R b K - 0 1"
+let discorde_5 = "Q1b1k2r/1pp2ppp/2nq1n2/1B1p4/3p4/2P1PN2/1B3PPP/4K2R b Kk - 1 14"
+let discorde_6 = "r3k2r/p1ppqpb1/Bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPB1PPP/R3K2R b KQkq - 0 1"
 
 (*Test 960*)
 let test_fisher0 = "bqnb1rkr/pp3ppp/3ppn2/2p5/5P2/P2P4/NPP1P1PP/BQ1BNRKR w HFhf - 2 9"

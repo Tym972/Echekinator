@@ -15,7 +15,8 @@
   evaluations
   strategie2
   config
-  interfaces)
+  interfaces
+  piece_square_tables)
  (libraries
   str
   unix

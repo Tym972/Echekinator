@@ -102,25 +102,19 @@ let tri_4 plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau ev
   tri plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau 4 evaluation
 
 (*Tableaux contenant les stratégies d'ordonnancement des coups aux pofondeurs correspondant à l'index + 1*)
-let tab_tri = [|non_tri; tri_mvvlva; tri_0; tri_0; tri_1; tri_1; tri_2; tri_2; tri_2; tri_2|]
+let tab_tri = [|non_tri; tri_mvvlva; tri_0; tri_0; tri_1; tri_1; tri_2; tri_2; tri_2; tri_2;tri_2; tri_2; tri_2; tri_2;tri_2; tri_2; tri_2; tri_2;tri_2; tri_2; tri_2; tri_2;tri_2; tri_2; tri_2; tri_2|]
 
 let compteur_recherche = ref 0
 
 let compteur_noeuds_terminaux = ref 0
 
-(*Fonction indiquant si la tête est présente n fois dans une liste, n supérieur ou égal à 2*)
+(*Fonction détectant les répétitions à partir d'une liste de code zobrist*)
 let repetition liste_releve_plateau n = match liste_releve_plateau with
   |[] -> false
   |h::q ->
     let rec aux liste k = match liste with
-      |[] -> false
-      |g::t ->
-        if h = g then begin
-          k + 1 = n || aux t (k + 1)
-        end
-        else begin 
-         aux t k
-        end;
+      |[] | [_] -> false
+      |_::j::t -> (h = j && (k + 1 = n || aux t (k + 1))) || aux t k
     in aux q 1
 
 (*Fonction indiquant si chaque joueur à moins de 3 pièces hors roi et pion sur l'échiquier, ou si leur nombre est inférieur à 6*)
@@ -192,9 +186,11 @@ let rec negalphabeta plateau trait_aux_blancs dernier_coup droit_au_roque releve
         in if score > !best_score then begin
           best_score := score;
           best_move := coup;
-          alpha0 := max !alpha0 !best_score;
-          if !alpha0 >= beta then begin
+          if score >= beta then begin
             b := false
+          end
+          else begin
+            alpha0 := max !alpha0 score
           end
         end;
         dejoue plateau coup

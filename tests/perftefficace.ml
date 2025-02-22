@@ -8,13 +8,12 @@ open Config
 
 let table_perft = ZobristHashtbl.create 200000000
 
-let rec algoperft plateau trait_aux_blancs dernier_coup droit_au_roque profondeur racine =
+let rec algoperft plateau trait_aux_blancs dernier_coup droit_au_roque profondeur racine zobrist_position =
   if profondeur = 0 then begin
     1
   end
   else begin
-    let zob = zobrist plateau trait_aux_blancs dernier_coup droit_au_roque lxor profondeur in
-    let nombre = try ZobristHashtbl.find table_perft zob with _ -> (-1) in
+    let nombre = try ZobristHashtbl.find table_perft zobrist_position with _ -> (-1) in
     if nombre <> (-1) then begin
       nombre
     end
@@ -25,21 +24,23 @@ let rec algoperft plateau trait_aux_blancs dernier_coup droit_au_roque profondeu
         let coup = List.hd !cp in
         joue plateau coup;
         cp := List.tl !cp;
-        let perft = (algoperft plateau (not trait_aux_blancs) coup (modification_roque coup droit_au_roque) (profondeur - 1) false) in
+        let nouveau_doit_au_roque = modification_roque coup droit_au_roque in
+        let nouveau_zobrist = if profondeur > 1 then (nouveau_zobrist coup dernier_coup zobrist_position droit_au_roque nouveau_doit_au_roque lxor (profondeur - 1)) else 0 in
+        let perft = (algoperft plateau (not trait_aux_blancs) coup nouveau_doit_au_roque (profondeur - 1) false nouveau_zobrist) in
         nodes := !nodes + perft;
         if racine then begin
           print_endline (uci_of_mouvement coup ^ ": " ^ string_of_int perft)
         end;
         dejoue plateau coup
       done;
-      ZobristHashtbl.add table_perft zob !nodes;
+      ZobristHashtbl.add table_perft zobrist_position !nodes;
       !nodes;
     end
   end
 
 let algoperftime plateau trait_aux_blancs dernier_coup droit_au_roque profondeur =
   let t = Sys.time () in
-  let fx = algoperft plateau trait_aux_blancs dernier_coup droit_au_roque profondeur true in
+  let fx = algoperft plateau trait_aux_blancs dernier_coup droit_au_roque profondeur true (zobrist plateau trait_aux_blancs dernier_coup droit_au_roque lxor profondeur) in
   fx, (Sys.time () -. t)
 
 let perft profondeur plateau =
