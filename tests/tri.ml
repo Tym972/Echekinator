@@ -5,6 +5,7 @@ open Libs.Evaluations
 open Libs.Strategie1
 open Libs.Traduction2
 open Libs.Quiescence
+open Libs.Total
 
 let rec affiche_liste liste plateau coups_valides_joueur = match liste with
   |(x, coup) :: t ->
@@ -12,7 +13,7 @@ let rec affiche_liste liste plateau coups_valides_joueur = match liste with
     affiche_liste t plateau coups_valides_joueur
   |_ -> ()
 
-let tri_algo plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau profondeur evaluation algo =
+let tri_algo_1 plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau profondeur evaluation algo =
   let rec association liste_coups =
     match liste_coups with
     |[] -> []
@@ -21,6 +22,21 @@ let tri_algo plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau
         joue plateau coup;
         let nouveau_droit_au_roque = modification_roque coup droit_au_roque in
         let x, _ = algo plateau (not trait_aux_blancs) coup nouveau_droit_au_roque (adapte_releve plateau coup profondeur trait_aux_blancs nouveau_droit_au_roque releve_plateau) profondeur profondeur (-99999) 99999 evaluation in
+        dejoue plateau coup;
+        (- x, coup) :: association liste_coup
+      end
+  in tri_fusion (association (coups_valides plateau trait_aux_blancs dernier_coup droit_au_roque))
+
+let tri_algo_2 plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau profondeur evaluation algo =
+  let rec association liste_coups =
+    match liste_coups with
+    |[] -> []
+    |coup :: liste_coup ->
+      begin
+        joue plateau coup;
+        let nouveau_droit_au_roque = modification_roque coup droit_au_roque in
+        let nouveau_releve = adapte_releve plateau coup profondeur trait_aux_blancs nouveau_droit_au_roque releve_plateau in
+        let x, _ = algo plateau (not trait_aux_blancs) coup nouveau_droit_au_roque nouveau_releve profondeur profondeur (-99999) 99999 evaluation (List.hd nouveau_releve) in
         dejoue plateau coup;
         (- x, coup) :: association liste_coup
       end
@@ -49,10 +65,13 @@ let rec association liste_coups =
   in List.map (fun (note, coup) -> (100 * note, coup) ) (tri_fusion (association (coups_valides plateau trait_aux_blancs dernier_coup droit_au_roque)))
 
 let tri_negalphabeta plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau profondeur evaluation =
-  tri_algo plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau profondeur evaluation negalphabeta
+  tri_algo_1 plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau profondeur evaluation negalphabeta
 
 let tri_negalphabeta_quiescent plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau profondeur evaluation =
-  tri_algo plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau profondeur evaluation negalphabeta_quiescent
+  tri_algo_1 plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau profondeur evaluation negalphabeta_quiescent
+
+let tri_negalphabeta_total plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau profondeur evaluation =
+  tri_algo_2 plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau profondeur evaluation negalphabeta_total
 
 let do_tri_negalphabeta () =
   print_newline ();
@@ -70,6 +89,14 @@ let do_tri_negalphabeta_quiescent () =
   affiche_liste (tri_negalphabeta_quiescent plateau !trait_aux_blancs !dernier_coup !droit_au_roque !releve_plateau (profondeur - 1) evaluation) plateau coups_valides_joueur;
   print_endline (string_of_float (Sys.time () -. t))
 
+let do_tri_negalphabeta_total () =
+  print_newline ();
+  print_endline "Tri negalphabeta total";
+  affiche plateau;
+  let t = Sys.time () in
+  affiche_liste (tri_negalphabeta_total plateau !trait_aux_blancs !dernier_coup !droit_au_roque !releve_plateau (profondeur - 1) evaluation) plateau coups_valides_joueur;
+  print_endline (string_of_float (Sys.time () -. t))
+
 let do_tri_see () =
   print_newline ();
   print_endline "Tri static exchange variation";
@@ -78,7 +105,7 @@ let do_tri_see () =
   affiche_liste (tri_algo3 plateau !trait_aux_blancs !dernier_coup !droit_au_roque) plateau coups_valides_joueur;
   print_endline (string_of_float (Sys.time () -. t))
 
-let main b1 b2 b3 =
+let main b1 b2 b3 b4 =
   print_endline ("\nProfondeur " ^ (string_of_int profondeur));
   if b1 then begin
     do_tri_negalphabeta ()
@@ -87,7 +114,10 @@ let main b1 b2 b3 =
     do_tri_negalphabeta_quiescent ()
   end;
   if b3 then begin
+    do_tri_negalphabeta_total ()
+  end;
+  if b4 then begin
     do_tri_see ();
   end
 
-let () = main false true false
+let () = main false false true false

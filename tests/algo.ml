@@ -290,16 +290,18 @@ let idd_time_total_print plateau trait_aux_blancs dernier_coup droit_au_roque re
   fx, (Sys.time () -. t)
 
 let run affichage plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau profondeur evaluation algo =
-  let (a, coup), c = algo plateau !trait_aux_blancs !dernier_coup !droit_au_roque !releve_plateau profondeur evaluation in
-  if affichage then begin
-    print_endline ("Matériel : " ^ (string_of_int a));
-    print_endline ("Temps : " ^ (string_of_float c))
-  end; 
-  joue_coup_2 plateau coup trait_aux_blancs dernier_coup droit_au_roque releve_coups releve_plateau;
-  if affichage then begin
-    affiche plateau;
-    print_endline (algebric_of_mouvement !dernier_coup plateau coups_valides_joueur);
-  end
+  for _ = 1 to nombre_de_coups do
+    let (a, coup), c = algo plateau !trait_aux_blancs !dernier_coup !droit_au_roque !releve_plateau profondeur evaluation in
+    if affichage then begin
+      print_endline ("Matériel : " ^ (string_of_int a));
+      print_endline ("Temps : " ^ (string_of_float c))
+    end; 
+    joue_coup_2 plateau coup trait_aux_blancs dernier_coup droit_au_roque releve_coups releve_plateau;
+    if affichage then begin
+      affiche plateau;
+      print_endline (algebric_of_mouvement !dernier_coup plateau coups_valides_joueur);
+    end
+  done
 
 let runnegamax affichage plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau profondeur evaluation =
   run affichage plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau profondeur evaluation negatime
@@ -319,6 +321,9 @@ let runnegalphabeta_trans affichage plateau trait_aux_blancs dernier_coup droit_
 let runnegalphabeta_quiescent affichage plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau profondeur evaluation =
   run affichage plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau profondeur evaluation negalphabetime_quiescent
 
+let runnegalphabeta_fp affichage plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau profondeur evaluation =
+  run affichage plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau profondeur evaluation negalphabetime_total
+
 let runidd_basique affichage plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau profondeur evaluation =
   run affichage plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau profondeur evaluation idd_time_basique_print
 
@@ -330,9 +335,6 @@ let runidd_trans affichage plateau trait_aux_blancs dernier_coup droit_au_roque 
 
 let runidd_total affichage plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau profondeur evaluation =
   run affichage plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau profondeur evaluation idd_time_total_print
-
-let runnegalphabeta_fp affichage plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau profondeur evaluation =
-  run affichage plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau profondeur evaluation negalphabetime_total
 
 (*let stat tableau_1 tableau_2 tableau_3 =
   let taille_tableau = Array.length tableau_1 - 1 in
@@ -402,6 +404,6 @@ let main b1 b2 b3 b4 b5 b6 b7 b8 b9 b10 b11 plateau =
   print_endline ("Noeuds recherche quiescente : " ^ string_of_int !compteur_quiescent);
   print_endline ("Noeuds hashtable : " ^ string_of_int !compteur_trans);
   print_endline ("EBF : " ^ string_of_float (float_of_int !compteur_recherche /. float_of_int (!compteur_recherche - !compteur_noeuds_terminaux)));
-  actualise table 10 (*;stat tab_hash_1 tab_hash_2 tab_hash_best*)
+  actualise table 10; (*;stat tab_hash_1 tab_hash_2 tab_hash_best*)print_endline (Printf.sprintf "oui : %i et non : %i et taux : %f" !a1 !a2 ((float_of_int !a1)/.(float_of_int !a1 +. float_of_int !a2)))
 
-let () = main false false false false false false true false false false false plateau
+let () = main false false false false false false false false false false true plateau

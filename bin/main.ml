@@ -2,8 +2,8 @@ open Libs.Interfaces
 open Libs.Config
 
 
-let config_j1 = config_pf_totale 4
-let config_j2 = config_pf_totale 4
+let config_j1 = config_pf_quiescent 6
+let config_j2 = config_pf 6
 
 (*Fonction permettant de lancer une partie d'échec, joueur contre joueur, joueur contre programme, ou programme contre programme*)
 let launcher =

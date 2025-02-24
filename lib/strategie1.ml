@@ -102,7 +102,7 @@ let tri_4 plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau ev
   tri plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau 4 evaluation
 
 (*Tableaux contenant les stratégies d'ordonnancement des coups aux pofondeurs correspondant à l'index + 1*)
-let tab_tri = [|non_tri; tri_mvvlva; tri_0; tri_0; tri_1; tri_1; tri_2; tri_2; tri_2; tri_2;tri_2; tri_2; tri_2; tri_2;tri_2; tri_2; tri_2; tri_2;tri_2; tri_2; tri_2; tri_2;tri_2; tri_2; tri_2; tri_2|]
+let tab_tri = [|non_tri; tri_mvvlva; tri_0; tri_0; tri_1; tri_1; tri_2; tri_2; tri_2; tri_2;tri_2; tri_2; tri_2; tri_2;tri_2; tri_2; tri_2; tri_2; tri_2; tri_2; tri_2; tri_2;tri_2; tri_2; tri_2; tri_2; tri_2; tri_2; tri_2; tri_2;tri_2; tri_2; tri_2; tri_2; tri_2; tri_2; tri_2; tri_2;tri_2; tri_2; tri_2; tri_2|]
 
 let compteur_recherche = ref 0
 
@@ -152,18 +152,18 @@ let finale plateau =
   pieces_esseulee plateau || roi_seul plateau
 
 (*Implémentation d'un algorithme de recherche minimax avec élagage alpha-bêta et negamax, utilisé après l'ouverture. Les pat par répétitions sont pris en comptes*)
-let rec negalphabeta plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau profondeur profondeur_initiale alpha beta evaluation = incr compteur_recherche;
+let rec negalphabeta plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau profondeur profondeur_initiale alpha beta evaluation = (*incr compteur_recherche;*)
   let best_score = ref (-99999) in
   let best_move = ref Aucun in
-  if repetition releve_plateau 3 then begin incr compteur_noeuds_terminaux;
+  if repetition releve_plateau 3 then begin (*incr compteur_noeuds_terminaux;*)
     best_score := 0
   end
-  else if profondeur = 0 then begin incr compteur_noeuds_terminaux;
+  else if profondeur = 0 then begin (*incr compteur_noeuds_terminaux;*)
     best_score := traitement_profondeur_0 evaluation plateau trait_aux_blancs dernier_coup alpha beta
   end
   else begin
     let cp = ref (tab_tri.(profondeur - 1) plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau evaluation negalphabeta)
-    in if !cp = [] then begin incr compteur_noeuds_terminaux;
+    in if !cp = [] then begin (*incr compteur_noeuds_terminaux;*)
       if menacee plateau (index_tableau plateau (roi trait_aux_blancs)) trait_aux_blancs then begin
         best_score := profondeur_initiale - (profondeur + 99999)
       end

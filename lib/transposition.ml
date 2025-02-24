@@ -25,7 +25,6 @@ let enfant noeud = match noeud with
   |All -> Cut
 
 let (table : (noeuds * int * int * mouvement * int) ZobristHashtbl.t) =  ZobristHashtbl.create taille_transposition
-let (meuble : (noeuds * int * int * mouvement * int) ZobristHashtbl.t) =  ZobristHashtbl.create taille_transposition
 
 let compteur_trans = ref 0
 let adapte_releve2 zobrist_position coup profondeur releve_plateau =
@@ -54,13 +53,13 @@ let traitement_hash (hash_node_type : noeuds) (hash_depth : int) (hash_value : i
       |Cut ->
         alpha := max !alpha hash_value;
         if hash_value >= !beta then begin
-          best_score := 99999;
+          best_score := hash_value;
           continuation := false
         end
       |All ->
         beta := min !beta hash_value;
         if !alpha >= hash_value then begin
-          best_score := (-99999);
+          best_score := hash_value;
           continuation := false
         end 
   end
@@ -120,7 +119,8 @@ let tab_hash_1 = Array.make 100 0
 let tab_hash_2 = Array.make 100 0
 let tab_hash_best = Array.make 2 0
 
-let a = ref 0
+let a1 = ref 0
+let a2 = ref 0
 
 let rec negalphabeta_trans plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau profondeur profondeur_initiale alpha beta evaluation zobrist_position = incr compteur_recherche;
   let best_score = ref (-99999) in
@@ -146,7 +146,7 @@ let rec negalphabeta_trans plateau trait_aux_blancs dernier_coup droit_au_roque 
       end
       else begin
         let b = ref true in
-        (*if hash_move <> Aucun (*&& hash_node_type <> All*) then begin
+        if (hash_node_type = Pv || (hash_node_type = Cut && hash_value > beta)) && hash_move <> Aucun then begin
           joue plateau hash_move;
           let nouveau_droit_au_roque = modification_roque hash_move droit_au_roque in
           let nouveau_zobrist = zobrist plateau (not trait_aux_blancs) hash_move nouveau_droit_au_roque in
@@ -161,24 +161,10 @@ let rec negalphabeta_trans plateau trait_aux_blancs dernier_coup droit_au_roque 
             b := false
           end;
           dejoue plateau hash_move;
-        end;*)
+        end;
         if !b then begin
-          let cp =
-            (*if (hash_node_type = All) then begin
-              if hash_move = Aucun then
-                ref (coups_valides plateau trait_aux_blancs dernier_coup droit_au_roque)
-              else
-                ref (List.filter (fun c -> c <> hash_move) (coups_valides plateau trait_aux_blancs dernier_coup droit_au_roque))
-              end
-            else begin
-              if hash_move = Aucun then*)
-                ref ((tab_tri.(profondeur - 1) plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau evaluation negalphabeta))
-              (*else
-                ref (List.filter (fun c -> c <> hash_move) (tab_tri.(profondeur - 1) plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau evaluation negalphabeta))
-            end*)
-          in (*let i = ref 0 in*)
-          (*if !best_move <> Aucun && hash_node_type <> All && false then begin incr a; let n = index_liste !best_move !cp in print_endline (string_of_int !a ^ " hash : "  ^ string_of_int n) end;*)
-          if !cp = [] then begin incr compteur_noeuds_terminaux;
+          let cp = ref ((tab_tri.(profondeur - 1) plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau evaluation negalphabeta))
+          in if !cp = [] then begin incr compteur_noeuds_terminaux;
             if (menacee plateau (index_tableau plateau (roi trait_aux_blancs)) trait_aux_blancs) then begin
               best_score := (profondeur_initiale - (profondeur + 99999))
             end 

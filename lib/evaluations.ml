@@ -1183,16 +1183,16 @@ let evalue_finale plateau trait_aux_blancs position_roi roi_en_echec (alpha : in
   end
 
 (*Fonction d'évaluation à n'appliquer que sur les positions stables*)
-let evalue_simple plateau trait_aux_blancs (position_roi : int) (roi_en_echec : bool) alpha beta =
+let evalue_simple plateau trait_aux_blancs (position_roi : int) (roi_en_echec : bool) alpha beta = let _ = alpha, beta in
   let _ = trait_aux_blancs, position_roi, roi_en_echec in
   let position = ref 0 in
   let note_provisoire = traitement trait_aux_blancs (eval_materiel plateau) 0 in
-  if note_provisoire - 75 < beta && note_provisoire + 75 > alpha then begin
+  (*if note_provisoire - 75 < beta && note_provisoire + 75 > alpha then begin
     position := mobilite plateau trait_aux_blancs;
     if note_provisoire + !position - 75 < beta && note_provisoire + !position > alpha then begin
       position := !position - mobilite plateau (not trait_aux_blancs)
     end
-  end;
+  end;*)
   note_provisoire + !position
 
 let fp plateau position table =
