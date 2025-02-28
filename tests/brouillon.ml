@@ -18,7 +18,26 @@ let main plateau =
 let () = main plateau
 
 
-  (*  affiche position_de_depart;
+  (* 
+      
+      if hash_node_type = All && node_type <> All && hash_depth = profondeur && !best_score > hash_value then begin
+        print_newline ();
+        print_endline (Printf.sprintf "Défaillance All profondeur %i, alpha : %i, beta : %i" profondeur alpha beta);
+        print_endline (fen plateau trait_aux_blancs dernier_coup droit_au_roque [] []);
+        print_endline (Printf.sprintf "best_score : %i et hash_value : %i" !best_score hash_value);
+        if node_type = Pv then print_endline "Pv" else print_endline "Cut";
+        (*affiche plateau*)
+      end
+      else if hash_node_type = Cut && node_type <> Cut && hash_depth = profondeur && !best_score < hash_value then begin
+        print_newline ();
+        print_endline (Printf.sprintf "Défaillance Cut profondeur %i, alpha ; %i, beta : %i" profondeur alpha beta);
+        print_endline (fen plateau trait_aux_blancs dernier_coup droit_au_roque [] []);
+        print_endline (Printf.sprintf "best_score : %i et hash_value : %i" !best_score hash_value);
+        if node_type = Pv then print_endline "Pv" else print_endline "All";
+        (*affiche plateau*)
+      end;
+  
+  affiche position_de_depart;
   print_endline (coord.(!depart_roi_blanc) ^ " " ^ coord.(!depart_tour_blanche_pr) ^ " " ^ coord.(!depart_tour_blanche_gr));
   print_endline (coord.(!depart_roi_noir) ^ " " ^ coord.(!depart_tour_noire_pr) ^ " " ^ coord.(!depart_tour_noire_gr));
   print_endline (string_of_bool !roi_blanc_clouable ^ " " ^ string_of_bool !roi_noir_clouable);

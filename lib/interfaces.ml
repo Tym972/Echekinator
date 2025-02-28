@@ -472,6 +472,7 @@ let ensemble_aleatoire k n =
 (*Permet de lancer un ensemble de partie en consignant le résultat*)
 let ensemble all_openings anti_repet nombre affichage config_j1 config_j2 =
   let heure_debut = Sys.time () in
+  Random.self_init ();
   let repertoire_ouverture = ouvertures_echantillon in
   let nombre_ouvertures = List.length repertoire_ouverture in
   let doc = ref "" in
@@ -512,9 +513,12 @@ let ensemble all_openings anti_repet nombre affichage config_j1 config_j2 =
     let fen_initial = fen plateau !trait_aux_blancs !dernier_coup !droit_au_roque !releve_coups !releve_plateau in
     if all_openings then begin
       joue_liste (List.nth repertoire_ouverture i) plateau dernier_coup releve_coups releve_plateau droit_au_roque trait_aux_blancs;
-    end;
-    if anti_repet then begin
+    end
+    else if anti_repet then begin
       joue_liste (List.nth repertoire_ouverture (List.nth !ens i)) plateau dernier_coup releve_coups releve_plateau droit_au_roque trait_aux_blancs;
+    end
+    else begin
+      joue_liste (List.nth repertoire_ouverture (Random.int nombre_ouvertures)) plateau dernier_coup releve_coups releve_plateau droit_au_roque trait_aux_blancs;
     end;
     let partie_finie = ref false in
     let position_de_depart = echiquier in
@@ -594,7 +598,7 @@ let partie_multiple config_j1 config_j2 =
     let anti_repet = ref false in
     if not all_openings then begin
       nombre := (try int_of_string (lire_entree "Tapez le nombre de parties désirées : ") with _ -> exit 0);
-      if est_oui ("Voulez-vous prévenir l'utilisation d'une même ouverture plusieurs fois? : ") then begin 
+      if est_oui (lire_entree "Voulez-vous prévenir l'utilisation d'une même ouverture plusieurs fois? : ") then begin 
         anti_repet := true 
       end
     end;

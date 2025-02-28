@@ -7,6 +7,7 @@ let bug_0_1 = "8/8/8/3p4/3kp1RP/3p2P1/5P2/2B3K1 w - - 1 53"
 let bug_0_2 = "8/8/8/3p4/3kpPRP/3p2P1/8/2B3K1 b - - 0 53"
 
 (*Kiwipete*)
+let pre_kiwipete = "r1b1k2r/p1ppqpb1/Qn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R b KQkq - 0 1"
 let kiwipete = "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1"
 
 (*Lasker-Reichhelm*)
@@ -15,6 +16,9 @@ let lasker = "8/k7/3p4/p2P1p2/P2P1P2/8/8/K7 w - -"
 (*Test Mat*)
 let tour_et_roi = "8/7K/8/8/8/8/R7/7k w - - 0 1"
 let deux_fous_et_roi = "8/8/8/3k4/8/3K4/3BB3/8 w - - 0 1"
+let etouffed_1 = "r2qr1k1/pp1bb1pp/2n2n2/6N1/8/2N5/PP1P1PPP/R1BQ1RK1 w - - 0 1"
+let etouffed_2 = "rq2r1k1/pp1bb1pp/2n2n2/6N1/8/2N5/PP1P1PPP/R1BQ1RK1 w - - 0 1"
+let etouffed_3 = "rq2r1k1/pp1bb1pp/2n2n2/6N1/8/2N5/PP1PbPPP/R1BQ1RK1 w - - 0 1"
 
 (*Puzzles Chess.com*)
 let puzzle_0 = "5k2/6P1/5P1P/8/8/p7/8/6K1 b - - 0 1"
@@ -30,6 +34,19 @@ let discorde_3 = "2b1k2r/1pp2ppp/2nqpn2/3p4/3P4/2PBPN2/1B3PPP/Q3K2R b Kk - 0 1"
 let discorde_4 = "Q1bk3r/1pp2ppp/2nq1n2/1B1p4/3P4/4PN2/1B3PPP/4K2R b K - 0 1"
 let discorde_5 = "Q1b1k2r/1pp2ppp/2nq1n2/1B1p4/3p4/2P1PN2/1B3PPP/4K2R b Kk - 1 14"
 let discorde_6 = "r3k2r/p1ppqpb1/Bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPB1PPP/R3K2R b KQkq - 0 1"
+let discorde_7 = "r3r1k1/2q2p1p/p5p1/2pbQ1P1/2p1p2P/P3P3/1P1p1PB1/R3RK2 b - - 0 1"
+let discorde_8 = "r4rk1/2q2p2/6pP/p1pbn3/2p1B2P/P1QpP3/1P3P2/R3R1K1 b - - 0 1"
+let discorde_9 = "r5k1/2q2p1p/p5p1/2pbr1P1/2p1p2P/P3P3/1P1p1PB1/R3RK2 w - - 0 1"
+let discorde_10 = "r5k1/2q2p1p/p5p1/2pbr1P1/2p1p2P/P3P3/1P3PB1/4RK2 w - - 0 1"
+let discorde_11 = "r4rk1/2q2p2/p1b3pP/2p1n3/2p1B2P/P1QpP3/1P3P2/R3R1K1 b - - 0 1"
+let discorde_12 = "r4rk1/2q2p1p/p5p1/2pbn1P1/2p1p2P/P1QpP3/1P3PB1/R3R1K1 b - - 0 1"
+let discorde_13 = "r3r1k1/2q2p1p/p5p1/2pbQ1P1/2p1p2P/P3P3/1P1p1PBK/R3R3 b - - 0 1"
+let discorde_14 = "r3r1k1/2q2p1p/p1n5/2pb2Pp/2p1p3/P2QP3/1P3PB1/3RRK2 b - - 0 1"
+let discorde_15 = "r3r1k1/2q2p1p/p1n5/2pb2Pp/4p3/P2pP3/1P3PB1/3RRK2 w - - 0 1"
+let discorde_16 = "5k2/p5p1/P6p/8/1r1p1Q2/1P6/2P2PPK/8 b - - 0 1"
+let discorde_17 = "6k1/5pp1/4p1bp/4P3/3P2PP/1r3P2/5r2/2Q4K b - - 0 1"
+let discorde_18 = "4r1k1/2p4p/6b1/1p2pp2/8/5K1P/2q5/3R3R b - - 0 1"
+let discorde_19 = "4r1k1/2p4p/6b1/1p2pp2/8/3q3P/5K2/3R3R b - - 0 1"
 
 (*Test 960*)
 let test_fisher0 = "bqnb1rkr/pp3ppp/3ppn2/2p5/5P2/P2P4/NPP1P1PP/BQ1BNRKR w HFhf - 2 9"

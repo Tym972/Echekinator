@@ -27,6 +27,7 @@ let enfant noeud = match noeud with
 let (table : (noeuds * int * int * mouvement * int) ZobristHashtbl.t) =  ZobristHashtbl.create taille_transposition
 
 let compteur_trans = ref 0
+
 let adapte_releve2 zobrist_position coup profondeur releve_plateau =
   if est_irremediable coup then begin
     if profondeur < 8 then begin
@@ -43,6 +44,7 @@ let adapte_releve2 zobrist_position coup profondeur releve_plateau =
     zobrist_position :: releve_plateau
   end
 
+(*PV node : Exact value, Cut Node : Lower Bound, All Node : Upper Bound*)
 let traitement_hash (hash_node_type : noeuds) (hash_depth : int) (hash_value : int) (hash_move : mouvement) depth alpha beta best_score best_move continuation = incr compteur_trans;
   if depth <= hash_depth then begin
     match hash_node_type with

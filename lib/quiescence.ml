@@ -462,10 +462,7 @@ let rec see plateau case trait_aux_blancs =
   !value
 
 let tri_see liste plateau trait_aux_blancs =
-  if List.length liste < 2 then begin 
-    liste
-  end
-  else begin
+  begin
     let rec association liste_coups =
       match liste_coups with
       |[] -> []
@@ -482,12 +479,17 @@ let tri_see liste plateau trait_aux_blancs =
     in List.map snd (tri_fusion (association liste))
   end
 
-  let rec detecte_captures listes_coups = match listes_coups with
+  let rec detecte_captures liste_coups = match liste_coups with
   |[] -> []
   |Classique {piece; depart; arrivee; prise} :: t when prise <> 0 -> Classique {piece; depart; arrivee; prise} :: detecte_captures t
   |Promotion x :: t -> Promotion x :: detecte_captures t
   |Enpassant x :: t -> Enpassant x :: detecte_captures t
   |_ :: t -> detecte_captures t
+
+let rec adapte_delta liste_coups = match liste_coups with
+  |[] -> 0
+  |Promotion _ :: _  -> 8000
+  |_ :: t -> adapte_delta t
 
 let compteur_quiescent = ref 0
 
@@ -501,8 +503,8 @@ let rec recherche_quiescente plateau trait_aux_blancs alpha beta evaluation cap 
   else if delta >= beta then begin
     best_score := beta
   end
-  else if delta + 9000 < alpha then begin
-    best_score := delta
+  else if delta + 9100 + adapte_delta cap < alpha then begin
+    best_score := alpha
   end
   else begin
     let cps = ref (mvvlva cap) in
@@ -531,7 +533,7 @@ let rec recherche_quiescente plateau trait_aux_blancs alpha beta evaluation cap 
         end;
         dejoue plateau coup
       done
-    end
+    end;
   end;
   !best_score
 

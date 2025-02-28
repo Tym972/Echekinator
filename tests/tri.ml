@@ -2,6 +2,7 @@ open Config
 open Libs.Plateau
 open Libs.Generateur
 open Libs.Evaluations
+open Libs.Zobrist
 open Libs.Strategie1
 open Libs.Traduction2
 open Libs.Quiescence
@@ -36,7 +37,7 @@ let tri_algo_2 plateau trait_aux_blancs dernier_coup droit_au_roque releve_plate
         joue plateau coup;
         let nouveau_droit_au_roque = modification_roque coup droit_au_roque in
         let nouveau_releve = adapte_releve plateau coup profondeur trait_aux_blancs nouveau_droit_au_roque releve_plateau in
-        let x, _ = algo plateau (not trait_aux_blancs) coup nouveau_droit_au_roque nouveau_releve profondeur profondeur (-99999) 99999 evaluation (List.hd nouveau_releve) in
+        let x, _ = algo plateau (not trait_aux_blancs) coup nouveau_droit_au_roque nouveau_releve profondeur profondeur (-99999) 99999 evaluation (zobrist plateau (not trait_aux_blancs) coup nouveau_droit_au_roque) in
         dejoue plateau coup;
         (- x, coup) :: association liste_coup
       end
@@ -120,4 +121,4 @@ let main b1 b2 b3 b4 =
     do_tri_see ();
   end
 
-let () = main false false true false
+let () = main false true true false
