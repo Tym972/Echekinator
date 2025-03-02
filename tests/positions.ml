@@ -47,6 +47,7 @@ let discorde_16 = "5k2/p5p1/P6p/8/1r1p1Q2/1P6/2P2PPK/8 b - - 0 1"
 let discorde_17 = "6k1/5pp1/4p1bp/4P3/3P2PP/1r3P2/5r2/2Q4K b - - 0 1"
 let discorde_18 = "4r1k1/2p4p/6b1/1p2pp2/8/5K1P/2q5/3R3R b - - 0 1"
 let discorde_19 = "4r1k1/2p4p/6b1/1p2pp2/8/3q3P/5K2/3R3R b - - 0 1"
+let discorde_20 = "r3k1nr/p1ppqpb1/Bn2p3/3PN1p1/4P3/2B2Q2/PPP2PpP/RR4K1 w - - 0 1"
 
 (*Test 960*)
 let test_fisher0 = "bqnb1rkr/pp3ppp/3ppn2/2p5/5P2/P2P4/NPP1P1PP/BQ1BNRKR w HFhf - 2 9"

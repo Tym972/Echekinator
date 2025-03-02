@@ -415,4 +415,222 @@ let rec filtre elt liste = match liste with
   |[] -> []
   |h::t -> if h = elt then t else h :: (filtre elt t)
 
+ let rec compte_captures liste_coups = match liste_coups with
+  |[] -> 0
+  |Classique {piece = _; depart = _; arrivee = _; prise} :: t when prise <> 0 -> 1 + compte_captures t
+  |Promotion {depart = _; arrivee = _; promotion = _; prise} :: t when prise <> 0 -> 1 + compte_captures t
+  |Enpassant _ :: t -> 1 + compte_captures t
+  |_ :: t -> compte_captures t
+
+let rec compte_en_passant liste_coups = match liste_coups with
+  |[] -> 0
+  |Enpassant _ :: t -> 1 + compte_en_passant t
+  |_ :: t -> compte_en_passant t
+
+let rec compte_roques liste_coups = match liste_coups with
+  |[] -> 0
+  |Roque _ :: t -> 1 + compte_roques t
+  |_ :: t -> compte_roques t
+
+let rec compte_promotions liste_coups = match liste_coups with
+  |[] -> 0
+  |Promotion _ :: t -> 1 + compte_captures t
+  |_ :: t -> compte_promotions t
+  
+  let smaller_attaquer plateau case trait_aux_blancs =
+  let coup = ref Aucun in
+  let b = ref false in
+  let m = tab64.(case) in
+  let piece = plateau.(case) in
+  if trait_aux_blancs then begin
+    let vect_pion = [|(-9); (-11)|] in
+    let i = ref 0 in
+    while (not !b && !i < 2) do
+      let dir = vect_pion.(!i) in
+      if tab120.(m + dir) <> (-1) then begin
+        let candidat = tab120.(m + dir) in
+        if plateau.(candidat) = (-1) then begin
+          let coup_potentiel = Classique {piece = -1; depart = candidat; arrivee = case; prise = piece} in
+          if est_valide plateau coup_potentiel false then begin
+            b := true;
+            coup := coup_potentiel
+          end
+        end
+      end;
+      incr i
+    done;
+    if not !b then begin
+      let i = ref 0 in
+      while (not !b && !i < 8) do
+        let dir = vect_cavalier.(!i) in
+        if tab120.(m + dir) <> (-1) then begin
+          let candidat = tab120.(m + dir) in
+          if plateau.(candidat) = (-2) then begin
+            let coup_potentiel = Classique {piece = -2; depart = candidat; arrivee = case; prise = piece} in
+            if est_valide plateau coup_potentiel false then begin
+              b := true;
+              coup := coup_potentiel
+            end
+          end
+        end;
+        incr i
+      done
+    end;
+    if not !b then begin
+      let i = ref 0 in
+      while (not !b && !i < 4) do
+        let dir = vect_fou.(!i) in
+        let k = ref 1 in
+        let s = ref true in
+        while (tab120.(m + (!k * dir)) <> (-1) && !s) do
+          let candidat = tab120.(m + (!k * dir)) in
+          let dest = plateau.(candidat) in
+          if dest = 0 then begin
+            incr k
+          end
+          else if dest > 0 then begin
+            s :=  false
+          end
+          else begin
+            if dest = (-3) || dest = (-5) || (dest = (-6) && !k = 1) then begin
+              let coup_potentiel = Classique {piece = dest; depart = candidat; arrivee = case; prise = piece} in
+              if est_valide plateau coup_potentiel false then begin
+                if dest = -3 then begin
+                  b := true
+                end;
+                coup := coup_potentiel
+              end
+            end;
+            s :=  false
+          end
+        done;
+        incr i
+      done
+    end;
+    if not !b then begin
+      let i = ref 0 in
+      while (not !b && !i < 4) do
+        let dir = vect_tour.(!i) in
+        let k = ref 1 in
+        let s = ref true in
+        while (tab120.(m + (!k * dir)) <> (-1) && !s) do
+          let candidat = tab120.(m + (!k * dir)) in
+          let dest = plateau.(candidat) in
+          if dest = 0 then begin
+            incr k
+          end
+          else if dest > 0 then begin
+            s :=  false
+          end
+          else begin
+            if dest = (-4) || dest = (-5) || (dest = (-6) && !k = 1) then begin
+              let coup_potentiel = Classique {piece = dest; depart = candidat; arrivee = case; prise = piece} in
+              if est_valide plateau coup_potentiel false then begin
+                b := true;
+                coup := coup_potentiel
+              end
+            end;
+            s :=  false
+          end
+        done;
+        incr i
+      done
+    end
+  end
+  else if piece < 0 then begin
+    let vect_pion = [|9; 11|] in
+    let i = ref 0 in
+    while (not !b && !i < 2) do
+      let dir = vect_pion.(!i) in
+      if tab120.(m + dir) <> (-1) then begin
+        let candidat = tab120.(m + dir) in
+        if plateau.(candidat) = 1 then begin
+          let coup_potentiel = Classique {piece = 1; depart = candidat; arrivee = case; prise = piece} in
+          if est_valide plateau coup_potentiel true then begin
+            b := true;
+            coup := coup_potentiel
+          end
+        end
+      end;
+      incr i
+    done;
+    if not !b then begin
+      let i = ref 0 in
+      while (not !b && !i < 8) do
+        let dir = vect_cavalier.(!i) in
+        if tab120.(m + dir) <> (-1) then begin
+          let candidat = tab120.(m + dir) in
+          if plateau.(candidat) = 2 then begin
+            let coup_potentiel = Classique {piece = 2; depart = candidat; arrivee = case; prise = piece} in
+            if est_valide plateau coup_potentiel true then begin
+              b := true;
+              coup := coup_potentiel
+            end
+          end
+        end;
+        incr i
+      done
+    end;
+    if not !b then begin
+      let i = ref 0 in
+      while (not !b && !i < 4) do
+        let dir = vect_fou.(!i) in
+        let k = ref 1 in
+        let s = ref true in
+        while (tab120.(m + (!k * dir)) <> (-1) && !s) do
+          let candidat = tab120.(m + (!k * dir)) in
+          let dest = plateau.(candidat) in
+          if dest = 0 then begin
+            incr k
+          end
+          else if dest < 0 then begin
+            s :=  false
+          end
+          else begin
+            if dest = 3 || dest = 5 || (dest = 6 && !k = 1) then begin
+              let coup_potentiel = Classique {piece = dest; depart = candidat; arrivee = case; prise = piece} in
+              if est_valide plateau coup_potentiel true then begin
+                if dest = 3 then begin
+                  b := true
+                end;
+                coup := coup_potentiel
+              end
+            end;
+            s :=  false
+          end
+        done;
+        incr i
+      done
+    end;
+    if not !b then begin
+      let i = ref 0 in
+      while (not !b && !i < 4) do
+        let dir = vect_tour.(!i) in
+        let k = ref 1 in
+        let s = ref true in
+        while (tab120.(m + (!k * dir)) <> (-1) && !s) do
+          let candidat = tab120.(m + (!k * dir)) in
+          let dest = plateau.(candidat) in
+          if dest = 0 then begin
+            incr k
+          end
+          else if dest < 0 then begin
+            s :=  false
+          end
+          else begin
+            if dest = 4 || dest = 5 || (dest = 6 && !k = 1) then begin
+              let coup_potentiel = Classique {piece = dest; depart = candidat; arrivee = case; prise = piece} in
+              if est_valide plateau coup_potentiel true then begin
+                b := true;
+                coup := coup_potentiel
+              end
+            end;
+            s :=  false
+          end
+        done;
+        incr i
+      done
+    end
+  end;
+  !coup
   *)

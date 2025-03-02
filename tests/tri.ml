@@ -5,6 +5,7 @@ open Libs.Evaluations
 open Libs.Zobrist
 open Libs.Strategie1
 open Libs.Traduction2
+open Libs.Traduction3
 open Libs.Quiescence
 open Libs.Total
 
@@ -63,7 +64,7 @@ let rec association liste_coups =
     dejoue plateau (Promotion {depart; arrivee; promotion; prise});
     ((tabvalue.(abs promotion) + tabvalue.(abs prise) - note), Promotion {depart; arrivee; promotion; prise}) :: association t
   |h :: t -> (0, h) :: association t
-  in List.map (fun (note, coup) -> (100 * note, coup) ) (tri_fusion (association (coups_valides plateau trait_aux_blancs dernier_coup droit_au_roque)))
+  in List.map (fun (note, coup) -> (100 * note, coup) ) (tri_fusion (association (detecte_extension (coups_valides plateau trait_aux_blancs dernier_coup droit_au_roque))))
 
 let tri_negalphabeta plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau profondeur evaluation =
   tri_algo_1 plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau profondeur evaluation negalphabeta
@@ -78,6 +79,8 @@ let do_tri_negalphabeta () =
   print_newline ();
   print_endline "Tri negalphabeta";
   affiche plateau;
+  print_endline (fen plateau !trait_aux_blancs !dernier_coup !droit_au_roque !releve_coups !releve_plateau);
+  print_newline ();
   let t = Sys.time () in
   affiche_liste (tri_negalphabeta plateau !trait_aux_blancs !dernier_coup !droit_au_roque !releve_plateau (profondeur - 1) evaluation) plateau coups_valides_joueur;
   print_endline (string_of_float (Sys.time () -. t))
@@ -86,6 +89,8 @@ let do_tri_negalphabeta_quiescent () =
   print_newline ();
   print_endline "Tri negalphabeta quiescent";
   affiche plateau;
+  print_endline (fen plateau !trait_aux_blancs !dernier_coup !droit_au_roque !releve_coups !releve_plateau);
+  print_newline ();
   let t = Sys.time () in
   affiche_liste (tri_negalphabeta_quiescent plateau !trait_aux_blancs !dernier_coup !droit_au_roque !releve_plateau (profondeur - 1) evaluation) plateau coups_valides_joueur;
   print_endline (string_of_float (Sys.time () -. t))
@@ -94,6 +99,8 @@ let do_tri_negalphabeta_total () =
   print_newline ();
   print_endline "Tri negalphabeta total";
   affiche plateau;
+  print_endline (fen plateau !trait_aux_blancs !dernier_coup !droit_au_roque !releve_coups !releve_plateau);
+  print_newline ();
   let t = Sys.time () in
   affiche_liste (tri_negalphabeta_total plateau !trait_aux_blancs !dernier_coup !droit_au_roque !releve_plateau (profondeur - 1) evaluation) plateau coups_valides_joueur;
   print_endline (string_of_float (Sys.time () -. t))
@@ -102,6 +109,8 @@ let do_tri_see () =
   print_newline ();
   print_endline "Tri static exchange variation";
   affiche plateau;
+  print_endline (fen plateau !trait_aux_blancs !dernier_coup !droit_au_roque !releve_coups !releve_plateau);
+  print_newline ();
   let t = Sys.time () in
   affiche_liste (tri_algo3 plateau !trait_aux_blancs !dernier_coup !droit_au_roque) plateau coups_valides_joueur;
   print_endline (string_of_float (Sys.time () -. t))
@@ -121,4 +130,4 @@ let main b1 b2 b3 b4 =
     do_tri_see ();
   end
 
-let () = main false true true false
+let () = main false false false true

@@ -2,7 +2,7 @@
 
 open Plateau
 
-(*Fonction indiquant si une case occupée par une pièce amie est attaquée par une pièce ennemie*)
+(*Fonction indiquant si une case est attaquée par une pièce ennemie*)
 let menacee plateau case trait_aux_blancs =
   let b = ref false in
   let m = tab64.(case) in
@@ -208,8 +208,12 @@ let deplacements_pion plateau case liste =
         end
       end
       else begin
-        liste := Promotion {depart = case; arrivee = candidat1; promotion = 5; prise = 0} :: Promotion {depart = case; arrivee = candidat1; promotion = 4; prise = 0} :: 
-        Promotion {depart = case; arrivee = candidat1; promotion = 3; prise = 0} :: Promotion {depart = case; arrivee = candidat1; promotion = 2; prise = 0} :: !liste
+        liste :=
+        Promotion {depart = case; arrivee = candidat1; promotion = 5; prise = 0} ::
+        Promotion {depart = case; arrivee = candidat1; promotion = 4; prise = 0} ::
+        Promotion {depart = case; arrivee = candidat1; promotion = 3; prise = 0} ::
+        Promotion {depart = case; arrivee = candidat1; promotion = 2; prise = 0} ::
+        !liste
       end
     end;
     if ((case + 1) mod 8 <> 0) then begin
@@ -220,8 +224,12 @@ let deplacements_pion plateau case liste =
           liste := Classique {piece = 1; depart = case; arrivee = candidat3; prise = dest3} :: !liste
         end
         else begin
-          liste := Promotion {depart = case; arrivee = candidat3; promotion = 5; prise = dest3} :: Promotion {depart = case; arrivee = candidat3; promotion = 4; prise = dest3} :: 
-          Promotion {depart = case; arrivee = candidat3; promotion = 3; prise = dest3} :: Promotion {depart = case; arrivee = candidat3; promotion = 2; prise = dest3} :: !liste
+          liste :=
+          Promotion {depart = case; arrivee = candidat3; promotion = 5; prise = dest3} ::
+          Promotion {depart = case; arrivee = candidat3; promotion = 4; prise = dest3} ::
+          Promotion {depart = case; arrivee = candidat3; promotion = 3; prise = dest3} ::
+          Promotion {depart = case; arrivee = candidat3; promotion = 2; prise = dest3} ::
+          !liste
         end
       end
     end;
@@ -233,8 +241,12 @@ let deplacements_pion plateau case liste =
           liste := Classique {piece = 1; depart = case; arrivee = candidat4; prise = dest4} :: !liste
         end
         else begin
-          liste := Promotion {depart = case; arrivee = candidat4; promotion = 5; prise = dest4} :: Promotion {depart = case; arrivee = candidat4; promotion = 4; prise = dest4} :: 
-          Promotion {depart = case; arrivee = candidat4; promotion = 3; prise = dest4} :: Promotion {depart = case; arrivee = candidat4; promotion = 2; prise = dest4} :: !liste
+          liste :=
+          Promotion {depart = case; arrivee = candidat4; promotion = 5; prise = dest4} ::
+          Promotion {depart = case; arrivee = candidat4; promotion = 4; prise = dest4} ::
+          Promotion {depart = case; arrivee = candidat4; promotion = 3; prise = dest4} ::
+          Promotion {depart = case; arrivee = candidat4; promotion = 2; prise = dest4} ::
+          !liste
         end
       end
     end
@@ -252,8 +264,12 @@ let deplacements_pion plateau case liste =
         end
       end
       else begin
-        liste := Promotion {depart = case; arrivee = candidat1; promotion = (-5); prise = 0} :: Promotion {depart = case; arrivee = candidat1; promotion = (-4); prise = 0} :: 
-        Promotion {depart = case; arrivee = candidat1; promotion = (-3); prise = 0} :: Promotion {depart = case; arrivee = candidat1; promotion = (-2); prise = 0} :: !liste
+        liste :=
+        Promotion {depart = case; arrivee = candidat1; promotion = (-5); prise = 0} ::
+        Promotion {depart = case; arrivee = candidat1; promotion = (-4); prise = 0} ::
+        Promotion {depart = case; arrivee = candidat1; promotion = (-3); prise = 0} ::
+        Promotion {depart = case; arrivee = candidat1; promotion = (-2); prise = 0} ::
+        !liste
       end
     end;
     if (case mod 8 <> 0) then begin
@@ -264,8 +280,12 @@ let deplacements_pion plateau case liste =
           liste := Classique {piece = (-1); depart = case; arrivee = candidat3; prise = dest3} :: !liste
         end
         else begin
-          liste := Promotion {depart = case; arrivee = candidat3; promotion = (-5); prise = dest3} :: Promotion {depart = case; arrivee = candidat3; promotion = (-4); prise = dest3} :: 
-          Promotion {depart = case; arrivee = candidat3; promotion = (-3); prise = dest3} :: Promotion {depart = case; arrivee = candidat3; promotion = (-2); prise = dest3} :: !liste
+          liste :=
+          Promotion {depart = case; arrivee = candidat3; promotion = (-5); prise = dest3} ::
+          Promotion {depart = case; arrivee = candidat3; promotion = (-4); prise = dest3} ::
+          Promotion {depart = case; arrivee = candidat3; promotion = (-3); prise = dest3} ::
+          Promotion {depart = case; arrivee = candidat3; promotion = (-2); prise = dest3} ::
+          !liste
         end
       end
     end;
@@ -277,8 +297,12 @@ let deplacements_pion plateau case liste =
           liste := Classique {piece = (-1); depart = case; arrivee = candidat4; prise = dest4} :: !liste
         end
         else begin
-          liste := Promotion {depart = case; arrivee = candidat4; promotion = (-5); prise = dest4} :: Promotion {depart = case; arrivee = candidat4; promotion = (-4); prise = dest4} :: 
-          Promotion {depart = case; arrivee = candidat4; promotion = (-3); prise = dest4} :: Promotion {depart = case; arrivee = candidat4; promotion = (-2); prise = dest4} :: !liste
+          liste :=
+          Promotion {depart = case; arrivee = candidat4; promotion = (-5); prise = dest4} ::
+          Promotion {depart = case; arrivee = candidat4; promotion = (-4); prise = dest4} ::
+          Promotion {depart = case; arrivee = candidat4; promotion = (-3); prise = dest4} ::
+          Promotion {depart = case; arrivee = candidat4; promotion = (-2); prise = dest4} ::
+          !liste
         end
       end
     end
@@ -819,16 +843,17 @@ let cloue plateau chessman trait_aux_blancs cord64 vect distance =
 let clouees plateau case_roi trait_aux_blancs =
   let ensemble = ref [] in
   let t = tab64.(case_roi) in
-  if trait_aux_blancs then begin
+  let signe_joueur = if trait_aux_blancs then 1 else (-1) in
+  let aux vect piece =
     for i = 0 to 3 do
-      let dir = vect_tour.(i) in
+      let dir = vect.(i) in
       let k = ref 1 in
       let s = ref true in
       while (!s && tab120.(t + (!k * dir)) <> (-1)) do
         let candidat = tab120.(t + (!k * dir)) in
-        let dest = plateau.(candidat) in
+        let dest = signe_joueur * plateau.(candidat) in
         if dest > 0 then begin
-          if cloue plateau (-4) trait_aux_blancs t dir (!k + 1) then begin
+          if cloue plateau (-piece * signe_joueur) trait_aux_blancs t dir (!k + 1) then begin
             ensemble := candidat :: !ensemble
           end;
           s :=  false
@@ -839,69 +864,10 @@ let clouees plateau case_roi trait_aux_blancs =
         incr k
       done
     done;
-    for i = 0 to 3 do
-      let dir = vect_fou.(i) in
-      let k = ref 1 in
-      let s = ref true in
-      while (!s && tab120.(t + (!k * dir)) <> (-1)) do
-        let candidat = tab120.(t + (!k * dir)) in
-        let dest = plateau.(candidat) in
-        if dest > 0 then begin
-          if cloue plateau (-3) trait_aux_blancs t dir (!k + 1) then begin
-            ensemble := candidat :: !ensemble
-          end;
-          s :=  false
-        end
-        else if dest < 0 then begin 
-          s :=  false
-        end;
-        incr k
-      done
-    done
-  end
-  else begin
-    for i = 0 to 3 do
-      let dir = vect_tour.(i) in
-      let k = ref 1 in
-      let s = ref true in
-      while (!s && tab120.(t + (!k * dir)) <> (-1)) do
-        let candidat = tab120.(t + (!k * dir)) in
-        let dest = plateau.(candidat) in
-        if dest < 0 then begin
-          if cloue plateau 4 trait_aux_blancs t dir (!k + 1) then begin
-            ensemble := candidat :: !ensemble
-          end;
-          s :=  false
-        end
-        else if dest > 0 then begin
-          s :=  false
-        end;
-        incr k
-      done
-    done;
-    for i = 0 to 3 do
-      let dir = vect_fou.(i) in
-      let k = ref 1 in
-      let s = ref true in
-      while (!s && tab120.(t + (!k * dir)) <> (-1)) do
-        let candidat = tab120.(t + (!k * dir)) in
-        let dest = plateau.(candidat) in
-        if dest < 0 then begin
-          if cloue plateau 3 trait_aux_blancs t dir (!k + 1) then begin
-            ensemble := candidat :: !ensemble
-          end;
-          s :=  false
-        end
-        else if dest > 0 then begin
-          s :=  false
-        end;
-        incr k
-      done
-    done
-  end;
+  in List.iter (fun (vect, piece) -> aux vect piece ) [(vect_tour, 4); (vect_fou, 3)];
   !ensemble
 
-(*Fonction construisant une liste des coups légaux du joueur*)  
+(*Fonction construisant une liste des coups légaux du joueur*)
 let coups_valides plateau trait_aux_blancs dernier_coup (prb, grb, prn, grn) =
   let liste_coups = ref [] in
   let roi_joueur = roi trait_aux_blancs in

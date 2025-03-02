@@ -45,6 +45,7 @@ let algoperftime plateau trait_aux_blancs dernier_coup droit_au_roque profondeur
 
 let perft profondeur plateau =
   let nodes, time = algoperftime plateau !trait_aux_blancs !dernier_coup !droit_au_roque profondeur in
+  print_newline ();
   affiche plateau;
   print_endline (fen plateau !trait_aux_blancs !dernier_coup !droit_au_roque !releve_coups !releve_plateau);
   print_endline ("\nPerft " ^ (string_of_int profondeur));
