@@ -17,11 +17,14 @@ let est_oui reponse =
   List.mem (String.lowercase_ascii reponse) ["oui"; "o"; "yes"; "y"]
 
 (*Fonction permettant la lecture d'une réponse*)
-let lire_entree message =
+let lire_entree message suppression =
   print_string message;
   flush stdout;
   let entree = input_line stdin in
-  supprimer entree
+  if suppression then
+    supprimer entree
+  else
+    entree
 
 (*Permet de lire une entrée avec des sauts de lignes*)
 let lire_entree_multiligne message =
@@ -126,19 +129,19 @@ let initialisation () =
   let releve_coups = ref [] in
   let releve_plateau = ref [zobrist echiquier true Aucun (true, true, true, true)] in
   let trait_aux_blancs = ref true in
-  let exotique = lire_entree "Voulez-vous une position initiale exotique : " in
+  let exotique = lire_entree "Voulez-vous une position initiale exotique : " true in
   if est_oui exotique then begin
-    let choix = lire_entree "Tapez 1 pour renseigner une position FEN, 2 pour une position aléatoire de Fischer : " in
+    let choix = lire_entree "Tapez 1 pour renseigner une position FEN, 2 pour une position aléatoire de Fischer : " true in
     if choix = "1" then begin
-      let chaine_fen = lire_entree "Rentrez l'enregistrement fen souhaité : " in
+      let chaine_fen = lire_entree "Rentrez l'enregistrement fen souhaité : " true in
       position_of_fen chaine_fen position_de_depart trait_aux_blancs dernier_coup droit_au_roque releve_coups releve_plateau
     end
     else if choix = "2" then begin
       Random.self_init ();
       let code_fen = ref (Random.int 960) in
-      let choice = lire_entree "Souhaitez-vous une position spécifique : " in
+      let choice = lire_entree "Souhaitez-vous une position spécifique : " true in
       if est_oui choice then begin
-        code_fen := (try int_of_string (lire_entree "Saisissez le code de la position : ") with _ -> !code_fen) 
+        code_fen := (try int_of_string (lire_entree "Saisissez le code de la position : " true) with _ -> !code_fen) 
       end;
       fischer !code_fen position_de_depart releve_plateau
     end;
@@ -158,33 +161,33 @@ let config () =
   let releve_plateau_initial = !releve_plateau in
   let trait_aux_blancs_initial = !trait_aux_blancs in
   let plateau = Array.copy position_de_depart in
-  let historique = lire_entree "Des coups ont-ils été joués? : " in
+  let historique = lire_entree "Des coups ont-ils été joués? : " true in
   if est_oui historique then begin
     let reverse_historique = algebric_to_type_mouvement (lire_entree_multiligne "Entrez la notation algébrique du début de partie : ") !trait_aux_blancs !dernier_coup !droit_au_roque position_de_depart in
     joue_liste reverse_historique plateau dernier_coup releve_coups releve_plateau droit_au_roque trait_aux_blancs;
     affiche_coup plateau !trait_aux_blancs !dernier_coup !droit_au_roque !releve_coups !releve_plateau
   end;
-  let mode = lire_entree "Tapez 2 pour jouer à deux, tapez 1 pour jouer seul et tapez 0 pour être spectateur : " in
+  let mode = lire_entree "Tapez 2 pour jouer à deux, tapez 1 pour jouer seul et tapez 0 pour être spectateur : " true in
   let temps_limite_court = ref 1.5 in
   let profondeur = ref 8 in
   let profondeur_max = ref 8 in
   if List.mem mode ["0"; "1"] then begin
     let pf = ref true in
-    let decision1 = lire_entree "Jouez-vous avec une cadence lente? : " in
+    let decision1 = lire_entree "Jouez-vous avec une cadence lente? : " true in
     if est_oui decision1 then begin
       profondeur := 10;
       profondeur_max := 10;
       pf := false;
     end
     else begin
-      let decision2 = lire_entree "Jouez-vous en blitz? : " in
+      let decision2 = lire_entree "Jouez-vous en blitz? : " true in
       if est_oui decision2 then begin
         profondeur := 6;
         profondeur_max := 6;
         pf := false
       end
       else begin
-        let decision2 = lire_entree "Jouez-vous en bullet? : " in
+        let decision2 = lire_entree "Jouez-vous en bullet? : " true in
         if est_oui decision2 then begin
           profondeur := 4;
           profondeur_max := 4;
@@ -193,7 +196,7 @@ let config () =
       end
     end;
     if !pf then begin
-      let decision2 = lire_entree "Voulez-vous utiliser une profondeur variable? : " in
+      let decision2 = lire_entree "Voulez-vous utiliser une profondeur variable? : " true in
       if est_oui decision2 then begin
         profondeur_max := 10
       end

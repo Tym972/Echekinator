@@ -121,7 +121,7 @@ let supprimer chaine =
   let nc = ref "" in
   for i = 0 to ((String.length chaine) - 1) do
     let k = chaine.[i] in
-    if not (List.mem k ['x'; '('; ')'; '+'; '.'; '?'; '!'; '\n']) then begin
+    if not (List.mem k ['x'; '('; ')'; '+'; '.'; '?'; '!'; '"'; '\n']) then begin
       nc := !nc ^ (String.make 1 k)
     end
   done;
@@ -129,7 +129,11 @@ let supprimer chaine =
 
 (*Fonction décomposant une chaine de caractère en liste de substring correspondants aux mots*)
 let detecte_mots chaine =
-   Str.split (Str.regexp " +") chaine
+  let regexp = Str.regexp "\"[^\"]*\"\\|[^ \n\r\t]+" in
+  Str.full_split regexp chaine
+  |> List.filter_map (function
+      | Str.Text s -> if String.trim s = "" then None else Some s
+      | Str.Delim s -> if String.trim s = "" then None else Some s)
 
 (*Fonction vérifiant si une chaine de caractère représente un entier*)
 let est_entier_string chaine =

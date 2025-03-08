@@ -18,7 +18,7 @@ let plateau = Array.copy echiquier
 
 let releve_plateau = ref [zobrist plateau true !dernier_coup !droit_au_roque]
 
-let chaine_fen = kiwipete
+let chaine_fen = tour_et_roi
 
 let liste_coup = ""
 
@@ -28,9 +28,9 @@ let () =
   position_of_fen chaine_fen plateau trait_aux_blancs dernier_coup droit_au_roque releve_coups releve_plateau;
   joue_liste (algebric_to_type_mouvement liste_coup !trait_aux_blancs !dernier_coup !droit_au_roque plateau) plateau dernier_coup releve_coups releve_plateau droit_au_roque trait_aux_blancs
 
-let evaluation = eval2_q
+let evaluation = eval3_q
 
-let profondeur = 8
+let profondeur = 15
 let profondeur_perft = 5
 let nombre_de_coups = 1
 

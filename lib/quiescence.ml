@@ -486,12 +486,12 @@ let rec recherche_quiescente plateau trait_aux_blancs alpha beta evaluation cap 
   !best_score
 
 (*Fonction permettant d'évaluer un plateau à la profondeur 0*)
-let traitement_quiescent_profondeur_0 evaluation plateau trait_aux_blancs dernier alpha beta =
+let traitement_quiescent_profondeur_0 profondeur_initiale evaluation plateau trait_aux_blancs dernier alpha beta =
   let position_roi = index_tableau plateau (roi trait_aux_blancs) in
   let cp = coups_valides plateau trait_aux_blancs dernier (false, false, false, false)
   in if cp = [] then begin
     if (menacee plateau position_roi trait_aux_blancs) then begin
-      (- 99950)
+      (profondeur_initiale - 99999)
     end
     else begin
       0
@@ -515,7 +515,7 @@ let rec negalphabeta_quiescent plateau trait_aux_blancs dernier_coup droit_au_ro
     best_score := 0
   end
   else if profondeur = 0 then begin incr compteur_noeuds_terminaux;
-    best_score := traitement_quiescent_profondeur_0 evaluation plateau trait_aux_blancs dernier_coup alpha beta
+    best_score := traitement_quiescent_profondeur_0 profondeur_initiale evaluation plateau trait_aux_blancs dernier_coup alpha beta
   end
   else begin
     let cp = ref (tab_tri.(profondeur - 1) plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau evaluation negalphabeta)

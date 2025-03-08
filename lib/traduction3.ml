@@ -279,11 +279,12 @@ let roque_valide position_de_depart roques droit_au_roque =
   end
 
 (*Fonction permettant de réinitialiser un plateau à l'état d'origine*)
-let reinitialise plateau dernier_coup droit_au_roque releve_coups releve_plateau position_de_depart dernier_coup_initial droit_au_roque_initial releve_coups_initial releve_plateau_initial = 
+let reinitialise plateau trait_aux_blancs dernier_coup droit_au_roque releve_coups releve_plateau position_de_depart trait_aux_blancs_initial dernier_coup_initial droit_au_roque_initial releve_coups_initial releve_plateau_initial = 
   for i = 0 to 63 do
     plateau.(i) <- position_de_depart.(i)
   done;
   actualisation_roque position_de_depart;
+  trait_aux_blancs := trait_aux_blancs_initial;
   dernier_coup := dernier_coup_initial;
   droit_au_roque := droit_au_roque_initial;
   releve_coups := releve_coups_initial;
@@ -310,7 +311,6 @@ let position_of_fen chaine position_de_depart trait_aux_blancs dernier_coup droi
           try plateau_of_fen position_de_depart split_ligne fen_correct with _ -> fen_correct := false
         end;
         if !fen_correct then begin
-          actualisation_roque position_de_depart;
           let complete longueur = 
             let rec aux acc longueur = match longueur with
               |5 -> aux ("1" :: acc) 6
@@ -351,7 +351,7 @@ let position_of_fen chaine position_de_depart trait_aux_blancs dernier_coup droi
           in nombre_coup !trait_aux_blancs (List.nth !split_fen 5)
         end;
         if (not !fen_correct) || menacee position_de_depart (index_tableau position_de_depart (roi (not !trait_aux_blancs))) (not !trait_aux_blancs) || coups_valides position_de_depart !trait_aux_blancs !dernier_coup !droit_au_roque = [] then begin
-          reinitialise position_de_depart dernier_coup droit_au_roque releve_coups releve_plateau echiquier Aucun (true, true, true, true) [] [zobrist echiquier true Aucun (true, true, true, true)]
+          reinitialise position_de_depart trait_aux_blancs dernier_coup droit_au_roque releve_coups releve_plateau echiquier true Aucun (true, true, true, true) [] [zobrist echiquier true Aucun (true, true, true, true)]
         end
       end
     end

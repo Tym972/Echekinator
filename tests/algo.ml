@@ -406,4 +406,4 @@ let main b1 b2 b3 b4 b5 b6 b7 b8 b9 b10 b11 plateau =
   print_endline ("EBF : " ^ string_of_float (float_of_int !compteur_recherche /. float_of_int (!compteur_recherche - !compteur_noeuds_terminaux)));
   actualise table 10; (*;stat tab_hash_1 tab_hash_2 tab_hash_best*)print_endline (Printf.sprintf "oui : %i et non : %i et taux : %f" !a1 !a2 ((float_of_int !a1)/.(float_of_int !a1 +. float_of_int !a2)))
 
-let () = main false false false false false false true false false false false plateau
+let () = main false false false false false false false false false false true plateau

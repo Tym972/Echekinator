@@ -16,7 +16,8 @@
   strategie2
   config
   interfaces
-  piece_square_tables)
+  piece_square_tables
+  uci)
  (libraries
   str
   unix

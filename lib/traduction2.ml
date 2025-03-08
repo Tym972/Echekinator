@@ -188,4 +188,5 @@ let uci_of_mouvement coup = match coup with
     let arrivee_roque = if sorte mod 2 = 1 then arrivee_pr else arrivee_gr in
     coord.(depart_roi) ^ coord.(arrivee_roque)
   |Promotion {depart = _; arrivee = _; prise = _; promotion} -> coord.(depart coup) ^ coord.(arrivee coup) ^ tab_english.(abs promotion)
+  |Aucun -> "0000"
   |_ -> coord.(depart coup) ^ coord.(arrivee coup)

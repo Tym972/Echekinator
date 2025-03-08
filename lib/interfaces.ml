@@ -30,8 +30,8 @@ let annule_coup plateau trait_aux_blancs dernier_coup droit_au_roque releve_coup
     |_ :: _ :: k :: t -> List.rev (k :: t)
     |_ -> []
   in let ancien_historique = aux !releve_coups in
-  reinitialise plateau dernier_coup droit_au_roque releve_coups releve_plateau position_de_depart dernier_coup_initial droit_au_roque_initial releve_coups_initial releve_plateau_initial;
-  joue_liste ancien_historique plateau dernier_coup releve_coups releve_plateau droit_au_roque (ref trait_aux_blancs_initial);
+  reinitialise plateau trait_aux_blancs dernier_coup droit_au_roque releve_coups releve_plateau position_de_depart trait_aux_blancs_initial dernier_coup_initial droit_au_roque_initial releve_coups_initial releve_plateau_initial;
+  joue_liste ancien_historique plateau dernier_coup releve_coups releve_plateau droit_au_roque trait_aux_blancs;
   print_endline ("Annulation du dernier coup des " ^ affiche_joueur);
   joue plateau coup_intermediaire;
   affiche_coup plateau (not !trait_aux_blancs) coup_intermediaire (modification_roque coup_intermediaire !droit_au_roque) (coup_intermediaire :: !releve_coups) (nouveau_releve_plateau coup_intermediaire releve_plateau plateau !trait_aux_blancs !droit_au_roque);
@@ -43,7 +43,7 @@ let jeu_humain plateau regle_des_50_coups dernier_coup releve_coups releve_plate
   let affiche_joueur = if !trait_aux_blancs then "blancs" else "noirs" in
   print_string ("Au tour des " ^ affiche_joueur ^ " de jouer\n");
   let coups_valides_joueur = coups_valides plateau !trait_aux_blancs !dernier_coup !droit_au_roque in
-  let coup = lire_entree "Entrez votre coup : " in
+  let coup = lire_entree "Entrez votre coup : " true in
   if List.mem (String.lowercase_ascii coup) ["tb"; "--"; "x-x-x"; "reprendre"; "take back"] && (List.length (List.filter (fun coup -> coup <> Aucun) !releve_coups)) > 1 then begin
     annule_coup plateau trait_aux_blancs dernier_coup droit_au_roque releve_coups releve_plateau affiche_joueur position_de_depart trait_aux_blancs_initial dernier_coup_initial droit_au_roque_initial releve_coups_initial releve_plateau_initial
   end
@@ -310,7 +310,7 @@ let partie_unique () =
     done
   end
   else if mode = "1" then begin
-    let ordre = lire_entree "Tapez 1 si vous voulez jouez les blancs, 2 si vous voulez jouez les noirs : " in
+    let ordre = lire_entree "Tapez 1 si vous voulez jouez les blancs, 2 si vous voulez jouez les noirs : " true in
     if ordre = "1" then begin
       nom_noir := "Echekinator profondeur " ^ string_of_int profondeur;
       while not !partie_finie do
@@ -593,14 +593,14 @@ let ensemble all_openings anti_repet nombre affichage config_j1 config_j2 =
 
 (*Fonction gérant le lancement d'un ensemble de parties*)
 let partie_multiple config_j1 config_j2 =
-  let all_openings = est_oui (lire_entree "Voulez vous tester chaque ouverture du répertoire désigné? : ") in
+  let all_openings = est_oui (lire_entree "Voulez vous tester chaque ouverture du répertoire désigné? : " true) in
     let nombre = ref 0 in
     let anti_repet = ref false in
     if not all_openings then begin
-      nombre := (try int_of_string (lire_entree "Tapez le nombre de parties désirées : ") with _ -> exit 0);
-      if est_oui (lire_entree "Voulez-vous prévenir l'utilisation d'une même ouverture plusieurs fois? : ") then begin 
+      nombre := (try int_of_string (lire_entree "Tapez le nombre de parties désirées : " true) with _ -> exit 0);
+      if est_oui (lire_entree "Voulez-vous prévenir l'utilisation d'une même ouverture plusieurs fois? : " true) then begin 
         anti_repet := true 
       end
     end;
-    let affichage = est_oui (lire_entree "Voulez vous afficher les coups? : ") in
+    let affichage = est_oui (lire_entree "Voulez vous afficher les coups? : " true) in
     ensemble all_openings !anti_repet !nombre affichage config_j1 config_j2

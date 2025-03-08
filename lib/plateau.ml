@@ -124,7 +124,7 @@ let tab_affiche = [|"   |"; " P |"; " C |"; " F |"; " T |"; " D |"; " R |"; " p 
 
 (*Fonction permettant l'affichage d'une grille représentant l'échiquier*)
 let affiche plateau =
-  print_string "   +---+---+---+---+---+---+---+---+\n";
+  let affichage = ref "   +---+---+---+---+---+---+---+---+\n" in
   for i = 0 to 7 do
     let k_list = ref [] in
     let k = string_of_int (8 - i) ^ "  |" in
@@ -134,10 +134,9 @@ let affiche plateau =
     done;
     k_list := List.rev !k_list;
     let k_str = String.concat "" !k_list in
-    print_string (k ^ k_str ^ "\n");
-    print_string "   +---+---+---+---+---+---+---+---+\n";
+    affichage := !affichage ^ (k ^ k_str ^ "\n" ^"   +---+---+---+---+---+---+---+---+\n");
   done;
-  print_string "     a   b   c   d   e   f   g   h\n"
+  print_endline (!affichage ^ "     a   b   c   d   e   f   g   h\n")
 
 (*Fonction renvoyant la valeur de gagne associée à une défaite du joueur*)
 let defaite joueur_est_blanc = if joueur_est_blanc then (-1) else 1

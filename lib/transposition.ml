@@ -45,23 +45,27 @@ let adapte_releve2 zobrist_position coup profondeur releve_plateau =
   end
 
 (*PV node : Exact value, Cut Node : Lower Bound, All Node : Upper Bound*)
-let traitement_hash (hash_node_type : noeuds) (hash_depth : int) (hash_value : int) (hash_move : mouvement) depth alpha beta best_score best_move continuation = incr compteur_trans;
+let traitement_hash (hash_node_type : noeuds) (hash_depth : int) (hash_value : int) (hash_move : mouvement) depth alpha beta best_score best_move continuation ply = incr compteur_trans;
   if depth <= hash_depth then begin
+    let score = ref hash_value in
+    if abs hash_value > 99000 then begin
+      if !score >= 0 then score := !score - ply else score := !score + ply
+    end;
     match hash_node_type with
       |Pv ->
-        best_score := hash_value;
+        best_score := !score;
         best_move := hash_move;
         continuation := false
       |Cut ->
-        alpha := max !alpha hash_value;
-        if hash_value >= !beta then begin
-          best_score := hash_value;
+        alpha := max !alpha !score;
+        if !score >= !beta then begin
+          best_score := !score;
           continuation := false
         end
       |All ->
-        beta := min !beta hash_value;
-        if !alpha >= hash_value then begin
-          best_score := hash_value;
+        beta := min !beta !score;
+        if !alpha >= !score then begin
+          best_score := !score;
           continuation := false
         end 
   end
@@ -140,7 +144,7 @@ let rec negalphabeta_trans plateau trait_aux_blancs dernier_coup droit_au_roque 
     let beta0 = ref beta in
     let continuation = ref true in
     if !presence then begin
-      traitement_hash hash_node_type hash_depth hash_value hash_move profondeur alpha0 beta0 best_score best_move continuation
+      traitement_hash hash_node_type hash_depth hash_value hash_move profondeur alpha0 beta0 best_score best_move continuation (profondeur_initiale - profondeur)
     end;
     if !continuation then begin
       if profondeur = 0 then begin incr compteur_noeuds_terminaux;
@@ -168,7 +172,7 @@ let rec negalphabeta_trans plateau trait_aux_blancs dernier_coup droit_au_roque 
           let cp = ref ((tab_tri.(profondeur - 1) plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau evaluation negalphabeta))
           in if !cp = [] then begin incr compteur_noeuds_terminaux;
             if (menacee plateau (index_tableau plateau (roi trait_aux_blancs)) trait_aux_blancs) then begin
-              best_score := (profondeur_initiale - (profondeur + 99999))
+              best_score := (profondeur_initiale - profondeur - 99999)
             end 
             else begin
               best_score := 0
