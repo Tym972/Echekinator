@@ -129,11 +129,7 @@ let supprimer chaine =
 
 (*Fonction décomposant une chaine de caractère en liste de substring correspondants aux mots*)
 let detecte_mots chaine =
-  let regexp = Str.regexp "\"[^\"]*\"\\|[^ \n\r\t]+" in
-  Str.full_split regexp chaine
-  |> List.filter_map (function
-      | Str.Text s -> if String.trim s = "" then None else Some s
-      | Str.Delim s -> if String.trim s = "" then None else Some s)
+  Str.split (Str.regexp " +") chaine
 
 (*Fonction vérifiant si une chaine de caractère représente un entier*)
 let est_entier_string chaine =
@@ -234,12 +230,12 @@ let mouvement_of_uci uci plateau coups_valides_joueur =
   
 (*Fonction permettant une tolérance à l'approximation de l'utilisateur dans sa saisie*)
 let tolerance plateau coup trait_aux_blancs coups_valides_joueur =
+  try mouvement_of_uci coup plateau coups_valides_joueur with _ ->
   try mouvement_of_algebric plateau coup trait_aux_blancs coups_valides_joueur with _ ->
   try mouvement_of_algebric plateau (coup ^ "ep") trait_aux_blancs coups_valides_joueur with _ ->
   try mouvement_of_algebric plateau (String.capitalize_ascii coup) trait_aux_blancs coups_valides_joueur with _ ->
   try mouvement_of_algebric plateau (Hashtbl.find dicofrench coup.[0] ^ String.sub coup 1 (String.length coup - 1)) trait_aux_blancs coups_valides_joueur with _ ->
-  try mouvement_of_algebric plateau (Hashtbl.find dicofrench (Char.uppercase_ascii coup.[0]) ^ String.sub coup 1 (String.length coup - 1)) trait_aux_blancs coups_valides_joueur with _ ->
-  try mouvement_of_uci coup plateau coups_valides_joueur with _ -> Aucun
+  try mouvement_of_algebric plateau (Hashtbl.find dicofrench (Char.uppercase_ascii coup.[0]) ^ String.sub coup 1 (String.length coup - 1)) trait_aux_blancs coups_valides_joueur with _ -> Aucun
 
 (*Fonction convertissant un relevé de coups notés algébriquement en un relevé de coups notés avec le type Mouvement*)
 let algebric_releve_to_type_mouvement algebric_list trait_aux_blancs dernier_coup droit_au_roque_initial position_de_depart =

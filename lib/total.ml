@@ -19,19 +19,15 @@ let traitement_mat_profondeur_0 plateau trait_aux_blancs dernier_coup =
   else begin
     0
   end
-open Traduction3
-let _ = fen
-let signe n =
-  if n >=0 then 1 else -1
 
 let rec negalphabeta_total plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau profondeur profondeur_initiale alpha beta evaluation zobrist_position = incr compteur_recherche;
-  if repetition releve_plateau 3 then begin incr compteur_noeuds_terminaux;
+  if !stop_calculating || repetition releve_plateau 3 then begin incr compteur_noeuds_terminaux;
     0, Aucun
   end
   else begin
     let alpha0 = ref alpha in
     let beta0 = ref beta in 
-    let best_score = ref (-999999) in
+    let best_score = ref (-infinity) in
     let best_move = ref Aucun in
     let ply = profondeur_initiale - profondeur in
     let presence = ref true in
@@ -144,7 +140,7 @@ let rec negalphabeta_total plateau trait_aux_blancs dernier_coup droit_au_roque 
 
 let negalphabetime_total plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau profondeur evaluation =
   let t = Sys.time () in
-  let fx = negalphabeta_total plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau profondeur profondeur (-999999) 999999 evaluation (List.hd releve_plateau) in
+  let fx = negalphabeta_total plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau profondeur profondeur (-infinity) infinity evaluation (List.hd releve_plateau) in
   fx, (Sys.time () -. t)
 
 let iid_total plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau profondeur alpha beta evaluation =
@@ -159,5 +155,5 @@ let iid_total plateau trait_aux_blancs dernier_coup droit_au_roque releve_platea
 
 let iid_time_total plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau profondeur evaluation =
   let t = Sys.time () in
-  let fx = iid_total plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau profondeur (-999999) 999999 evaluation in
+  let fx = iid_total plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau profondeur (-infinity) infinity evaluation in
   fx, (Sys.time () -. t)

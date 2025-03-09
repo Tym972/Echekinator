@@ -151,11 +151,15 @@ let roi_seul plateau=
 let finale plateau =
   pieces_esseulee plateau || roi_seul plateau
 
+(*Variable utilisée pour arrêter la recherche de force*)
+let stop_calculating = ref false
+let infinity = (Int64.to_int (Random.int64 4611686018427387903L))
+
 (*Implémentation d'un algorithme de recherche minimax avec élagage alpha-bêta et negamax, utilisé après l'ouverture. Les pat par répétitions sont pris en comptes*)
-let rec negalphabeta plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau profondeur profondeur_initiale alpha beta evaluation = (*incr compteur_recherche;*)
-  let best_score = ref (-99999) in
+let rec negalphabeta plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau profondeur profondeur_initiale alpha beta evaluation = incr compteur_recherche;
+  let best_score = ref (-infinity) in
   let best_move = ref Aucun in
-  if repetition releve_plateau 3 then begin (*incr compteur_noeuds_terminaux;*)
+  if !stop_calculating || repetition releve_plateau 3 then begin (*incr compteur_noeuds_terminaux;*)
     best_score := 0
   end
   else if profondeur = 0 then begin (*incr compteur_noeuds_terminaux;*)
@@ -202,7 +206,7 @@ let rec negalphabeta plateau trait_aux_blancs dernier_coup droit_au_roque releve
 (*Fonction renvoyant un appel à la fonction alphabeta_valide ansi que le temps nécessaire à l'éxécution*)
 let negalphabetime plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau profondeur evaluation =
   let t = Sys.time () in
-  let fx = negalphabeta plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau profondeur profondeur (-99999) 99999 evaluation in
+  let fx = negalphabeta plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau profondeur profondeur (-infinity) infinity evaluation in
   fx, (Sys.time () -. t)
 
 (*Premier coup évité par le moteur s'il joue les blancs*)

@@ -187,6 +187,6 @@ let uci_of_mouvement coup = match coup with
     let depart_roi, arrivee_pr, arrivee_gr = if sorte < 3 then !depart_roi_blanc, 62, 58 else !depart_roi_noir, 6, 2 in
     let arrivee_roque = if sorte mod 2 = 1 then arrivee_pr else arrivee_gr in
     coord.(depart_roi) ^ coord.(arrivee_roque)
-  |Promotion {depart = _; arrivee = _; prise = _; promotion} -> coord.(depart coup) ^ coord.(arrivee coup) ^ tab_english.(abs promotion)
+  |Promotion {depart = _; arrivee = _; prise = _; promotion} -> coord.(depart coup) ^ coord.(arrivee coup) ^ (String.lowercase_ascii tab_english.(abs promotion))
   |Aucun -> "0000"
   |_ -> coord.(depart coup) ^ coord.(arrivee coup)

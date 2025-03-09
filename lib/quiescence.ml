@@ -509,9 +509,9 @@ let traitement_quiescent_profondeur_0 profondeur_initiale evaluation plateau tra
   end
 
 let rec negalphabeta_quiescent plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau profondeur profondeur_initiale alpha beta evaluation = incr compteur_recherche;
-  let best_score = ref (-99999) in
+  let best_score = ref (-infinity) in
   let best_move = ref Aucun in
-  if repetition releve_plateau 3 then begin incr compteur_noeuds_terminaux;
+  if !stop_calculating || repetition releve_plateau 3 then begin incr compteur_noeuds_terminaux;
     best_score := 0
   end
   else if profondeur = 0 then begin incr compteur_noeuds_terminaux;
@@ -557,5 +557,5 @@ let rec negalphabeta_quiescent plateau trait_aux_blancs dernier_coup droit_au_ro
 
 let negalphabetime_quiescent plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau profondeur evaluation = (*if dernier_coup = Aucun then begin affiche plateau end;*)
   let t = Sys.time () in
-  let fx = negalphabeta_quiescent plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau profondeur profondeur (-99999) 99999 evaluation in
+  let fx = negalphabeta_quiescent plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau profondeur profondeur (-infinity) infinity evaluation in
   fx, (Sys.time () -. t)

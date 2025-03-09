@@ -16,7 +16,7 @@ let affiche_coup plateau trait_aux_blancs dernier_coup droit_au_roque releve_cou
 (*Fonction permettant d'afficher l'évaluation que fait le moteur d'une position*)
 let affiche_score score profondeur_initiale trait_aux_blancs =
   if trait_aux_blancs then begin
-    if abs score < 99900 then begin
+    if abs score < 99000 then begin
       print_endline (Printf.sprintf "Score : %f" (float_of_int (score) /. 1000.))
     end
     else begin
@@ -38,7 +38,7 @@ let affiche_score score profondeur_initiale trait_aux_blancs =
     end
   end
   else begin
-    if abs score < 99900 then begin
+    if abs score < 99000 then begin
       print_endline (Printf.sprintf "Score : %f" (-. float_of_int (score) /. 1000.))
     end
     else begin
