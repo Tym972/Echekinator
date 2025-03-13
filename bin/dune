@@ -4,10 +4,3 @@
  (modules main)
  (libraries 
  libs))
-
- (executable
- (public_name main_new)
- (name main_new)
- (modules main_new)
- (libraries 
- libs))

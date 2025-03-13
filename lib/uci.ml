@@ -97,10 +97,11 @@ let score score =
   end
 
 (*Probe the pv from the transposition table*)
-let pv_finder plateau dernier_coup droit_au_roque releve_plateau best_move profondeur =
+let pv_finder plateau dernier_coup droit_au_roque releve_plateau profondeur_initial =
   let pv = ref "" in
+  let _, _, _, best_move, _ = try ZobristHashtbl.find table (List.hd releve_plateau) with _ -> (All, (-1), 0, Aucun, 0) in
   let rec aux zobrist_position droit_au_roque releve_plateau coup dernier_coup profondeur =
-    if not (profondeur <= 0 || coup = Aucun || (repetition releve_plateau 3) || List.length releve_plateau = 100) then begin
+    if not (profondeur <= 0 || coup = Aucun || (profondeur <> profondeur_initial && (repetition releve_plateau 3) || List.length releve_plateau = 101)) then begin
       joue plateau coup;
       pv := !pv ^ (uci_of_mouvement coup) ^ " ";
       let nouveau_droit_au_roque = modification_roque coup droit_au_roque
@@ -111,7 +112,7 @@ let pv_finder plateau dernier_coup droit_au_roque releve_plateau best_move profo
       in aux nouveau_zobrist nouveau_droit_au_roque nouveau_releve hash_move coup (profondeur - 1);
       dejoue plateau coup
     end
-  in aux (List.hd releve_plateau) droit_au_roque releve_plateau best_move dernier_coup profondeur;
+  in aux (List.hd releve_plateau) droit_au_roque releve_plateau best_move dernier_coup profondeur_initial;
   !pv
 
 let rec algoperft plateau trait_aux_blancs dernier_coup droit_au_roque profondeur racine zobrist_position table_perft =
@@ -164,8 +165,6 @@ let go instruction plateau trait_aux_blancs dernier_coup droit_au_roque releve_p
     let nodes = ref infinity in
     let mate = ref false in
     let movetime = ref (-1.) in
-    let best_score = ref "cp 0" in
-    let best_move = ref "0000" in
     let rec aux_searchmoves list coups_valides_joueur = match list with
       |[] -> ()
       |h::t ->
@@ -207,18 +206,20 @@ let go instruction plateau trait_aux_blancs dernier_coup droit_au_roque releve_p
         end
       end
     in let _ = Thread.create (fun () -> monitor_time time stop_calculating) () in
+    let best_score = ref "cp 0" in
+    let pv = ref "" in
     let var_depth = ref 0 in
     while not !stop_calculating && !var_depth < !depth do
       incr var_depth;
-      let new_score, new_move = pvs plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau !var_depth !var_depth (-infinity) infinity evaluation (List.hd releve_plateau) true in
+      let new_score = pvs plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau !var_depth !var_depth (-infinity) infinity evaluation (List.hd releve_plateau) true in
       if not !stop_calculating then begin
         let exec_time = Sys.time () -. t in
-        best_move := uci_of_mouvement new_move;
         best_score := score new_score;
-        print_endline (Printf.sprintf "info depth %i seldepth %i multipv 1 score %s nodes %i nps %i hashfull %i time %i pv %s" !var_depth !var_depth !best_score !compteur_recherche (int_of_float (float_of_int !compteur_recherche /. exec_time)) (int_of_float (1000. *. (float_of_int !compteur_transposition /. (float_of_int taille_transposition)))) (int_of_float (1000. *. exec_time)) (*pv_finder plateau dernier_coup droit_au_roque releve_plateau new_move !var_depth*)"");
+        pv := (pv_finder plateau dernier_coup droit_au_roque releve_plateau !var_depth);
+        print_endline (Printf.sprintf "info depth %i seldepth %i multipv 1 score %s nodes %i nps %i hashfull %i time %i pv %s" !var_depth !var_depth !best_score !compteur_recherche (int_of_float (float_of_int !compteur_recherche /. exec_time)) (int_of_float (1000. *. (float_of_int !compteur_transposition /. (float_of_int taille_transposition)))) (int_of_float (1000. *. exec_time)) !pv);
       end
     done;
-    print_endline (Printf.sprintf "bestmove %s ponder %s" !best_move (if true then "" else try (List.nth (detecte_mots (pv_finder plateau dernier_coup droit_au_roque releve_plateau Aucun !var_depth)) 1) with _ -> "0000"))
+    print_endline (Printf.sprintf "bestmove %s ponder %s" (try (List.nth (detecte_mots !pv) 0) with _ -> "0000") (try (List.nth (detecte_mots !pv) 1) with _ -> "0000"))
   end
 
 let checkers plateau trait_aux_blancs =

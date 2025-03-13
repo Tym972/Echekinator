@@ -102,7 +102,7 @@ let tri_4 plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau ev
   tri plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau 4 evaluation
 
 (*Tableaux contenant les stratégies d'ordonnancement des coups aux pofondeurs correspondant à l'index + 1*)
-let tab_tri = [|non_tri; tri_mvvlva; tri_0; tri_0; tri_1; tri_1; tri_2; tri_2; tri_2; tri_2;tri_2; tri_2; tri_2; tri_2;tri_2; tri_2; tri_2; tri_2; tri_2; tri_2; tri_2; tri_2;tri_2; tri_2; tri_2; tri_2; tri_2; tri_2; tri_2; tri_2;tri_2; tri_2; tri_2; tri_2; tri_2; tri_2; tri_2; tri_2;tri_2; tri_2; tri_2; tri_2|]
+let tab_tri = Array.concat [[|non_tri; tri_mvvlva; tri_0; tri_0; tri_1; tri_1|]; Array.make 300 tri_2]
 
 let compteur_recherche = ref 0
 

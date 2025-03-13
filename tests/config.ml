@@ -22,9 +22,8 @@ let droit_au_roque_initial = ref (true, true, true, true)
 let releve_coups_initial = ref []
 let releve_plateau_initial = ref [zobrist plateau true !dernier_coup !droit_au_roque]
 
-let chaine_fen = discorde_25
-
-let liste_coup = discordieux_25
+let chaine_fen = discorde_27
+let liste_coup = discordieux_27
 
 let () = 
   position_of_fen chaine_fen position_de_depart trait_aux_blancs_initial dernier_coup_initial droit_au_roque_initial releve_coups_initial releve_plateau_initial;

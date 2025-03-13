@@ -1,6 +1,6 @@
 open Libs.Plateau
 open Libs.Traduction3
-open Libs.Uci_new
+open Libs.Uci
 open Config
 open Libs.Transposition
 
