@@ -110,7 +110,7 @@ let algebric_of_promotion depart arrivee promotion =
   !algebric
 
 (*Fonction traduisant un coup noté avec le type Mouvement en sa notation algébrique*)
-let algebric_of_mouvement coup plateau coups_valides_joueur = match coup with
+let algebric_of_move coup plateau coups_valides_joueur = match coup with
   |Enpassant {depart = depart; arrivee = arrivee} -> String.sub coord.(depart) 0 1 ^ "x" ^ coord.(arrivee) ^ "ep"
   |Roque {sorte} -> if sorte mod 2 = 1 then "0-0" else "0-0-0"
   |Classique {piece = piece; depart = depart; arrivee = arrivee; prise} -> algebric_of_classique piece depart arrivee prise plateau coups_valides_joueur
@@ -118,7 +118,7 @@ let algebric_of_mouvement coup plateau coups_valides_joueur = match coup with
   |_ -> ""
 
 (*Fonction traduisant un relevé de coups en type Mouvement en sa notation algébrique*)
-let type_mouvement_to_algebric liste position_de_depart dernier_coup_initial droit_au_roque_initial =
+let san_of_move_list liste position_de_depart dernier_coup_initial droit_au_roque_initial =
   let plateau = Array.copy position_de_depart in
   let trait_aux_blancs = ref true in
   let dernier_coup = ref dernier_coup_initial in
@@ -134,12 +134,12 @@ let type_mouvement_to_algebric liste position_de_depart dernier_coup_initial dro
     liste_coups := List.tl !liste_coups;
     if coup <> Aucun then begin
       if !trait_aux_blancs then begin
-        mot := (string_of_int !compteur) ^ ". " ^ algebric_of_mouvement coup plateau coups_valides_joueur;
-      incr compteur;
+        mot := (string_of_int !compteur) ^ ". " ^ algebric_of_move coup plateau coups_valides_joueur;
+        incr compteur
       end
       else begin
         if !mot = "" then mot := (string_of_int (!compteur - 1)) ^ "...";
-        mot := !mot ^ " " ^ algebric_of_mouvement coup plateau coups_valides_joueur
+        mot := !mot ^ " " ^ algebric_of_move coup plateau coups_valides_joueur
       end;
       joue_coup_1 plateau coup trait_aux_blancs dernier_coup droit_au_roque;
       if menacee plateau (index_tableau plateau (roi !trait_aux_blancs)) !trait_aux_blancs then begin
@@ -184,9 +184,9 @@ let type_mouvement_to_algebric liste position_de_depart dernier_coup_initial dro
 (*Fonction traduisant un coup en sa notation UCI*)
 let uci_of_mouvement coup = match coup with
   |Roque {sorte} ->
-    let depart_roi, arrivee_pr, arrivee_gr = if sorte < 3 then !depart_roi_blanc, 62, 58 else !depart_roi_noir, 6, 2 in
-    let arrivee_roque = if sorte mod 2 = 1 then arrivee_pr else arrivee_gr in
-    coord.(depart_roi) ^ coord.(arrivee_roque)
+    let depart_roi, arrivee_pr, arrivee_gr, depart_tour_pr, depart_tour_gr = if sorte < 3 then !depart_roi_blanc, 62, 58, !depart_tour_blanche_pr, !depart_tour_blanche_gr else !depart_roi_noir, 6, 2, !depart_tour_noire_pr, !depart_tour_noire_gr in
+    let arrivee_roque, depart_tour = if sorte mod 2 = 1 then arrivee_pr, depart_tour_pr else arrivee_gr, depart_tour_gr in
+    coord.(depart_roi) ^ coord.(if not !chess_960 then arrivee_roque else depart_tour)
   |Promotion {depart = _; arrivee = _; prise = _; promotion} -> coord.(depart coup) ^ coord.(arrivee coup) ^ (String.lowercase_ascii tab_english.(abs promotion))
   |Aucun -> "0000"
   |_ -> coord.(depart coup) ^ coord.(arrivee coup)

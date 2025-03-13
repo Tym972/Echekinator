@@ -4,21 +4,31 @@ open Libs.Interfaces
 open Libs.Config
 
 let main plateau =
-  let b = ref true in
-  for i = 0 to 959 do
-    fischer i plateau releve_plateau;
-    if not (est_960 chaine_fen) then begin
-      b := false;
-      print_endline "Ce n'est pas une position 960";
-      affiche plateau
-    end
-  done;
-  print_endline (if !b then  "Fonction correcte" else "Les problèmes")
+  if false then begin
+    let b = ref true in
+    for i = 0 to 959 do
+      fischer i plateau releve_plateau;
+      if not (est_960 chaine_fen) then begin
+        b := false;
+        print_endline "Ce n'est pas une position 960";
+        affiche plateau
+      end
+    done;
+    print_endline (if !b then  "Fonction correcte" else "Les problèmes")
+  end
+  else if false then begin
+    affiche plateau;
+    print_endline (uci_of_san liste_coup !trait_aux_blancs_initial !dernier_coup_initial !droit_au_roque_initial position_de_depart)
+  end
+  else begin
+    affiche plateau;
+    print_endline (san_of_uci (uci_of_san liste_coup !trait_aux_blancs_initial !dernier_coup_initial !droit_au_roque_initial position_de_depart) !trait_aux_blancs_initial !dernier_coup_initial !droit_au_roque_initial position_de_depart)
+  end
 
 let () = main plateau
 
 
-  (* 
+  (* fastchess   -openings order=random file=/home/tym972/openbench-books/UHO_Lichess_4852_v1.epd   -engine name=new cmd=/home/tym972/Echekinator/_build/install/default/bin/main_new   -engine name=base cmd=/home/tym972/Echekinator/_build/install/default/bin/main   -concurrency 4   -each tc=8+0.08 -rounds 4000 -repeat -recover   -sprt alpha=0.05 beta=0.10 elo0=0 elo1=10 -pgnout file=/home/tym972/Pgn_fastchess.pgn notation=san seldepth=true -pgnout notation=san file=/home/tym972/Echekinator/Résultats/Pgn_fastchess.pgn
       
       if hash_node_type = All && node_type <> All && hash_depth = profondeur && !best_score > hash_value then begin
         print_newline ();
@@ -202,37 +212,6 @@ let rec algoperft plateau trait_aux_blancs dernier_coup droit_au_roque profondeu
     end
   end
 
-let algoperftime plateau trait_aux_blancs dernier_coup droit_au_roque profondeur =
-  let t = Sys.time () in
-  let fx = algoperft plateau trait_aux_blancs dernier_coup droit_au_roque profondeur true (zobrist plateau trait_aux_blancs dernier_coup droit_au_roque lxor profondeur) in
-  fx, (Sys.time () -. t)
-
-let perft profondeur plateau =
-  let nodes, time = algoperftime plateau !trait_aux_blancs !dernier_coup !droit_au_roque profondeur in
-  affiche plateau;
-  print_endline (fen plateau !trait_aux_blancs !dernier_coup !droit_au_roque !releve_coups !releve_plateau);
-  print_endline ("\nPerft " ^ (string_of_int profondeur));
-  print_endline ("Total time (s) : " ^ (string_of_float time));
-  print_endline ("Nodes searched : " ^ (string_of_int nodes));
-  print_endline ("Nodes/seconde : " ^ (string_of_float ((float_of_int nodes)/. time)))
- 
-
-let () = perft profondeur_perft plateau; print_endline (string_of_int !a)
-
-
-  let roi_blanc_roque = position_de_depart.(!depart_roi_blanc) = 6 in
-  let roi_noir_roque = position_de_depart.(!depart_roi_noir) = (-6) in
-  let tour_blanc_petit_roque = position_de_depart.(!depart_tour_blanche_pr) = 4 in
-  let tour_blanc_grand_roque = position_de_depart.(!depart_tour_blanche_gr) = 4 in
-  let tour_noir_petit_roque = position_de_depart.(!depart_tour_noire_pr) = (-4) in
-  let tour_noir_grand_roque = position_de_depart.(!depart_tour_noire_gr) = (-4) in
-  droit_au_roque :=
-  (String.contains roques 'K') && roi_blanc_roque && tour_blanc_petit_roque,
-  (String.contains roques 'Q') && roi_blanc_roque && tour_blanc_grand_roque,
-  (String.contains roques 'k') && roi_noir_roque && tour_noir_petit_roque,
-  (String.contains roques 'q') && roi_noir_roque && tour_noir_grand_roque
-  
-
 let negalphabeta_tri liste_coups plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau profondeur profondeur_initiale alpha beta evaluation = incr compteur_recherche;
   if List.length liste_coups = 1 then begin
     List.hd liste_coups
@@ -402,40 +381,9 @@ let rec negalphabeta_yalta plateau trait_aux_blancs dernier_coup droit_au_roque 
   end;
   !best_score, !best_move
 
-let negalphabetime_yalta plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau profondeur evaluation =
-  let t = Sys.time () in
-  let fx = negalphabeta_yalta plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau profondeur profondeur (-99999) 99999 evaluation (List.hd releve_plateau) in
-  fx, (Sys.time () -. t)
-
-let runnegalphabeta_yalta affichage plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau profondeur evaluation =
-  run affichage plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau profondeur evaluation negalphabetime_yalta
-
-
 let rec filtre elt liste = match liste with
   |[] -> []
   |h::t -> if h = elt then t else h :: (filtre elt t)
-
- let rec compte_captures liste_coups = match liste_coups with
-  |[] -> 0
-  |Classique {piece = _; depart = _; arrivee = _; prise} :: t when prise <> 0 -> 1 + compte_captures t
-  |Promotion {depart = _; arrivee = _; promotion = _; prise} :: t when prise <> 0 -> 1 + compte_captures t
-  |Enpassant _ :: t -> 1 + compte_captures t
-  |_ :: t -> compte_captures t
-
-let rec compte_en_passant liste_coups = match liste_coups with
-  |[] -> 0
-  |Enpassant _ :: t -> 1 + compte_en_passant t
-  |_ :: t -> compte_en_passant t
-
-let rec compte_roques liste_coups = match liste_coups with
-  |[] -> 0
-  |Roque _ :: t -> 1 + compte_roques t
-  |_ :: t -> compte_roques t
-
-let rec compte_promotions liste_coups = match liste_coups with
-  |[] -> 0
-  |Promotion _ :: t -> 1 + compte_captures t
-  |_ :: t -> compte_promotions t
   
   let smaller_attaquer plateau case trait_aux_blancs =
   let coup = ref Aucun in

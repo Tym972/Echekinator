@@ -70,20 +70,6 @@ let traitement_hash (hash_node_type : noeuds) (hash_depth : int) (hash_value : i
 let actualise table n =
   ZobristHashtbl.iter (fun key value -> let _, _, _, _, coup = value in if coup < n then ZobristHashtbl.remove table key ) table
 
-let tri_trans plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau profondeur evaluation algo =
-  let rec association liste_coups =
-    match liste_coups with
-    |[] -> []
-    |coup :: liste_coup ->
-      begin
-        joue plateau coup;
-        let nouveau_droit_au_roque = modification_roque coup droit_au_roque in
-        let x, _ = algo plateau (not trait_aux_blancs) coup nouveau_droit_au_roque (adapte_releve plateau coup profondeur trait_aux_blancs nouveau_droit_au_roque releve_plateau) profondeur profondeur (-99999) 99999 evaluation (zobrist plateau (not trait_aux_blancs) coup nouveau_droit_au_roque) in
-        dejoue plateau coup;
-        (- x, coup) :: association liste_coup
-      end
-  in List.map snd (tri_fusion (association (coups_valides plateau trait_aux_blancs dernier_coup droit_au_roque)))
-
 let index_liste element liste = 
   let rec aux liste n = match liste with
   |[] -> (-1)

@@ -17,7 +17,9 @@
   config
   interfaces
   piece_square_tables
-  uci)
+  uci
+  uci_new
+  total_new)
  (libraries
   str
   unix

@@ -1,6 +1,6 @@
 open Libs.Interfaces
 open Libs.Config
-open Libs.Uci
+open Libs.Uci_new
 open Libs.Traduction1
 
 

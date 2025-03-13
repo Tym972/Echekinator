@@ -1,0 +1,142 @@
+{
+    "resign": {
+        "move_count": 1,
+        "score": 0,
+        "twosided": false,
+        "enabled": false
+    },
+    "draw": {
+        "move_number": 0,
+        "move_count": 1,
+        "score": 0,
+        "enabled": false
+    },
+    "maxmoves": {
+        "move_count": 1,
+        "enabled": false
+    },
+    "opening": {
+        "file": "/home/tym972/openbench-books/UHO_Lichess_4852_v1.epd",
+        "format": 0,
+        "order": 0,
+        "plies": -1,
+        "start": 1
+    },
+    "pgn": {
+        "additional_lines_rgx": [],
+        "event_name": "Fastchess Tournament",
+        "site": "?",
+        "file": "/home/tym972/Echekinator/Résultats/Pgn_fastchess.pgn",
+        "notation": 0,
+        "track_nodes": false,
+        "track_seldepth": true,
+        "track_nps": false,
+        "track_hashfull": false,
+        "track_tbhits": false,
+        "track_timeleft": false,
+        "track_latency": false,
+        "min": false,
+        "crc": false
+    },
+    "epd": {
+        "file": ""
+    },
+    "sprt": {
+        "alpha": 0.05,
+        "beta": 0.1,
+        "elo0": 0.0,
+        "elo1": 10.0,
+        "model": "normalized",
+        "enabled": true
+    },
+    "config_name": "",
+    "output": 0,
+    "seed": 16410017837209368678,
+    "variant": 0,
+    "ratinginterval": 10,
+    "scoreinterval": 1,
+    "wait": 0,
+    "autosaveinterval": 20,
+    "games": 2,
+    "rounds": 8000,
+    "concurrency": 4,
+    "force_concurrency": false,
+    "recover": true,
+    "noswap": false,
+    "reverse": false,
+    "report_penta": true,
+    "affinity": false,
+    "show_latency": false,
+    "log": {
+        "file": "",
+        "level": 2,
+        "compress": false,
+        "realtime": true
+    },
+    "engines": [
+        {
+            "name": "new",
+            "dir": "",
+            "cmd": "/home/tym972/Echekinator/_build/install/default/bin/main_new",
+            "args": "",
+            "restart": false,
+            "options": [],
+            "limit": {
+                "tc": {
+                    "increment": 80,
+                    "fixed_time": 0,
+                    "time": 8000,
+                    "moves": 0,
+                    "timemargin": 0
+                },
+                "nodes": 0,
+                "plies": 0
+            },
+            "variant": 0
+        },
+        {
+            "name": "base",
+            "dir": "",
+            "cmd": "/home/tym972/Echekinator/_build/install/default/bin/main",
+            "args": "",
+            "restart": false,
+            "options": [],
+            "limit": {
+                "tc": {
+                    "increment": 80,
+                    "fixed_time": 0,
+                    "time": 8000,
+                    "moves": 0,
+                    "timemargin": 0
+                },
+                "nodes": 0,
+                "plies": 0
+            },
+            "variant": 0
+        }
+    ],
+    "stats": {
+        "base vs new": {
+            "wins": 295,
+            "losses": 293,
+            "draws": 190,
+            "penta_WW": 33,
+            "penta_WD": 66,
+            "penta_WL": 163,
+            "penta_DD": 36,
+            "penta_LD": 52,
+            "penta_LL": 39
+        },
+        "new vs base": {
+            "wins": 116,
+            "losses": 115,
+            "draws": 99,
+            "penta_WW": 13,
+            "penta_WD": 35,
+            "penta_WL": 55,
+            "penta_DD": 18,
+            "penta_LD": 28,
+            "penta_LL": 16
+        }
+    }
+}

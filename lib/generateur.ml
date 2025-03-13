@@ -373,6 +373,8 @@ let deplacements_clouage plateau trait_aux_blancs position_roi piece_clouees =
   end;
   !liste_coups, liste_coups_roi, !liste_coups_clouees
 
+let chess_960 = ref false
+
 (*Variables indiquant la positions initiales des pièces impliquées dans un roque*)
 let depart_roi_blanc = ref 60
 let depart_roi_noir = ref 4

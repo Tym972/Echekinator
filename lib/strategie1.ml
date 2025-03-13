@@ -156,7 +156,7 @@ let stop_calculating = ref false
 let infinity = (Int64.to_int (Random.int64 4611686018427387903L))
 
 (*Implémentation d'un algorithme de recherche minimax avec élagage alpha-bêta et negamax, utilisé après l'ouverture. Les pat par répétitions sont pris en comptes*)
-let rec negalphabeta plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau profondeur profondeur_initiale alpha beta evaluation = incr compteur_recherche;
+let rec negalphabeta plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau profondeur profondeur_initiale alpha beta evaluation = (*incr compteur_recherche;*)
   let best_score = ref (-infinity) in
   let best_move = ref Aucun in
   if !stop_calculating || repetition releve_plateau 3 then begin (*incr compteur_noeuds_terminaux;*)

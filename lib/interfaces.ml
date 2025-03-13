@@ -224,7 +224,7 @@ let pgn  date_debut round white black resultat fen_initial fen_final termination
 
 (*Fonction indiquant le résultat d'une partie (unique)*)
 let fin_de_partie plateau dernier_coup droit_au_roque releve_coups releve_plateau regle_des_50_coups verif position_de_depart dernier_coup_initial droit_au_roque_initial date_debut heure_debut nom_blanc nom_noir fen_initial =
-  let releve_partie = ref (type_mouvement_to_algebric releve_coups position_de_depart dernier_coup_initial droit_au_roque_initial) in
+  let releve_partie = ref (san_of_move_list releve_coups position_de_depart dernier_coup_initial droit_au_roque_initial) in
   let resultat_pgn = ref "1/2-1/2" in
   let termination = ref "" in
   let annonce_resultat =
@@ -355,7 +355,7 @@ let partie_unique () =
 let fin_de_partie2 plateau dernier_coup droit_au_roque releve_coups releve_plateau regle_des_50_coups verif position_de_depart dernier_coup_initial droit_au_roque_initial doc victoire_blanches_j1 victoire_noires_j1 victoire_blanches_j2 victoire_noires_j2 manque_materiel pat triple_repetition coups50 i m nom1 nom2 affichage htbl date_debut heure_debut fen_initial =
   let round = string_of_int (i + 1) in
   let resultat = ref "1/2-1/2" in
-  let releve = type_mouvement_to_algebric releve_coups position_de_depart dernier_coup_initial droit_au_roque_initial in
+  let releve = san_of_move_list releve_coups position_de_depart dernier_coup_initial droit_au_roque_initial in
   let termination = ref "" in
   let white = if i < m then nom1 else nom2 in
   let black = if i < m then nom2 else nom1 in

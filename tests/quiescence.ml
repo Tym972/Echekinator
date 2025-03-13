@@ -9,7 +9,7 @@ let run_tpf0 plateau =
   print_newline ()
 
 let run_tpfq0 plateau = 
-  let score = traitement_quiescent_profondeur_0 evaluation plateau !trait_aux_blancs !dernier_coup (-99999) 99999 in
+  let score = traitement_quiescent_profondeur_0 0 evaluation plateau !trait_aux_blancs !dernier_coup (-99999) 99999 in
   print_int score;
   print_newline ()
 

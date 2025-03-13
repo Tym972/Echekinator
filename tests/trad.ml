@@ -12,8 +12,8 @@ let rec algoperft plateau trait_aux_blancs dernier_coup droit_au_roque profondeu
   else begin
     let cp = ref (coups_valides plateau trait_aux_blancs dernier_coup droit_au_roque) in
     if ((List.map (fun c -> mouvement_of_uci c plateau !cp) (List.map (fun c -> uci_of_mouvement c) !cp)) <> !cp) then begin affiche plateau;
-        List.iter (fun c -> print_string (algebric_of_mouvement c plateau [] ^ " ")) !cp; print_newline ();
-        List.iter (fun c -> print_string (algebric_of_mouvement c plateau [] ^ " ")) (List.map (fun c -> mouvement_of_uci c plateau !cp) (List.map (fun c -> uci_of_mouvement c) !cp)); print_newline (); print_newline ();
+        List.iter (fun c -> print_string (algebric_of_move c plateau [] ^ " ")) !cp; print_newline ();
+        List.iter (fun c -> print_string (algebric_of_move c plateau [] ^ " ")) (List.map (fun c -> mouvement_of_uci c plateau !cp) (List.map (fun c -> uci_of_mouvement c) !cp)); print_newline (); print_newline ();
         List.iter (fun l -> List.iter (fun c -> print_string (uci_of_mouvement c ^ " ")) l; print_newline ()) [!cp;  (List.map (fun c -> mouvement_of_uci c plateau !cp) (List.map (fun c -> uci_of_mouvement c) !cp))]; print_newline ()
       end;
     let nodes = ref 0 in

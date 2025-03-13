@@ -82,7 +82,7 @@ let changement_du_trait plateau coup trait_aux_blancs dernier_coup releve_coups 
     verif := (if !trait_aux_blancs then 1 else 2);
     partie_finie := true
   end
-  else if repetition !releve_plateau 3 || List.length (!releve_plateau) = regle_des_50_coups || manque_de_materiel plateau then begin
+  else if repetition !releve_plateau 3 || List.length !releve_plateau = regle_des_50_coups || manque_de_materiel plateau then begin
     partie_finie := true
   end
 

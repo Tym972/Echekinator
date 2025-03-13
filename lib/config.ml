@@ -163,7 +163,7 @@ let config () =
   let plateau = Array.copy position_de_depart in
   let historique = lire_entree "Des coups ont-ils été joués? : " true in
   if est_oui historique then begin
-    let reverse_historique = algebric_to_type_mouvement (lire_entree_multiligne "Entrez la notation algébrique du début de partie : ") !trait_aux_blancs !dernier_coup !droit_au_roque position_de_depart in
+    let reverse_historique = move_list_of_san (lire_entree_multiligne "Entrez la notation algébrique du début de partie : ") trait_aux_blancs_initial dernier_coup_initial droit_au_roque_initial position_de_depart in
     joue_liste reverse_historique plateau dernier_coup releve_coups releve_plateau droit_au_roque trait_aux_blancs;
     affiche_coup plateau !trait_aux_blancs !dernier_coup !droit_au_roque !releve_coups !releve_plateau
   end;
@@ -205,7 +205,7 @@ let config () =
   let duree_theorie = 40 in
   let duree_ouverture = 30 in
   let duree_finale = 90 in
-  let regle_des_50_coups = 101 in
+  let regle_des_50_coups = 100 in
   let verif = ref 0 in
   let partie_finie = ref false in
   plateau, verif, mode, !temps_limite_court, !profondeur, !profondeur_max, duree_theorie, duree_ouverture, duree_finale, regle_des_50_coups, dernier_coup, releve_coups, releve_plateau, trait_aux_blancs, partie_finie, phase1, position_de_depart, trait_aux_blancs_initial, affichage, droit_au_roque, dernier_coup_initial, droit_au_roque_initial, releve_coups_initial, releve_plateau_initial

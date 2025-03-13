@@ -51,7 +51,7 @@ let rec negalphabeta_total_pv plateau trait_aux_blancs dernier_coup droit_au_roq
     end;
     if !continuation then begin
       if profondeur = 0 then begin incr compteur_noeuds_terminaux;
-        best_score := traitement_quiescent_profondeur_0 evaluation plateau trait_aux_blancs dernier_coup !alpha0 !beta0;
+        best_score := traitement_quiescent_profondeur_0 profondeur_initiale evaluation plateau trait_aux_blancs dernier_coup !alpha0 !beta0;
       end
       else begin
         let b = ref true in

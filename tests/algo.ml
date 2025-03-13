@@ -216,7 +216,7 @@ let idd_basique_print plateau trait_aux_blancs dernier_coup droit_au_roque relev
     let new_score, new_move = negalphabeta plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau i i alpha beta evaluation in
     move := new_move;
     score := new_score;
-    print_endline (algebric_of_mouvement !move plateau coups_valides_joueur ^ " " ^ string_of_int !score ^ " " ^  string_of_int i) 
+    print_endline (algebric_of_move !move plateau coups_valides_joueur ^ " " ^ string_of_int !score ^ " " ^  string_of_int i) 
   done;
   !score, !move
 
@@ -227,7 +227,7 @@ let idd_simple_print plateau trait_aux_blancs dernier_coup droit_au_roque releve
     let new_score, new_move = negalphabeta_idd_simple plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau i i alpha beta evaluation !move in
     move := new_move;
     score := new_score;
-    print_endline (algebric_of_mouvement !move plateau coups_valides_joueur ^ " " ^ string_of_int !score ^ " " ^  string_of_int i) 
+    print_endline (algebric_of_move !move plateau coups_valides_joueur ^ " " ^ string_of_int !score ^ " " ^  string_of_int i) 
   done;
   !score, !move
 
@@ -238,7 +238,7 @@ let idd_trans_print plateau trait_aux_blancs dernier_coup droit_au_roque releve_
     let new_score, new_move = negalphabeta_trans plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau i i alpha beta evaluation (List.hd releve_plateau) in
     move := new_move;
     score := new_score;
-    print_endline (algebric_of_mouvement !move plateau coups_valides_joueur ^ " " ^ string_of_int !score ^ " " ^  string_of_int i) 
+    print_endline (algebric_of_move !move plateau coups_valides_joueur ^ " " ^ string_of_int !score ^ " " ^  string_of_int i) 
   done;
   !score, !move
 
@@ -249,7 +249,7 @@ let idd_total_print plateau trait_aux_blancs dernier_coup droit_au_roque releve_
     let new_score, new_move = negalphabeta_total plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau i i alpha beta evaluation (List.hd releve_plateau) in
     move := new_move;
     score := new_score;
-    print_endline (algebric_of_mouvement !move plateau coups_valides_joueur ^ " " ^ string_of_int !score ^ " " ^  string_of_int i)
+    print_endline (algebric_of_move !move plateau coups_valides_joueur ^ " " ^ string_of_int !score ^ " " ^  string_of_int i)
   done;
   !score, !move
 
@@ -299,7 +299,7 @@ let run affichage plateau trait_aux_blancs dernier_coup droit_au_roque releve_pl
     joue_coup_2 plateau coup trait_aux_blancs dernier_coup droit_au_roque releve_coups releve_plateau;
     if affichage then begin
       affiche plateau;
-      print_endline (algebric_of_mouvement !dernier_coup plateau coups_valides_joueur);
+      print_endline (algebric_of_move !dernier_coup plateau coups_valides_joueur);
     end
   done
 

@@ -11,7 +11,7 @@ open Libs.Total
 
 let rec affiche_liste liste plateau coups_valides_joueur = match liste with
   |(x, coup) :: t ->
-    print_endline ("Score : " ^ (string_of_float ((float_of_int x)/. 1000.)) ^ " " ^ (algebric_of_mouvement coup plateau coups_valides_joueur) ^ " ");
+    print_endline ("Score : " ^ (string_of_float ((float_of_int x)/. 1000.)) ^ " " ^ (algebric_of_move coup plateau coups_valides_joueur) ^ " ");
     affiche_liste t plateau coups_valides_joueur
   |_ -> ()
 
@@ -130,4 +130,4 @@ let main b1 b2 b3 b4 =
     do_tri_see ();
   end
 
-let () = main false false false true
+let () = main false false true false

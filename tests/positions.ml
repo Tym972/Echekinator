@@ -11,7 +11,7 @@ let pre_kiwipete = "r1b1k2r/p1ppqpb1/Qn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R b 
 let kiwipete = "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1"
 
 (*Lasker-Reichhelm*)
-let lasker = "8/k7/3p4/p2P1p2/P2P1P2/8/8/K7 w - -"
+let lasker = "8/k7/3p4/p2P1p2/P2P1P2/8/8/K7 w - - 0 1"
 
 (*Test Mat*)
 let tour_et_roi = "8/7K/8/8/8/8/R7/7k w - - 0 1"
@@ -48,6 +48,17 @@ let discorde_17 = "6k1/5pp1/4p1bp/4P3/3P2PP/1r3P2/5r2/2Q4K b - - 0 1"
 let discorde_18 = "4r1k1/2p4p/6b1/1p2pp2/8/5K1P/2q5/3R3R b - - 0 1"
 let discorde_19 = "4r1k1/2p4p/6b1/1p2pp2/8/3q3P/5K2/3R3R b - - 0 1"
 let discorde_20 = "r3k1nr/p1ppqpb1/Bn2p3/3PN1p1/4P3/2B2Q2/PPP2PpP/RR4K1 w - - 0 1"
+let discorde_21 = "rn2kbnr/1ppq1ppp/p2p4/4p3/3PP3/1PN2N2/1PP2PPP/R1BQ1RK1 b kq - 0 8"
+let discordieux_21 = "8... exd4 9. Nxd4 c5 10. Nd5 Qd8 11. Nb5 Kd7 12. Ndc7 axb5 13. Nxa8 Na6 14. Rxa6 bxa6 15. Qd5 Qb8 16. Qf5+ Ke8 17. Qd5 Ne7 18. Qd1 Qxa8 19. Qxd6 Qxe4 20. Rd1 f5 21. Qxc5 Nc6 22. Qc3 b4 23. Qc4 Be7 24. f3 Qxc4 25. bxc4 Bc5+ 26. Kh1 Bd4 27. g4 fxg4 28. fxg4 Kf7 29. b3 Re8 30. Bd2 Re4 31. g5 Kg8 32. h3 a5 33. Kh2 Re2+ 34. Kh1 g6 35. h4 Rf2 36. Bc1 Rxc2 37. Re1 Bf2 38. Rd1 Bxh4 39. Bf4 Bf2 40. Rd7 Bb6 41. Rb7 Bd4 42. Rc7 Ne5 43. Rc8+ Kg7 44. Rd8 Bc3 45. Rd5 Nc6 46. Rc5 Rf2 47. Bd6 Nd4 48. Be5+ Kg8 49. Bxd4 Bxd4 50. Rxa5 Rf1+ 51. Kh2 Rf2+ 52. Kh1 Rf1+ 53. Kh2 Rf3 54. Rd5 Bb6 55. c5 Bc7+ 56. Kg1 Rxb3 57. c6 Bb6+ 58. Kh1 Rb1+ 59. Kg2 Rc1 60. Rb5 Rxc6 61. Rxb4 Rc2+ 62. Kh1 Rc1+ 63. Kh2 Bc7+ 64. Kh3 Rc2 65. Rb7 Be5 66. Rd7 Rh2+ 67. Kg4 Rg2+ 68. Kh4 Rh2+ 69. Kg4 Rg2+ 70. Kh4"
+let discorde_22 = "r1bqkbnr/ppp3pp/5p2/4p3/3np3/2N2N2/PPP2PPP/R1BQKB1R w KQkq - 0 7"
+let discordieux_22 = "7. Nxd4 Qxd4 8. Qxd4 exd4 9. Nxe4 f5 10. Ng3 Bb4+ 11. Kd1 Nf6 12. Bf4 Ng4 13. Ke2 Be6 14. Bxc7 Rc8 15. h3 Rxc7 16. hxg4 Rxc2+ 17. Kd1 Rd2+ 18. Kc1 Rxf2 19. gxf5 Bxf5 20. Nxf5 Rxf5 21. Bd3 Rf2 22. Be4 b5 23. Kb1 Kf8 24. Rc1 Kg8 25. Bd5+ Kf8 26. a3 Bxa3 27. Rxa3 b4 28. Rc8+ Ke7 29. Rxa7+ Kd6 30. Rxh8 Kxd5 31. Rxg7 b3 32. Rc7 Rxg2 33. Rc1 Ke6 34. Rxh7 Rd2 35. Rb7 Rd3 36. Rc6+ Kf5 37. Rb5+ Kg4 38. Rc1 Kh3 39. Rg1 Kh2 40. Rc1 Kh3 41. Rg1 Kh2 42. Re1 Kg3 43. Rb7 Kg4 44. Rb5 Kg3 45. Rh1 Kg2 46. Rbh5 Rf3 47. Rh7 d3 48. Rd1 Kf2 49. Rd7 Ke2 50. Kc1 Re3 51. Rd2+ Kf1 52. R2xd3 Re1+ 53. Kd2 Re2+ 54. Kc1 Re1+ 55. Kd2 Re2+ 56. Kc3 Re8 57. Kxb3 Ra8 58. Rd1+ Kg2 59. Kc2 Kh3 60. Kb1 Re8 61. Rh1+ Kg4 62. Rhh7 Kg5 63. Rhg7+ Kh6 64. Rh7+ Kg6 65. Rhg7+ Kh6 66. Rh7+ Kg6 67. Rdg7+ Kf5 68. Rf7+ Kg6 69. Rhg7+ Kh5 70. Rh7+ Kg6 71. Rhg7+ Kh6 72. Rc7 Re1+ 73. Ka2 Rf1 74. Rh7+ Kg6 75. Rcg7+ Kf6 76. Rf7+ Kg6 77. Rfg7+ Kf6 78. Rf7+ Kg6 79. Rhg7+ Kh6 80. Re7 Kh5 81. Rh7+ Kg6 82. Rhg7+ Kh6 83. Rc7 Kh5 84. Rh7+ Kg6"
+let discorde_23 = "r2qkb1r/pp2ppp1/1np2n1p/3p3b/3P1B2/2P1PN1P/PP1NBPP1/R2QK2R w KQkq - 1 9"
+let discordieux_23 = "9. g4 Bg6 10. Ne5 Bh7 11. O-O e6 12. c4 c5 13. cxd5 cxd4 14. exd4 Nbxd5 15. Qa4+ Nd7 16. Nxd7 Nxf4 17. Nb6+ Ke7 18. Qa3+ Kf6 19. Qf3 Qxb6 20. Qxf4+ Ke7 21. Nc4 Qb5 22. Qc7+ Qd7 23. Qxd7+ Kxd7 24. Ne5+ Ke7 25. Rfc1 f6 26. Nd3 Be4 27. Rc7+ Kd8 28. Rf7 Ke8 29. Rc7 Rd8 30. Nc5 Bxc5 31. dxc5 Kf8 32. Bc4 Re8 33. Re1 f5 34. gxf5 Bxf5 35. Rxb7 Bxh3 36. Rxa7 e5 37. Rf7+ Kg8 38. Rf3+ Be6 39. Rxe5 Bxc4 40. Rxe8+ Kh7 41. Rxh8+ Kxh8 42. Rf8+ Kh7 43. c6 Bxa2 44. c7 Be6 45. c8=Q Bxc8 46. Rxc8 g5 47. Rf8 g4 48. Rf5 Kg6 49. Rf8 Kg7 50. Rf5 Kg6 51. Rf8 Kh7 "
+let discorde_24 = "rn2kbnr/1bqp1ppp/pp2p3/2p5/2PP4/2N1PN2/PP3PPP/R1BQKB1R w KQkq - 1 7"
+let discordieux_24 = "e3e4 g8f6 d4d5 d7d6 f1d3 b8d7 e1g1 f8e7 c1e3 e8g8 d1b3 e6e5 a1e1 f8e8 h2h3 a8d8 e1d1 f6h5 c3e2 h5f6 e2g3 h7h6 g3f5 e7f8 f1e1 f6h5 g2g3 h5f6 f3e5 d7e5 d3e2 f6e4 b3c2 e4g5 g1g2 g5e6 g2h2 e6g5 h2g2 g5e6 f2f3 e6d4 f5d4 c5d4 d1d4 b6b5 a2a3 b5c4 f3f4 c7a5 c2d1 e5d3 e2d3 b7d5 g2g1 c4d3 d4a4 d5f3 a4a5 f3d1 a5a6 d1e2 e3d2 d6d5 a6a5 f8e7 d2c3 e2f3 f4f5 e7d6 e1e8 d8e8 g1f2 f3e4 a5b5 h6h5 b5a5 e8d8 g3g4 d6c7 a5b5 h5g4 h3g4 c7f4 b5b4 d8e8 b4a4 e8d8 a4b4 d8e8 "
+let discorde_25 = "rn2kb1r/pp1qnpp1/4p3/2ppP2p/5P2/2N2N2/PPPP2PP/R1BQ1RK1 b kq - 1 8"
+let discordieux_25 = "b8c6 d2d4 e7f5 c3e2 c5d4 e2d4 c6d4 f3d4 f8c5 c2c3 e8g8 d1d3 h5h4 c1d2 f8e8 f1e1 a8d8 e1d1 a7a6 g1h1 c5b6 d4f5 e6f5 d2e1 h4h3 d3h3 d7b5 e1d2 b5b2 h3f5 b2b5 d1e1 b5c4 f5c2 b6d4 a1b1 c4c6 c2b3 d4f2 e1f1 f2c5 b3b7 c6a4 b7b3 a4b3 b1b3 e8e6 f1b1 e6e8 b3b7 e8e6 d2e1 c5e3 e1g3 e6c6 b1b3 e3d2 b7b8 c6c8 b8c8 d8c8 b3b6 c8c3 b6b8 g8h7 b8b1 c3c2 a2a3 d2e3 f4f5 c2a2 e5e6 f7e6 f5e6 a2e2 g3d6 e3g5 b1d1 e2e6 d6c5 e6e5 c5d4 e5e8 d4b6 e8e5 b6c5 h7g8 h1g1 g5f4 h2h3 e5g5 d1f1 f4e5 f1f8 g8h7 f8a8 e5f6 a8a6 d5d4 a6c6 d4d3 c5b4 g5d5 b4d2 f6b2 c6a6 d5d8 g1h1 b2d4 a6c6 h7g8 d2g5 d8e8 c6c7 e8e1 h1h2 d4e5 g2g3 e5c7 h2g2 d3d2 g5d2 e1e2 g2g1 e2d2 g3g4 c7b6 g1f1 d2h2 a3a4 h2h3 a4a5 b6a5 f1g2 h3h4 g2f3 h4h2 g4g5 a5c3 f3g3 c3e5 g3f3 h2h5 f3g2 h5g5 g2f1 e5d4 f1e1 g5g1 e1e2 g1g2 e2f1 g2d2 f1e1 d2f2 e1d1 d4e3 d1e1 e3d4 e1d1 d4e3 d1e1 e3c5 e1d1 c5d4 d1c1 f2b2 c1d1 d4e3 d1e1 b2f2 e1d1 f2g2 d1e1 g2f2 e1d1 e3f4 d1e1 f2d2 e1f1 f4e3 f1e1 d2g2 e1f1 g2d2 f1e1 d2g2 e1f1 g2g1 f1e2 e3d4 e2d2 d4e5 d2e2 e5d4 e2d2 d4e5 d2e2 e5f6 e2f2 f6d4 f2e2 d4c5 e2d2 c5d6 d2e2 d6c5 e2d2 c5d6 d2e2 d6b4 e2f2 b4c5 f2e2 c5d6 e2f2 d6c5 f2e2 c5b6 e2d2 g1f1 d2c2 b6d4 c2d2 d4e5 d2e2 f1f8 e2e1 e5d4 e1d2 f8f1 d2e2 f1b1 e2d2 d4e5 d2e2 b1b2 e2e1 e5d4 e1d1 d4e5 "
+
 
 (*Test 960*)
 let test_fisher0 = "bqnb1rkr/pp3ppp/3ppn2/2p5/5P2/P2P4/NPP1P1PP/BQ1BNRKR w HFhf - 2 9"

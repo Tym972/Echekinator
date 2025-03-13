@@ -137,7 +137,7 @@ let est_entier_string chaine =
   i > 0
 
 (*Fonction convertissant la notation d'un string de coups notés algébriquement, en une liste de coups en notation algébrique*)
-let algebric_to_algebric_list algebric =
+let algebric_list_of_san algebric =
   let rec supprime_compteur_coups liste  = match liste with
     |[] -> []
     |h :: t ->
@@ -158,7 +158,7 @@ let dicorigin =
   ht
 
 (*Traduit un coup noté en notation algébrique en sa notation avec le type mouvement*)
-let mouvement_of_algebric plateau coup trait_aux_blancs coups_valides_joueur =
+let move_of_algebric plateau coup trait_aux_blancs coups_valides_joueur =
   let coup_traduit = ref Aucun in
   if List.mem coup ["0-0"; "O-O"] then begin
     coup_traduit := if trait_aux_blancs then Roque {sorte = 1} else Roque {sorte = 3}
@@ -208,10 +208,10 @@ let mouvement_of_uci uci plateau coups_valides_joueur =
     else if plateau.(depart) = 6 * signe_joueur && (arrivee / 8 = depart / 8) && (abs (arrivee - depart) <> 1 || plateau.(arrivee) * signe_joueur > 0) then begin
       let roque_joueur = if trait_aux_blancs then 1 else 3 in
       let arrivee_pr, depart_tour_pr, arrivee_gr, depart_tour_gr = if trait_aux_blancs then 62, !depart_tour_blanche_pr, 58, !depart_tour_blanche_gr else 6, !depart_tour_noire_pr, 2, !depart_tour_noire_gr in
-      if List.mem arrivee [arrivee_pr; depart_tour_pr] then begin
+      if (not !chess_960 && arrivee = arrivee_pr) || (!chess_960 && arrivee = depart_tour_pr) then begin
         coup := Roque {sorte = roque_joueur}
       end
-      else if List.mem arrivee [arrivee_gr; depart_tour_gr] then begin
+      else if (not !chess_960 && arrivee = arrivee_gr) || (!chess_960 && arrivee = depart_tour_gr) then begin
         coup := Roque {sorte = roque_joueur + 1}
       end
     end
@@ -231,17 +231,17 @@ let mouvement_of_uci uci plateau coups_valides_joueur =
 (*Fonction permettant une tolérance à l'approximation de l'utilisateur dans sa saisie*)
 let tolerance plateau coup trait_aux_blancs coups_valides_joueur =
   try mouvement_of_uci coup plateau coups_valides_joueur with _ ->
-  try mouvement_of_algebric plateau coup trait_aux_blancs coups_valides_joueur with _ ->
-  try mouvement_of_algebric plateau (coup ^ "ep") trait_aux_blancs coups_valides_joueur with _ ->
-  try mouvement_of_algebric plateau (String.capitalize_ascii coup) trait_aux_blancs coups_valides_joueur with _ ->
-  try mouvement_of_algebric plateau (Hashtbl.find dicofrench coup.[0] ^ String.sub coup 1 (String.length coup - 1)) trait_aux_blancs coups_valides_joueur with _ ->
-  try mouvement_of_algebric plateau (Hashtbl.find dicofrench (Char.uppercase_ascii coup.[0]) ^ String.sub coup 1 (String.length coup - 1)) trait_aux_blancs coups_valides_joueur with _ -> Aucun
+  try move_of_algebric plateau coup trait_aux_blancs coups_valides_joueur with _ ->
+  try move_of_algebric plateau (coup ^ "ep") trait_aux_blancs coups_valides_joueur with _ ->
+  try move_of_algebric plateau (String.capitalize_ascii coup) trait_aux_blancs coups_valides_joueur with _ ->
+  try move_of_algebric plateau (Hashtbl.find dicofrench coup.[0] ^ String.sub coup 1 (String.length coup - 1)) trait_aux_blancs coups_valides_joueur with _ ->
+  try move_of_algebric plateau (Hashtbl.find dicofrench (Char.uppercase_ascii coup.[0]) ^ String.sub coup 1 (String.length coup - 1)) trait_aux_blancs coups_valides_joueur with _ -> Aucun
 
 (*Fonction convertissant un relevé de coups notés algébriquement en un relevé de coups notés avec le type Mouvement*)
-let algebric_releve_to_type_mouvement algebric_list trait_aux_blancs dernier_coup droit_au_roque_initial position_de_depart =
+let move_list_of_algebric_list algebric_list trait_aux_blancs_initial dernier_coup_initial droit_au_roque_initial position_de_depart =
   let plateau = Array.copy position_de_depart in
-  let white_to_move = ref trait_aux_blancs in
-  let last_move = ref dernier_coup in
+  let white_to_move = ref trait_aux_blancs_initial in
+  let last_move = ref dernier_coup_initial in
   let right_to_castle = ref droit_au_roque_initial in
   let liste_algebric = ref algebric_list in
   let liste_type_mouvement = ref [] in
@@ -262,13 +262,13 @@ let algebric_releve_to_type_mouvement algebric_list trait_aux_blancs dernier_cou
   List.rev !liste_type_mouvement
 
 (*Fonction convertissant la notation d'un string de coups notés algébriquement en une liste de coups notés avec le type Mouvement*)
-let algebric_to_type_mouvement algebric trait_aux_blancs dernier_coup droit_au_roque position_de_depart =
-  algebric_releve_to_type_mouvement (algebric_to_algebric_list algebric) trait_aux_blancs dernier_coup droit_au_roque position_de_depart
+let move_list_of_san san trait_aux_blancs_initial dernier_coup_initial droit_au_roque_initial position_de_depart =
+  move_list_of_algebric_list (algebric_list_of_san san) trait_aux_blancs_initial dernier_coup_initial droit_au_roque_initial position_de_depart
 
 (*Fonction convertissant un répertoire d'ouvertures en une liste de liste de coups notés avec le type Mouvement*)
 let traduction algebrique =
   let detecte_sauts_de_ligne = Str.split (Str.regexp "\n") algebrique
   in let rec fonc liste = match liste with
     |[] -> []
-    |h :: t -> algebric_to_type_mouvement h true Aucun (true, true, true, true) echiquier :: fonc t
+    |h :: t -> move_list_of_san h true Aucun (true, true, true, true) echiquier :: fonc t
   in fonc detecte_sauts_de_ligne

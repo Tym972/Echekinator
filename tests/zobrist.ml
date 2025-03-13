@@ -20,7 +20,7 @@ let releve_plateau = ref [zobrist plateau_apres true !dernier_coup !droit_au_roq
 
 let liste_coup = "1 e4 e5"
 
-let liste_traduite = algebric_to_type_mouvement liste_coup !trait_aux_blancs !dernier_coup !droit_au_roque plateau_apres
+let liste_traduite = move_list_of_san liste_coup !trait_aux_blancs !dernier_coup !droit_au_roque plateau_apres
 
 let () =
   joue_liste liste_traduite plateau_apres (ref !dernier_coup) (ref !releve_coups) (ref !releve_plateau) (ref !droit_au_roque) (ref !trait_aux_blancs);
