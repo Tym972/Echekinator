@@ -16,7 +16,7 @@ let main plateau =
     done;
     print_endline (if !b then  "Fonction correcte" else "Les problèmes")
   end
-  else if false then begin
+  else if true then begin
     affiche plateau;
     print_endline (uci_of_san liste_coup !trait_aux_blancs_initial !dernier_coup_initial !droit_au_roque_initial position_de_depart)
   end

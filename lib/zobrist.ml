@@ -12,8 +12,8 @@ let () =
   done
 
 (*Indique la colonne d'une prise en passant potentielle*)
-let colonne_ep coup = match coup with
-  |Classique {piece; depart; arrivee; prise = _} when (abs piece = 1 && abs (depart - arrivee) = 16) -> depart mod 8
+let colonne_ep coup plateau = match coup with
+  |Classique {piece; depart; arrivee; prise = _} when (abs piece = 1 && abs (depart - arrivee) = 16 && ((depart mod 8 <> 0 && plateau.(arrivee - 1) = - piece) || (depart mod 8 <> 7 && plateau.(arrivee + 1) = - piece))) -> depart mod 8
   |_ -> -1
 
 (*Fonction de hachage*)
@@ -43,16 +43,16 @@ let zobrist plateau trait_aux_blancs dernier_coup (prb, grb, prn, grn) =
   if grn then begin
     h := !h lxor tab_zobrist.(772)
   end;
-  let pep = colonne_ep dernier_coup in
+  let pep = colonne_ep dernier_coup plateau in
   if pep <> (-1) then begin
     h := !h lxor tab_zobrist.(773 + pep)
   end;
   !h
 
 (*Fonction caulculant la valeur de la fonction de zobrist en fonction de la précédente et du coup joué. Non utilisée.*)
-let nouveau_zobrist coup avant_dernier_coup ancien_zobrist (aprb, agrb, aprn, agrn) (nprb, ngrb, nprn, ngrn) =
+let nouveau_zobrist coup avant_dernier_coup ancien_zobrist (aprb, agrb, aprn, agrn) (nprb, ngrb, nprn, ngrn) plateau =
   let h = ref (ancien_zobrist lxor tab_zobrist.(768)) in
-  let pep_adversaire = colonne_ep avant_dernier_coup in
+  let pep_adversaire = colonne_ep avant_dernier_coup plateau in
   if pep_adversaire <> (-1) then begin
     h := !h lxor tab_zobrist.(773 + pep_adversaire)
   end;

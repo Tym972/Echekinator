@@ -29,7 +29,7 @@
         "file": "/home/tym972/Echekinator/Résultats/Pgn_fastchess.pgn",
         "notation": 0,
         "track_nodes": false,
-        "track_seldepth": true,
+        "track_seldepth": false,
         "track_nps": false,
         "track_hashfull": false,
         "track_tbhits": false,
@@ -51,7 +51,7 @@
     },
     "config_name": "",
     "output": 0,
-    "seed": 16588626647513819035,
+    "seed": 6224922726954985070,
     "variant": 0,
     "ratinginterval": 10,
     "scoreinterval": 1,
@@ -59,7 +59,7 @@
     "autosaveinterval": 20,
     "games": 2,
     "rounds": 8000,
-    "concurrency": 4,
+    "concurrency": 3,
     "force_concurrency": false,
     "recover": true,
     "noswap": false,
@@ -77,66 +77,66 @@
         {
             "name": "new",
             "dir": "",
-            "cmd": "/home/tym972/Echekinator/_build/install/default/bin/main_new",
-            "args": "",
-            "restart": false,
-            "options": [],
-            "limit": {
-                "tc": {
-                    "increment": 80,
-                    "fixed_time": 0,
-                    "time": 8000,
-                    "moves": 0,
-                    "timemargin": 0
-                },
-                "nodes": 0,
-                "plies": 0
-            },
-            "variant": 0
-        },
-        {
-            "name": "base",
-            "dir": "",
             "cmd": "/home/tym972/Echekinator/_build/install/default/bin/main",
             "args": "",
             "restart": false,
             "options": [],
             "limit": {
                 "tc": {
-                    "increment": 80,
+                    "increment": 0,
                     "fixed_time": 0,
-                    "time": 8000,
+                    "time": 0,
                     "moves": 0,
                     "timemargin": 0
                 },
                 "nodes": 0,
-                "plies": 0
+                "plies": 4
+            },
+            "variant": 0
+        },
+        {
+            "name": "base",
+            "dir": "",
+            "cmd": "/home/tym972/Base/_build/default/bin/main.exe",
+            "args": "",
+            "restart": false,
+            "options": [],
+            "limit": {
+                "tc": {
+                    "increment": 0,
+                    "fixed_time": 0,
+                    "time": 0,
+                    "moves": 0,
+                    "timemargin": 0
+                },
+                "nodes": 0,
+                "plies": 4
             },
             "variant": 0
         }
     ],
     "stats": {
         "base vs new": {
-            "wins": 82,
-            "losses": 72,
-            "draws": 56,
-            "penta_WW": 10,
-            "penta_WD": 20,
-            "penta_WL": 42,
-            "penta_DD": 10,
-            "penta_LD": 16,
-            "penta_LL": 7
+            "wins": 79,
+            "losses": 13,
+            "draws": 10,
+            "penta_WW": 29,
+            "penta_WD": 9,
+            "penta_WL": 12,
+            "penta_DD": 0,
+            "penta_LD": 1,
+            "penta_LL": 0
         },
         "new vs base": {
-            "wins": 26,
-            "losses": 23,
-            "draws": 19,
-            "penta_WW": 3,
-            "penta_WD": 7,
-            "penta_WL": 13,
-            "penta_DD": 3,
-            "penta_LD": 6,
-            "penta_LL": 2
+            "wins": 10,
+            "losses": 32,
+            "draws": 2,
+            "penta_WW": 2,
+            "penta_WD": 0,
+            "penta_WL": 6,
+            "penta_DD": 0,
+            "penta_LD": 2,
+            "penta_LL": 12
         }
     }
 }

@@ -1004,20 +1004,6 @@ let placement_mdj plateau position =
     end
   end
 
-(**)
-let eval_materiel plateau =
-  let materiel = ref 0 in
-  for i = 0 to 63 do
-    let case = plateau.(i) in
-    if case > 0 then begin
-      materiel := !materiel + tabvalue.(case)
-    end
-    else if case < 0 then begin
-      materiel := !materiel - tabvalue.(- case)
-    end
-  done;
-  !materiel
-
 let eval_noirs_sl plateau trait_aux_blancs piece_clouees defendues pieces_joueur attaque_noirs position_roi roi_en_echec materiel position =
   for i = 0 to 63 do
     let case = plateau.(i) in
@@ -1182,17 +1168,25 @@ let evalue_finale plateau trait_aux_blancs position_roi roi_en_echec (alpha : in
     traitement trait_aux_blancs !materiel !position
   end
 
+(**)
+let eval_materiel plateau =
+  let materiel = ref 0 in
+  for i = 0 to 63 do
+    let case = plateau.(i) in
+    if case > 0 then begin
+      materiel := !materiel + tabvalue.(case)
+    end
+    else if case < 0 then begin
+      materiel := !materiel - tabvalue.(- case)
+    end
+  done;
+  !materiel
+
 (*Fonction d'évaluation à n'appliquer que sur les positions stables*)
 let evalue_simple plateau trait_aux_blancs (position_roi : int) (roi_en_echec : bool) alpha beta = let _ = alpha, beta in
   let _ = trait_aux_blancs, position_roi, roi_en_echec in
   let position = ref 0 in
   let note_provisoire = traitement trait_aux_blancs (eval_materiel plateau) 0 in
-  (*if note_provisoire - 75 < beta && note_provisoire + 75 > alpha then begin
-    position := mobilite plateau trait_aux_blancs;
-    if note_provisoire + !position - 75 < beta && note_provisoire + !position > alpha then begin
-      position := !position - mobilite plateau (not trait_aux_blancs)
-    end
-  end;*)
   note_provisoire + !position
 
 let fp plateau position table =
@@ -1233,23 +1227,78 @@ let eval3 plateau trait_aux_blancs position_roi roi_en_echec (alpha : int) (beta
   evaluation_double plateau trait_aux_blancs position_roi roi_en_echec materiel position;
   traitement trait_aux_blancs !materiel !position
 
+let eval_materiel2 plateau (tb, tn) =
+  let materiel = ref 0 in
+  let position = ref 0 in
+  for i = 0 to 63 do
+    let case = plateau.(i) in
+    if case > 0 then begin
+      materiel := !materiel + tabvalue.(case);
+      position := !position + tb.(case - 1).(i)
+    end
+    else if case < 0 then begin
+      materiel := !materiel - tabvalue.(- case);
+      position := !position - tn.(- case - 1).(i)
+    end
+  done;
+  !materiel, !position
+
 let eval1_q plateau trait_aux_blancs position_roi roi_en_echec (alpha : int) (beta : int) =
   let _ = alpha, beta, position_roi, roi_en_echec in
-  let materiel = ref (2 * (doublees plateau) + eval_materiel plateau) in
-  let position = ref 0 in
-  fp plateau position tab_ouverture;
-  traitement trait_aux_blancs !materiel !position
+  let materiel, position = eval_materiel2 plateau tab_ouverture in
+  traitement trait_aux_blancs (materiel + 2 * (doublees plateau)) (position / 5)
 
 let eval2_q plateau trait_aux_blancs position_roi roi_en_echec (alpha : int) (beta : int) =
   let _ = alpha, beta, position_roi, roi_en_echec in
-  let materiel = ref (2 * (doublees plateau) + eval_materiel plateau) in
-  let position = ref 0 in
-  fp plateau position tab_mdg;
-  traitement trait_aux_blancs !materiel !position
+  let materiel, position = eval_materiel2 plateau tab_mdg in
+  traitement trait_aux_blancs (materiel + 2 * (doublees plateau)) (position / 5)
 
 let eval3_q plateau trait_aux_blancs position_roi roi_en_echec (alpha : int) (beta : int) =
   let _ = alpha, beta, position_roi, roi_en_echec in
-  let materiel = ref (2 * (doublees plateau) + eval_materiel plateau) in
-  let position = ref 0 in
-  fp plateau position tab_finale;
-  traitement trait_aux_blancs !materiel !position
+  let materiel, position = eval_materiel2 plateau tab_finale in
+  traitement trait_aux_blancs (materiel + 2 * (doublees plateau)) (position / 5)
+
+let traitement2 trait_aux_blancs materiel position =
+  if trait_aux_blancs then begin
+    100. *. materiel +. position
+  end
+  else begin
+    -. (100. *. materiel +. position)
+  end
+
+let evolved plateau trait_aux_blancs position_roi roi_en_echec (alpha : int) (beta : int) =
+  let _ = alpha, beta, position_roi, roi_en_echec in
+  let tab_pieces = [|ref 0; ref 0; ref 0; ref 0; ref 0; ref 0|] in
+  let tab_position = [|ref 0; ref 0; ref 0|] in
+  let tab_phase = [|1; 1; 2; 4|] in
+  let materiel = ref 0 in
+  for i = 0 to 63 do
+    let piece = plateau.(i) in
+    if piece > 0 then begin
+      incr tab_pieces.(piece - 1);
+      materiel := !materiel + tabvalue.(piece);
+      let note_ouverture, note_mdj, note_finale = tab_position.(0), tab_position.(1), tab_position.(2) in
+      note_ouverture := !note_ouverture + tab_pieces_blanches_ouverture.(piece - 1).(i);
+      note_mdj := !note_mdj + tab_pieces_blanches_mdg.(piece - 1).(i);
+      note_finale := !note_finale + tab_pieces_blanches_finale.(piece - 1).(i)
+    end
+    else if piece < 0 then begin
+      incr tab_pieces.(- piece - 1);
+      materiel := !materiel - tabvalue.(- piece);
+      let note_ouverture, note_mdj, note_finale = tab_position.(0), tab_position.(1), tab_position.(2) in
+      note_ouverture := !note_ouverture - tab_pieces_noires_ouverture.(abs piece - 1).(i);
+      note_mdj := !note_mdj - tab_pieces_noires_mdg.(abs piece - 1).(i);
+      note_finale := !note_finale - tab_pieces_noires_finale.(abs piece - 1).(i)
+    end
+  done;
+  let phase = ref 0 in
+  for i = 1 to 4 do
+    phase := !phase + !(tab_pieces.(i)) * tab_phase.(i - 1)
+  done;
+  if !phase <= 2 then begin
+    0
+  end
+  else begin
+    let phase_2 = ((float_of_int !phase) *. 256. +. ((float_of_int !phase) /. 2.)) /. (float_of_int !phase) in
+    traitement trait_aux_blancs ( !materiel) (int_of_float (((float_of_int !(tab_position.(0)) *. (256. -. phase_2)) +. ((float_of_int !(tab_position.(2)) *. phase_2) /. 256.)) /. 5.))
+  end

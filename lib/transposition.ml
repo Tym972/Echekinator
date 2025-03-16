@@ -114,7 +114,7 @@ let rec negalphabeta_trans plateau trait_aux_blancs dernier_coup droit_au_roque 
         in if hash_ordering then begin
           joue plateau hash_move;
           let nouveau_droit_au_roque = modification_roque hash_move droit_au_roque in
-          let nouveau_zobrist = nouveau_zobrist hash_move dernier_coup zobrist_position droit_au_roque nouveau_droit_au_roque in
+          let nouveau_zobrist = nouveau_zobrist hash_move dernier_coup zobrist_position droit_au_roque nouveau_droit_au_roque plateau in
           let nouveau_releve = adapte_releve2 nouveau_zobrist hash_move profondeur releve_plateau
           in let score =
             let note, _ = negalphabeta_trans plateau (not trait_aux_blancs) hash_move nouveau_droit_au_roque nouveau_releve (profondeur - 1) profondeur_initiale (- !beta0) (- !alpha0) evaluation nouveau_zobrist
@@ -149,7 +149,7 @@ let rec negalphabeta_trans plateau trait_aux_blancs dernier_coup droit_au_roque 
               joue plateau coup;
               cp := List.tl !cp;
               let nouveau_droit_au_roque = modification_roque coup droit_au_roque in
-              let nouveau_zobrist = nouveau_zobrist coup dernier_coup zobrist_position droit_au_roque nouveau_droit_au_roque in
+              let nouveau_zobrist = nouveau_zobrist coup dernier_coup zobrist_position droit_au_roque nouveau_droit_au_roque plateau in
               let nouveau_releve = adapte_releve2 nouveau_zobrist coup profondeur releve_plateau
               in let score =
                 let note, _ = negalphabeta_trans plateau (not trait_aux_blancs) coup nouveau_droit_au_roque nouveau_releve (profondeur - 1) profondeur_initiale (- !beta0) (- !alpha0) evaluation nouveau_zobrist

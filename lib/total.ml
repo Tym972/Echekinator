@@ -54,11 +54,11 @@ let rec negalphabeta_total plateau trait_aux_blancs dernier_coup droit_au_roque 
           (*not (hash_node_type = All || hash_move = Aucun) && hash_value > beta*)
           ((hash_node_type = Pv || (hash_node_type = Cut && hash_value > beta)) && hash_move <> Aucun)
         in if hash_ordering then begin
-          joue plateau hash_move;
           let nouveau_droit_au_roque = modification_roque hash_move droit_au_roque in
-          let nouveau_zobrist = nouveau_zobrist hash_move dernier_coup zobrist_position droit_au_roque nouveau_droit_au_roque in
-          let nouveau_releve = adapte_releve2 nouveau_zobrist hash_move profondeur releve_plateau
-          in let score =
+          let nouveau_zobrist = nouveau_zobrist hash_move dernier_coup zobrist_position droit_au_roque nouveau_droit_au_roque plateau in
+          let nouveau_releve = adapte_releve2 nouveau_zobrist hash_move profondeur releve_plateau in
+          joue plateau hash_move;
+          let score =
             let note, _ = negalphabeta_total plateau (not trait_aux_blancs) hash_move nouveau_droit_au_roque nouveau_releve (profondeur - 1) profondeur_initiale (- !beta0) (- !alpha0) evaluation nouveau_zobrist
             in - note
           in if score > !best_score then begin
@@ -88,12 +88,12 @@ let rec negalphabeta_total plateau trait_aux_blancs dernier_coup droit_au_roque 
           else begin
             while (!b && !cp <> []) do
               let coup = List.hd !cp in
+              let nouveau_droit_au_roque = modification_roque coup droit_au_roque in
+              let nouveau_zobrist = nouveau_zobrist coup dernier_coup zobrist_position droit_au_roque nouveau_droit_au_roque plateau in
+              let nouveau_releve = adapte_releve2 nouveau_zobrist coup profondeur releve_plateau in
               joue plateau coup;
               cp := List.tl !cp;
-              let nouveau_droit_au_roque = modification_roque coup droit_au_roque in
-              let nouveau_zobrist = nouveau_zobrist coup dernier_coup zobrist_position droit_au_roque nouveau_droit_au_roque in
-              let nouveau_releve = adapte_releve2 nouveau_zobrist coup profondeur releve_plateau
-              in let score =
+              let score =
                 let note, _ = negalphabeta_total plateau (not trait_aux_blancs) coup nouveau_droit_au_roque nouveau_releve (profondeur - 1) profondeur_initiale (- !beta0) (- !alpha0) evaluation nouveau_zobrist
                 in - note 
               in if score > !best_score then begin
@@ -146,20 +146,26 @@ let rec negalphabeta_total plateau trait_aux_blancs dernier_coup droit_au_roque 
     !best_score, !best_move
   end
 
-let adapte_releve3 zobrist_position coup profondeur releve_plateau =
+let adapte_releve3 zobrist_position coup profondeur releve_plateau demi_coups =
   if est_irremediable coup then begin
-    [zobrist_position]
+    if profondeur < 8 then begin
+      [], 0
+    end
+    else begin
+      [zobrist_position], 0
+    end
   end
-  else if List.length releve_plateau + profondeur < 8 then begin
-    []
+  else if demi_coups + profondeur < 7 then begin
+    [], demi_coups + 1
   end
   else begin 
-    zobrist_position :: releve_plateau
+    zobrist_position :: releve_plateau, demi_coups + 1
   end
   
-let rec pvs plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau profondeur profondeur_initiale alpha beta evaluation zobrist_position ispv =
+let rec pvs plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau demi_coups profondeur profondeur_initiale alpha beta evaluation zobrist_position ispv =
   incr compteur_recherche;
-  if !stop_calculating || repetition releve_plateau 3 then begin incr compteur_noeuds_terminaux;
+  if !stop_calculating || repetition releve_plateau 3 || demi_coups = 100 then begin
+    incr compteur_noeuds_terminaux;
     0
   end
   else begin
@@ -192,13 +198,12 @@ let rec pvs plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau 
       else begin
         let b = ref true in
         let hash_ordering = (hash_node_type = Pv || (hash_node_type = Cut && hash_value > beta)) && hash_move <> Aucun in
-        (*let hash_ordering = hash_move <> Aucun in*)
         if hash_ordering then begin
-          joue plateau hash_move;
           let nouveau_droit_au_roque = modification_roque hash_move droit_au_roque in
-          let nouveau_zobrist = nouveau_zobrist hash_move dernier_coup zobrist_position droit_au_roque nouveau_droit_au_roque in
-          let nouveau_releve = adapte_releve3 nouveau_zobrist hash_move profondeur releve_plateau
-          in let score = - pvs plateau (not trait_aux_blancs) hash_move nouveau_droit_au_roque nouveau_releve (profondeur - 1) profondeur_initiale (- !beta0) (- !alpha0) evaluation nouveau_zobrist ispv
+          let nouveau_zobrist = nouveau_zobrist hash_move dernier_coup zobrist_position droit_au_roque nouveau_droit_au_roque plateau in
+          let nouveau_releve, nouveau_demi_coups = adapte_releve3 nouveau_zobrist hash_move profondeur releve_plateau demi_coups in
+          joue plateau hash_move;
+          let score = - pvs plateau (not trait_aux_blancs) hash_move nouveau_droit_au_roque nouveau_releve nouveau_demi_coups (profondeur - 1) profondeur_initiale (- !beta0) (- !alpha0) evaluation nouveau_zobrist ispv
           in if score > !best_score then begin
             best_score := score;
             best_move := hash_move;
@@ -227,20 +232,20 @@ let rec pvs plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau 
             let first_move = ref true in
             while (!b && !cp <> []) do
               let coup = List.hd !cp in
+              let nouveau_droit_au_roque = modification_roque coup droit_au_roque in
+              let nouveau_zobrist = nouveau_zobrist coup dernier_coup zobrist_position droit_au_roque nouveau_droit_au_roque plateau in
+              let nouveau_releve, nouveau_demi_coups = adapte_releve3 nouveau_zobrist coup profondeur releve_plateau demi_coups in
               joue plateau coup;
               cp := List.tl !cp;
-              let nouveau_droit_au_roque = modification_roque coup droit_au_roque in
-              let nouveau_zobrist = nouveau_zobrist coup dernier_coup zobrist_position droit_au_roque nouveau_droit_au_roque in
-              let nouveau_releve = adapte_releve3 nouveau_zobrist coup profondeur releve_plateau
-              in let score =
+              let score =
                 if !first_move then begin
                   first_move := false;
-                  - pvs plateau (not trait_aux_blancs) coup nouveau_droit_au_roque nouveau_releve (profondeur - 1) profondeur_initiale (- !beta0) (- !alpha0) evaluation nouveau_zobrist ispv
+                  - pvs plateau (not trait_aux_blancs) coup nouveau_droit_au_roque nouveau_releve nouveau_demi_coups (profondeur - 1) profondeur_initiale (- !beta0) (- !alpha0) evaluation nouveau_zobrist ispv
                 end
                 else begin
-                  let note0 = - pvs plateau (not trait_aux_blancs) coup nouveau_droit_au_roque nouveau_releve (profondeur - 1) profondeur_initiale (- !alpha0 - 1) (- !alpha0) evaluation nouveau_zobrist false
+                  let note0 = - pvs plateau (not trait_aux_blancs) coup nouveau_droit_au_roque nouveau_releve nouveau_demi_coups (profondeur - 1) profondeur_initiale (- !alpha0 - 1) (- !alpha0) evaluation nouveau_zobrist false
                   in if (note0 > !alpha0 && ispv) then begin 
-                    - pvs plateau (not trait_aux_blancs) coup nouveau_droit_au_roque nouveau_releve (profondeur - 1) profondeur_initiale (- !beta0) (- !alpha0) evaluation nouveau_zobrist ispv
+                    - pvs plateau (not trait_aux_blancs) coup nouveau_droit_au_roque nouveau_releve nouveau_demi_coups (profondeur - 1) profondeur_initiale (- !beta0) (- !alpha0) evaluation nouveau_zobrist ispv
                   end
                   else begin
                     note0
@@ -263,7 +268,7 @@ let rec pvs plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau 
     if not !stop_calculating then begin
       let node_type =
         if !best_score <= alpha then begin
-          best_move := Aucun;
+          (*best_move := Aucun;*)
           All
         end
         else if !best_score >= beta then begin

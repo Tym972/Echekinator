@@ -102,11 +102,11 @@ let pv_finder plateau dernier_coup droit_au_roque releve_plateau profondeur_init
   let _, _, _, best_move, _ = try ZobristHashtbl.find table (List.hd releve_plateau) with _ -> (All, (-1), 0, Aucun, 0) in
   let rec aux zobrist_position droit_au_roque releve_plateau coup dernier_coup profondeur =
     if not (profondeur <= 0 || coup = Aucun || (profondeur <> profondeur_initial && (repetition releve_plateau 3) || List.length releve_plateau = 101)) then begin
+      let nouveau_droit_au_roque = modification_roque coup droit_au_roque
+      in let nouveau_zobrist = nouveau_zobrist coup dernier_coup zobrist_position droit_au_roque nouveau_droit_au_roque plateau
+      in let nouveau_releve = adapte_releve2 nouveau_zobrist coup 1000 releve_plateau in
       joue plateau coup;
       pv := !pv ^ (uci_of_mouvement coup) ^ " ";
-      let nouveau_droit_au_roque = modification_roque coup droit_au_roque
-      in let nouveau_zobrist = nouveau_zobrist coup dernier_coup zobrist_position droit_au_roque nouveau_droit_au_roque
-      in let nouveau_releve = adapte_releve2 nouveau_zobrist coup 1000 releve_plateau in
       let _, _, _, hash_move, _ =
         try ZobristHashtbl.find table nouveau_zobrist with _ -> (All, (-1), 0, Aucun, 0)
       in aux nouveau_zobrist nouveau_droit_au_roque nouveau_releve hash_move coup (profondeur - 1);
@@ -129,10 +129,10 @@ let rec algoperft plateau trait_aux_blancs dernier_coup droit_au_roque profondeu
       let nodes = ref 0 in
       while !cp <> [] do
         let coup = List.hd !cp in
+        let nouveau_doit_au_roque = modification_roque coup droit_au_roque in
+        let nouveau_zobrist = if profondeur > 1 then (nouveau_zobrist coup dernier_coup zobrist_position droit_au_roque nouveau_doit_au_roque plateau) else 0 in
         joue plateau coup;
         cp := List.tl !cp;
-        let nouveau_doit_au_roque = modification_roque coup droit_au_roque in
-        let nouveau_zobrist = if profondeur > 1 then (nouveau_zobrist coup dernier_coup zobrist_position droit_au_roque nouveau_doit_au_roque) else 0 in
         let perft = (algoperft plateau (not trait_aux_blancs) coup nouveau_doit_au_roque (profondeur - 1) false nouveau_zobrist table_perft) in
         nodes := !nodes + perft;
         if racine then begin
@@ -146,7 +146,7 @@ let rec algoperft plateau trait_aux_blancs dernier_coup droit_au_roque profondeu
   end
 
 (*Answer to the command "go"*)
-let go instruction plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau evaluation =
+let go instruction plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau demi_coups evaluation =
   if (List.length instruction > 1 && List.nth instruction 1 = "perft" && est_entier_string (List.nth instruction 2)) then begin
     let depth = int_of_string (List.nth instruction 2) in
     let table_perft = ZobristHashtbl.create taille_transposition in
@@ -211,7 +211,7 @@ let go instruction plateau trait_aux_blancs dernier_coup droit_au_roque releve_p
     let var_depth = ref 0 in
     while not !stop_calculating && !var_depth < !depth do
       incr var_depth;
-      let new_score = pvs plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau !var_depth !var_depth (-infinity) infinity evaluation (List.hd releve_plateau) true in
+      let new_score = pvs plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau demi_coups !var_depth !var_depth (-infinity) infinity evaluation (List.hd releve_plateau) true in
       if not !stop_calculating then begin
         let exec_time = Sys.time () -. t in
         best_score := score new_score;
@@ -269,11 +269,12 @@ let echekinator () =
       |"ucinewgame" -> ucinewgame plateau trait_aux_blancs dernier_coup droit_au_roque releve_coups releve_plateau position_de_depart trait_aux_blancs_initial dernier_coup_initial droit_au_roque_initial releve_coups_initial releve_plateau_initial
       |"position" -> position command_line plateau trait_aux_blancs dernier_coup droit_au_roque releve_coups releve_plateau position_de_depart trait_aux_blancs_initial dernier_coup_initial droit_au_roque_initial releve_coups_initial releve_plateau_initial
       |"go" ->
-        let _ = Thread.create (fun () -> go command_line (Array.copy plateau) !trait_aux_blancs !dernier_coup !droit_au_roque !releve_plateau evaluation) () in
+        let _ = Thread.create (fun () -> go command_line (Array.copy plateau) !trait_aux_blancs !dernier_coup !droit_au_roque !releve_plateau (List.length !releve_plateau - 1) evaluation) () in
         stop_calculating := false;
         compteur_recherche := 0
       |"quit" -> exit := true
       |"stop" -> stop_calculating := true
       |"d" -> display plateau !trait_aux_blancs !dernier_coup !droit_au_roque !releve_coups !releve_plateau
+      |"ponderhit" -> ()
       |_ -> print_endline (Printf.sprintf "Unknown command: '%s'. Type help for more information." command)
   done
