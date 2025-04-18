@@ -177,7 +177,8 @@ let rec pvs plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau 
     let presence = ref true in
     let hash_node_type, hash_depth, hash_value, hash_move, _ =
       if ispv then begin
-        presence := false; (All, (-1), 0, Aucun, 0)
+        presence := false;
+        (All, (-1), 0, Aucun, 0)
       end
       else begin
         try ZobristHashtbl.find table zobrist_position with _ ->
@@ -185,7 +186,7 @@ let rec pvs plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau 
             presence := false;
             (All, (-1), 0, Aucun, 0)
           end
-        end
+      end
     in let continuation = ref true in
     if !presence then begin
       traitement_hash hash_node_type hash_depth hash_value hash_move profondeur alpha0 beta0 best_score best_move continuation ply
@@ -197,7 +198,7 @@ let rec pvs plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau 
       end
       else begin
         let b = ref true in
-        let hash_ordering = (hash_node_type = Pv || (hash_node_type = Cut && hash_value > beta)) && hash_move <> Aucun in
+        let hash_ordering = hash_move <> Aucun && not (hash_node_type = Cut && hash_value <= beta) in
         if hash_ordering then begin
           let nouveau_droit_au_roque = modification_roque hash_move droit_au_roque in
           let nouveau_zobrist = nouveau_zobrist hash_move dernier_coup zobrist_position droit_au_roque nouveau_droit_au_roque plateau in
@@ -220,7 +221,8 @@ let rec pvs plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau 
               ref (List.filter (fun c -> c <> hash_move) (tab_tri.(profondeur - 1) plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau evaluation negalphabeta))
             else
               ref (tab_tri.(profondeur - 1) plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau evaluation negalphabeta)
-          in if !cp = [] && not hash_ordering then begin incr compteur_noeuds_terminaux;
+          in if !cp = [] && not hash_ordering then begin
+            incr compteur_noeuds_terminaux;
             if (menacee plateau (index_tableau plateau (roi trait_aux_blancs)) trait_aux_blancs) then begin
               best_score := ply - 99999
             end 
@@ -245,7 +247,7 @@ let rec pvs plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau 
                 else begin
                   let note0 = - pvs plateau (not trait_aux_blancs) coup nouveau_droit_au_roque nouveau_releve nouveau_demi_coups (profondeur - 1) profondeur_initiale (- !alpha0 - 1) (- !alpha0) evaluation nouveau_zobrist false
                   in if (note0 > !alpha0 && ispv) then begin 
-                    - pvs plateau (not trait_aux_blancs) coup nouveau_droit_au_roque nouveau_releve nouveau_demi_coups (profondeur - 1) profondeur_initiale (- !beta0) (- !alpha0) evaluation nouveau_zobrist ispv
+                    - pvs plateau (not trait_aux_blancs) coup nouveau_droit_au_roque nouveau_releve nouveau_demi_coups (profondeur - 1) profondeur_initiale (- !beta0) (- !alpha0) evaluation nouveau_zobrist true
                   end
                   else begin
                     note0
@@ -268,7 +270,7 @@ let rec pvs plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau 
     if not !stop_calculating then begin
       let node_type =
         if !best_score <= alpha then begin
-          (*best_move := Aucun;*)
+          best_move := Aucun;
           All
         end
         else if !best_score >= beta then begin
