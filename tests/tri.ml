@@ -4,10 +4,10 @@ open Libs.Generateur
 open Libs.Evaluations
 open Libs.Zobrist
 open Libs.Strategie1
+open Libs.Strategie2
 open Libs.Traduction2
 open Libs.Traduction3
 open Libs.Quiescence
-open Libs.Total
 
 let rec affiche_liste liste plateau coups_valides_joueur = match liste with
   |(x, coup) :: t ->

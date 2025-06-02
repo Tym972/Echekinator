@@ -6,25 +6,11 @@ open Evaluations
 open Traduction1
 open Traduction3
 open Zobrist
-open Strategie1
 open Strategie2
-open Quiescence
-open Transposition
-open Total
 
 (*Fonction permettant d'acquérir l'entrée clavier*)
 let est_oui reponse =
   List.mem (String.lowercase_ascii reponse) ["oui"; "o"; "yes"; "y"]
-
-(*Fonction permettant la lecture d'une réponse*)
-let lire_entree message suppression =
-  print_string message;
-  flush stdout;
-  let entree = input_line stdin in
-  if suppression then
-    supprimer entree
-  else
-    entree
 
 (*Permet de lire une entrée avec des sauts de lignes*)
 let lire_entree_multiligne message =
@@ -44,24 +30,6 @@ let lire_entree_multiligne message =
     end
   in
   String.concat " " (lire_lignes [] true)
-
-(*Fonction permettant de jouer une liste de coups*)
-let joue_liste liste_coups plateau dernier_coup releve_coups releve_plateau droit_au_roque trait_aux_blancs =
-  let rec func liste_coups plateau dernier_coup releve_coups releve_plateau droit_au_roque trait_aux_blancs controle = match liste_coups with
-    |[] -> ()
-    |coup :: t when !controle ->
-      if List.mem coup (coups_valides plateau !trait_aux_blancs !dernier_coup !droit_au_roque) then begin
-        joue_coup_2 plateau coup trait_aux_blancs dernier_coup droit_au_roque releve_coups releve_plateau;
-        func t plateau dernier_coup releve_coups releve_plateau droit_au_roque trait_aux_blancs controle
-      end
-      else if coup = Aucun then begin
-        func t plateau dernier_coup releve_coups releve_plateau droit_au_roque trait_aux_blancs controle
-      end
-      else begin
-        controle := false
-      end
-    |_ -> ()
-  in func liste_coups plateau dernier_coup releve_coups releve_plateau droit_au_roque trait_aux_blancs (ref true)
 
 (*Tableau représentant les dispositions KRN, l'indice correspondant au code*)
 let krn = 
@@ -205,7 +173,7 @@ let config () =
   let duree_theorie = 40 in
   let duree_ouverture = 30 in
   let duree_finale = 90 in
-  let regle_des_50_coups = 100 in
+  let regle_des_50_coups = 101 in
   let verif = ref 0 in
   let partie_finie = ref false in
   plateau, verif, mode, !temps_limite_court, !profondeur, !profondeur_max, duree_theorie, duree_ouverture, duree_finale, regle_des_50_coups, dernier_coup, releve_coups, releve_plateau, trait_aux_blancs, partie_finie, phase1, position_de_depart, trait_aux_blancs_initial, affichage, droit_au_roque, dernier_coup_initial, droit_au_roque_initial, releve_coups_initial, releve_plateau_initial

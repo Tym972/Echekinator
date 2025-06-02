@@ -1,8 +1,8 @@
 open Libs.Plateau
+open Libs.Strategie1
 open Libs.Traduction3
 open Libs.Uci
 open Config
-open Libs.Transposition
 
 let table_perft = ZobristHashtbl.create taille_transposition
 

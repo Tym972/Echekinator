@@ -116,17 +116,6 @@ let origine_promotion coup trait_aux_blancs plateau =
   end;
   Promotion {depart = !depart; arrivee = case; promotion = !promo; prise = plateau.(case)}
 
-(*Fonction supprimant les caractères dispensables de la notation algébrique*)
-let supprimer chaine =
-  let nc = ref "" in
-  for i = 0 to ((String.length chaine) - 1) do
-    let k = chaine.[i] in
-    if not (List.mem k ['x'; '('; ')'; '+'; '.'; '?'; '!'; '"'; '\n']) then begin
-      nc := !nc ^ (String.make 1 k)
-    end
-  done;
-  !nc
-
 (*Fonction décomposant une chaine de caractère en liste de substring correspondants aux mots*)
 let detecte_mots chaine =
   Str.split (Str.regexp " +") chaine

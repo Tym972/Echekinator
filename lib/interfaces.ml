@@ -11,7 +11,6 @@ open Strategie2
 open Evaluations
 open Ouvertures
 open Config
-open Transposition
 
 (*Fonction permettant de traiter une proposition de coup du joueur*)
 let traitement choix coups_valides_joueur plateau dernier_coup releve_coups releve_plateau trait_aux_blancs verif partie_finie regle_des_50_coups proposition_invalide droit_au_roque =

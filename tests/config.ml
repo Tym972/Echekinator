@@ -1,7 +1,6 @@
 open Libs.Plateau
 open Libs.Generateur
 open Libs.Zobrist
-open Libs.Config
 open Libs.Evaluations
 open Libs.Traduction1
 open Libs.Traduction2
@@ -14,16 +13,14 @@ let dernier_coup = ref Aucun
 let droit_au_roque = ref (true, true, true, true)
 let releve_coups = ref []
 let releve_plateau = ref [zobrist plateau true !dernier_coup !droit_au_roque]
-
 let position_de_depart = Array.copy echiquier
 let trait_aux_blancs_initial = ref true
 let dernier_coup_initial = ref Aucun
 let droit_au_roque_initial = ref (true, true, true, true)
 let releve_coups_initial = ref []
 let releve_plateau_initial = ref [zobrist plateau true !dernier_coup !droit_au_roque]
-
-let chaine_fen = discorde_33
-let liste_coup = discordieux_33
+let chaine_fen = standard
+let liste_coup = ""
 
 let () = 
   position_of_fen chaine_fen position_de_depart trait_aux_blancs_initial dernier_coup_initial droit_au_roque_initial releve_coups_initial releve_plateau_initial;
@@ -31,7 +28,6 @@ let () =
   joue_liste (move_list_of_san liste_coup !trait_aux_blancs !dernier_coup !droit_au_roque plateau) plateau dernier_coup releve_coups releve_plateau droit_au_roque trait_aux_blancs
 
 let evaluation = eval1_q
-
 let profondeur = 8
 let profondeur_perft = 6
 let nombre_de_coups = 1

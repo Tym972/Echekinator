@@ -1,6 +1,7 @@
 (*Module implémentant les fonctions qui permettent de générer les coups possibles à partir d'une position*)
 
 open Plateau
+open Zobrist
 
 (*Fonction indiquant si une case est attaquée par une pièce ennemie*)
 let menacee plateau case trait_aux_blancs =
@@ -791,13 +792,6 @@ let dejoue plateau coup = match coup with
   end
   |Aucun -> ()
 
-(*Fonction permettant de jouer un coup en actualisant les variables d'états de la partie*)
-let joue_coup_1 plateau coup trait_aux_blancs dernier_coup droit_au_roque = 
-  joue plateau coup;
-  droit_au_roque := modification_roque coup !droit_au_roque;
-  dernier_coup := coup;
-  trait_aux_blancs := not !trait_aux_blancs
-
 (*Fonction donnant la case de départ d'un coup classique et d'une promotion*)
 let depart coup = match coup with
   |Classique {piece = _; depart; arrivee = _; prise = _} | Enpassant {depart; arrivee = _} | Promotion {depart; arrivee = _; prise = _; promotion = _} -> depart
@@ -903,6 +897,46 @@ let coups_valides plateau trait_aux_blancs dernier_coup (prb, grb, prn, grn) =
     end
   end
 
+(*Fonction permettant de jouer un coup en actualisant les variables d'états de la partie*)
+let joue_coup_1 plateau coup trait_aux_blancs dernier_coup droit_au_roque = 
+  joue plateau coup;
+  droit_au_roque := modification_roque coup !droit_au_roque;
+  dernier_coup := coup;
+  trait_aux_blancs := not !trait_aux_blancs
+
+(*Fonction renvoyant le relevé des positions actualisé*)
+let nouveau_releve_plateau dernier_coup releve_plateau plateau trait_aux_blancs droit_au_roque =
+  if est_irremediable dernier_coup then begin
+    [zobrist plateau trait_aux_blancs dernier_coup droit_au_roque]
+  end
+  else begin
+    zobrist plateau trait_aux_blancs dernier_coup droit_au_roque :: !releve_plateau
+  end
+
+(*Fonction permettant de jouer un coup en actualisant les variables d'états de la partie*)
+let joue_coup_2 plateau coup trait_aux_blancs dernier_coup droit_au_roque releve_coups releve_plateau = 
+  joue_coup_1 plateau coup trait_aux_blancs dernier_coup droit_au_roque;
+  releve_coups := coup :: !releve_coups;
+  releve_plateau := nouveau_releve_plateau coup releve_plateau plateau !trait_aux_blancs !droit_au_roque
+
+(*Fonction permettant de jouer une liste de coups*)
+let joue_liste liste_coups plateau dernier_coup releve_coups releve_plateau droit_au_roque trait_aux_blancs =
+  let rec func liste_coups plateau dernier_coup releve_coups releve_plateau droit_au_roque trait_aux_blancs controle = match liste_coups with
+    |[] -> ()
+    |coup :: t when !controle ->
+      if List.mem coup (coups_valides plateau !trait_aux_blancs !dernier_coup !droit_au_roque) then begin
+        joue_coup_2 plateau coup trait_aux_blancs dernier_coup droit_au_roque releve_coups releve_plateau;
+        func t plateau dernier_coup releve_coups releve_plateau droit_au_roque trait_aux_blancs controle
+      end
+      else if coup = Aucun then begin
+        func t plateau dernier_coup releve_coups releve_plateau droit_au_roque trait_aux_blancs controle
+      end
+      else begin
+        controle := false
+      end
+    |_ -> ()
+  in func liste_coups plateau dernier_coup releve_coups releve_plateau droit_au_roque trait_aux_blancs (ref true)
+
 (*Fonction indiquant si un coup est valide*)
 let est_valide plateau coup trait_aux_blancs =
   let b = ref true in
@@ -960,51 +994,3 @@ let gagne plateau trait_aux_blancs dernier_coup =
 
 (*Tableau dont les élément indiquent si la présence de la pièce d'indice correspondant est imcompatible avec la nulle par manque de matériel*)
 let tab_manque_de_materiel = [|false; true; false; false; true; true; false|]
-
-(*Fonction indiquant si une case est blanche*)
-let est_blanche case =
-  ((case / 8) mod 2 = 0 && (case mod 2) = 0) || ((case / 8) mod 2 = 1 && (case mod 2) = 1)
-
-(*Fonction servant à cloturer la partie si un mat est strictement impossible. 4 cas sont considérés : roi contre roi, roi et fou contre roi, roi et cavalier contre roi et roi et fou contre roi et fou avec fous de même couleur*)
-let manque_de_materiel plateau =
-  let b = ref true in
-  let compteur = ref 0 in
-  let cavaliers_blancs = ref 0 in
-  let cavaliers_noirs = ref 0 in
-  let fous_blancs_cb = ref 0 in
-  let fous_noirs_cb = ref 0 in
-  let i = ref 0 in
-  while (!b && !i < 64) do
-    let case = plateau.(!i) in
-    if case <> 0 then begin
-      if tab_manque_de_materiel.(abs case) then begin
-        b := false
-      end
-      else if abs case <> 6 then begin
-        compteur := !compteur + 1;
-        if !compteur > 2 then begin
-          b := false
-        end
-        else begin
-          match case with
-            |2 -> cavaliers_blancs := !cavaliers_blancs + 1
-            |(-2) -> cavaliers_noirs := !cavaliers_noirs + 1
-            |3 -> if est_blanche !i then fous_blancs_cb := !fous_blancs_cb + 1
-            |(-3) -> if est_blanche !i then fous_noirs_cb := !fous_noirs_cb + 1
-            |_ -> ()
-        end
-      end
-    end;
-    incr i
-  done;
-  if !b then begin
-    if !compteur = 2 then begin
-      if (!cavaliers_blancs + !cavaliers_noirs > 0) then begin
-        b := false
-      end
-      else if (!fous_blancs_cb <> !fous_noirs_cb) then begin
-        b := false
-      end
-    end
-  end;
-  !b

@@ -2,9 +2,9 @@
 
 open Plateau
 open Generateur
-open Ouvertures
 open Zobrist
 open Evaluations
+open Quiescence
 
 (*Fonction permettant d'évaluer un plateau à la profondeur 0*)
 let traitement_profondeur_0 evaluation plateau trait_aux_blancs dernier_coup alpha beta =
@@ -21,12 +21,6 @@ let traitement_profondeur_0 evaluation plateau trait_aux_blancs dernier_coup alp
   else begin
     evaluation plateau trait_aux_blancs position_roi false alpha beta
   end
-
-(*Fonction indiquant si un coup est irrémédiable (poussée de pion ou capture)*)
-let est_irremediable coup = match coup with
-  |Enpassant _ | Promotion _ -> true
-  |Classique {piece; depart = _; arrivee = _; prise} when (abs piece = 1 || prise <> 0) -> true
-  |_ -> false
 
 (*Fonction adaptant le relevé des positions*)
 let adapte_releve plateau coup profondeur trait_aux_blancs nouveau_droit_au_roque releve_plateau =
@@ -105,8 +99,8 @@ let tri_4 plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau ev
 let tab_tri = Array.concat [[|non_tri; tri_mvvlva; tri_0; tri_0; tri_1; tri_1|]; Array.make 300 tri_2]
 
 let compteur_recherche = ref 0
-
 let compteur_noeuds_terminaux = ref 0
+let compteur_transposition = ref 0
 
 (*Fonction détectant les répétitions à partir d'une liste de code zobrist*)
 let repetition liste_releve_plateau n = match liste_releve_plateau with
@@ -116,40 +110,6 @@ let repetition liste_releve_plateau n = match liste_releve_plateau with
       |[] | [_] -> false
       |_::j::t -> (h = j && (k + 1 = n || aux t (k + 1))) || aux t k
     in aux q 1
-
-(*Fonction indiquant si chaque joueur à moins de 3 pièces hors roi et pion sur l'échiquier, ou si leur nombre est inférieur à 6*)
-let pieces_esseulee plateau =
-  let pieces_blanches = ref 0 in
-  let pieces_noires = ref 0 in
-  for i = 0 to 63 do
-    let case = plateau.(i) in
-    if case > 1 then begin
-      pieces_blanches := !pieces_blanches + 1
-    end
-    else if case < (-1) then begin
-      pieces_noires := !pieces_noires + 1
-    end
-  done;
-  (!pieces_blanches < 3 && !pieces_noires < 3) || ((!pieces_blanches + !pieces_noires) < 6)
-
-(*Fonction indiquant si l'un des deux joueurs n'a plus que son roi*)
-let roi_seul plateau=
-  let blancs = ref true in
-  let noirs = ref true in
-  for i = 0 to 63 do
-    let case = plateau.(i) in
-    if case > 0 && case <> 6 then begin
-      blancs := false
-    end;
-    if case < 0 && case <> (-6) then begin
-      noirs := false
-    end
-  done;
-  !blancs || !noirs
-
-(*Fonction indiquant si une partie est dans sa phase finale*)
-let finale plateau =
-  pieces_esseulee plateau || roi_seul plateau
 
 (*Variable utilisée pour arrêter la recherche de force*)
 let stop_calculating = ref false
@@ -203,141 +163,208 @@ let rec negalphabeta plateau trait_aux_blancs dernier_coup droit_au_roque releve
   end;
   !best_score, !best_move
 
-(*Fonction renvoyant un appel à la fonction alphabeta_valide ansi que le temps nécessaire à l'éxécution*)
-let negalphabetime plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau profondeur evaluation =
-  let t = Sys.time () in
-  let fx = negalphabeta plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau profondeur profondeur (-infinity) infinity evaluation in
-  fx, (Sys.time () -. t)
+let taille_transposition = 10000000
 
-(*Premier coup évité par le moteur s'il joue les blancs*)
-let a_eviter = 
-  let ht = Hashtbl.create 5 in
-  List.iter (fun (key, value) -> Hashtbl.add ht key value)
-    [ (classic ('P', "a2", "a3"), ());
-      (classic ('P', "a2", "a4"), ());
-      (classic ('P', "b2", "b3"), ());
-      (classic ('P', "b2", "b4"), ());
-      (classic ('P', "c2", "c3"), ());
-      (classic ('P', "c2", "c4"), ());
-      (classic ('P', "d2", "d3"), ());
-      (classic ('P', "e2", "e3"), ());
-      (classic ('P', "f2", "f3"), ());
-      (classic ('P', "f2", "f4"), ());
-      (classic ('P', "g2", "g3"), ());
-      (classic ('P', "g2", "g4"), ());
-      (classic ('P', "h2", "h3"), ());
-      (classic ('P', "h2", "h4"), ());
-      (classic ('C', "b1", "a3"), ());
-      (classic ('C', "b1", "c3"), ());
-      (classic ('C', "g1", "f3"), ());
-      (classic ('C', "g1", "h3"), ()); ];
-  ht
-
-(*Fonction établissant une liste des coups théoriques possibles*)
-let theorie_search historique repertoire = 
-  let l = ref [] in
-  let coups_joues = List.length historique in
-  if coups_joues = 0 then begin
-    let rec fonc1 liste = match liste with
-      |[] -> ()
-      |h::t ->
-        begin match h with
-          |[]->()
-          |h::_ -> if not (List.mem h !l || Hashtbl.mem a_eviter h) then 
-            l := h :: !l
-        end;
-        fonc1 t
-    in fonc1 repertoire
+module ZobristHash =
+  struct
+    type t = int
+    let equal i j = i = j
+    let hash i = i mod taille_transposition
   end
-  else begin
-    let rec fonc2 liste = match liste with
-      |[] -> ()
-      |h::t -> begin
-        if List.length h > coups_joues then begin
-          let correspondance = ref true in
-          let l1 = ref h in
-          let l2 = ref (List.rev historique) in
-          let i = ref 0 in
-          while (!i < coups_joues && !l1 <> []) do
-            incr i;
-            if List.hd !l1 <> List.hd !l2 then begin
-              correspondance := false
-            end;
-            l1 := List.tl !l1;
-            l2 := List.tl !l2
-          done;
-          if !correspondance then begin
-            let coup_theorique = List.nth h coups_joues in
-            if not (List.mem coup_theorique !l) then begin
-              l := coup_theorique :: !l
-            end
-          end
+
+module ZobristHashtbl = Hashtbl.Make(ZobristHash)
+
+type noeuds =
+  |Pv
+  |Cut
+  |All
+
+let (table : (noeuds * int * int * mouvement * int) ZobristHashtbl.t) =  ZobristHashtbl.create taille_transposition
+
+(*PV node : Exact value, Cut Node : Lower Bound, All Node : Upper Bound*)
+let traitement_hash (hash_node_type : noeuds) (hash_depth : int) (hash_value : int) (hash_move : mouvement) depth alpha beta best_score best_move continuation ply =
+  if depth <= hash_depth then begin
+    let score = ref hash_value in
+    if abs hash_value > 99000 then begin
+      if !score >= 0 then score := !score - ply else score := !score + ply
+    end;
+    match hash_node_type with
+      |Pv ->
+        best_score := !score;
+        best_move := hash_move;
+        continuation := false
+      |Cut ->
+        alpha := max !alpha !score;
+        if !score >= !beta then begin
+          best_score := !score;
+          continuation := false
         end
-      end;
-      fonc2 t
-    in fonc2 repertoire;
-    if !l = [] then begin
-      let rec fonc3 liste = match liste with
-      |[] -> ()
-      |h::t -> begin
-        if List.length h > coups_joues then begin
-          let rec fonc4 liste n = match liste,n with
-            |_, 0 -> []
-            |[], _ -> []
-            |h::t, k ->  begin h :: fonc4 t (k - 1) end
-          in let l1 = fonc4 h coups_joues in
-          let rec fonc5 liste = match liste with
-            |[] -> true
-            |k::w -> (List.mem k l1 && fonc5 w)
-          in if fonc5 historique then begin
-            let coup_theorique = List.nth h coups_joues in
-            if not (List.mem coup_theorique !l) then begin
-              l := coup_theorique :: !l
-            end
-          end
-        end
-      end;
-      fonc3 t
-      in fonc3 repertoire
+      |All ->
+        beta := min !beta !score;
+        if !alpha >= !score then begin
+          best_score := !score;
+          continuation := false
+        end 
+  end
+
+(*Fonction retirant les entrées de la hash table datant d'avant le n-ième coup.*)
+let actualise table n =
+  ZobristHashtbl.iter (fun key value -> let _, _, _, _, coup = value in if coup < n then ZobristHashtbl.remove table key) table
+
+let adapte_releve3 zobrist_position coup profondeur releve_plateau demi_coups =
+  if est_irremediable coup then begin
+    if profondeur < 8 then begin
+      [], 0
     end
-  end;
-  !l
-
-(*Fonction renvoyant la liste des coups théoriques possibles*)
-let theoriques_possibles historique =
-  let l = theorie_search historique ouvertures_efficaces in if
-  l <> [] then begin
-    l
+    else begin
+      [zobrist_position], 0
+    end
+  end
+  else if demi_coups + profondeur < 7 then begin
+    [], demi_coups + 1
+  end
+  else begin 
+    zobrist_position :: releve_plateau, demi_coups + 1
+  end
+  
+let rec pvs plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau demi_coups profondeur profondeur_initiale alpha beta evaluation zobrist_position ispv =
+  incr compteur_recherche;
+  if !stop_calculating || repetition releve_plateau 3 || demi_coups = 100 then begin
+    incr compteur_noeuds_terminaux;
+    0
   end
   else begin
-    theorie_search historique ouvertures_exhaustif
-  end
-
-(*Fonction indiquant si les deux tours d'un joueur son connectées*)
-let tours_connectees plateau joueur = 
-  let b = ref false in
-  if Array.mem (tour joueur) plateau then begin
-    let t = tab64.(index_tableau plateau (tour joueur)) in
-    let s1 = ref true in
-    let i = ref 0 in
-    while (!i < 4 && !s1) do
-      let dir = vect_tour.(!i) in
-      let k = ref 1 in
-      let s2 = ref true in
-      while (tab120.(t + (!k * dir)) <> (-1) && !s2) do
-        let candidat = coord.(tab120.(t + (!k * dir))) in
-        let dest = plateau.(Hashtbl.find dicocoord candidat) in
-        if dest <> 0 then begin
-          if dest = tour joueur then begin
-            b := true;
-            s1 := false
+    let alpha0 = ref alpha in
+    let beta0 = ref beta in
+    let best_score = ref (-infinity) in
+    let best_move = ref Aucun in
+    let ply = profondeur_initiale - profondeur in
+    let presence = ref true in
+    let hash_node_type, hash_depth, hash_value, hash_move, _ =
+      if ispv then begin
+        presence := false;
+        (All, (-1), 0, Aucun, 0)
+      end
+      else begin
+        try ZobristHashtbl.find table zobrist_position with _ ->
+          begin
+            presence := false;
+            (All, (-1), 0, Aucun, 0)
+          end
+      end
+    in let continuation = ref true in
+    if !presence then begin
+      traitement_hash hash_node_type hash_depth hash_value hash_move profondeur alpha0 beta0 best_score best_move continuation ply
+    end;
+    if !continuation then begin
+      if profondeur = 0 then begin
+        incr compteur_noeuds_terminaux;
+        best_score := traitement_quiescent_profondeur_0 profondeur_initiale evaluation plateau trait_aux_blancs dernier_coup !alpha0 !beta0
+      end
+      else begin
+        let b = ref true in
+        let hash_ordering = hash_move <> Aucun && not (hash_node_type = Cut && hash_value <= beta) in
+        if hash_ordering then begin
+          let nouveau_droit_au_roque = modification_roque hash_move droit_au_roque in
+          let nouveau_zobrist = nouveau_zobrist hash_move dernier_coup zobrist_position droit_au_roque nouveau_droit_au_roque plateau in
+          let nouveau_releve, nouveau_demi_coups = adapte_releve3 nouveau_zobrist hash_move profondeur releve_plateau demi_coups in
+          joue plateau hash_move;
+          let score = - pvs plateau (not trait_aux_blancs) hash_move nouveau_droit_au_roque nouveau_releve nouveau_demi_coups (profondeur - 1) profondeur_initiale (- !beta0) (- !alpha0) evaluation nouveau_zobrist ispv
+          in if score > !best_score then begin
+            best_score := score;
+            best_move := hash_move;
+            alpha0 := max !alpha0 score;
+            if score >= !beta0 then begin
+              b := false
+            end
           end;
-          s2 := false
+          dejoue plateau hash_move;
+        end;
+        if !b then begin
+          let cp =
+            if hash_ordering then
+              ref (List.filter (fun c -> c <> hash_move) (tab_tri.(profondeur - 1) plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau evaluation negalphabeta))
+            else
+              ref (tab_tri.(profondeur - 1) plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau evaluation negalphabeta)
+          in if !cp = [] && not hash_ordering then begin
+            incr compteur_noeuds_terminaux;
+            if (menacee plateau (index_tableau plateau (roi trait_aux_blancs)) trait_aux_blancs) then begin
+              best_score := ply - 99999
+            end 
+            else begin
+              best_score := 0
+            end
+          end
+          else begin
+            let first_move = ref true in
+            while (!b && !cp <> []) do
+              let coup = List.hd !cp in
+              let nouveau_droit_au_roque = modification_roque coup droit_au_roque in
+              let nouveau_zobrist = nouveau_zobrist coup dernier_coup zobrist_position droit_au_roque nouveau_droit_au_roque plateau in
+              let nouveau_releve, nouveau_demi_coups = adapte_releve3 nouveau_zobrist coup profondeur releve_plateau demi_coups in
+              joue plateau coup;
+              cp := List.tl !cp;
+              let score =
+                if !first_move then begin
+                  first_move := false;
+                  - pvs plateau (not trait_aux_blancs) coup nouveau_droit_au_roque nouveau_releve nouveau_demi_coups (profondeur - 1) profondeur_initiale (- !beta0) (- !alpha0) evaluation nouveau_zobrist ispv
+                end
+                else begin
+                  let note0 = - pvs plateau (not trait_aux_blancs) coup nouveau_droit_au_roque nouveau_releve nouveau_demi_coups (profondeur - 1) profondeur_initiale (- !alpha0 - 1) (- !alpha0) evaluation nouveau_zobrist false
+                  in if (note0 > !alpha0 && ispv) then begin 
+                    - pvs plateau (not trait_aux_blancs) coup nouveau_droit_au_roque nouveau_releve nouveau_demi_coups (profondeur - 1) profondeur_initiale (- !beta0) (- !alpha0) evaluation nouveau_zobrist true
+                  end
+                  else begin
+                    note0
+                  end
+                end 
+              in if score > !best_score then begin
+                best_score := score;
+                best_move := coup;
+                alpha0 := max !alpha0 score;
+                if score >= !beta0 then begin
+                  b := false
+                end
+              end;
+              dejoue plateau coup
+            done
+          end
         end
-        else
-          incr k
-      done;
-      incr i
-    done;
-  end;
-  !b
+      end
+    end;
+    if not !stop_calculating then begin
+      let node_type =
+        if !best_score <= alpha then begin
+          best_move := Aucun;
+          All
+        end
+        else if !best_score >= beta then begin
+          Cut
+        end
+        else begin
+          Pv
+        end
+      in let stored_value =
+        if abs !best_score < 99000 then begin
+          !best_score
+        end
+        else begin
+          if !best_score >= 0 then begin
+            !best_score + ply
+          end
+          else begin
+            !best_score - ply
+          end
+        end
+      in if !presence then begin
+        if profondeur > hash_depth then begin
+          ZobristHashtbl.replace table zobrist_position (node_type, profondeur, stored_value, !best_move, 0)
+        end
+      end
+      else begin
+        incr compteur_transposition;
+        ZobristHashtbl.add table zobrist_position (node_type, profondeur, stored_value, !best_move, 0)
+      end
+    end;
+    !best_score
+  end

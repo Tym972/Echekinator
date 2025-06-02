@@ -31,7 +31,7 @@
         "track_nodes": false,
         "track_seldepth": false,
         "track_nps": false,
-        "track_hashfull": false,
+        "track_hashfull": true,
         "track_tbhits": false,
         "track_timeleft": false,
         "track_latency": false,
@@ -51,7 +51,7 @@
     },
     "config_name": "",
     "output": 0,
-    "seed": 12828076461287093870,
+    "seed": 6114769719799356632,
     "variant": 0,
     "ratinginterval": 10,
     "scoreinterval": 1,
@@ -117,26 +117,26 @@
     ],
     "stats": {
         "base vs new": {
-            "wins": 47,
-            "losses": 3,
-            "draws": 8,
-            "penta_WW": 18,
-            "penta_WD": 8,
+            "wins": 4,
+            "losses": 4,
+            "draws": 2,
+            "penta_WW": 0,
+            "penta_WD": 1,
             "penta_WL": 3,
             "penta_DD": 0,
-            "penta_LD": 0,
+            "penta_LD": 1,
             "penta_LL": 0
         },
         "new vs base": {
-            "wins": 3,
-            "losses": 18,
-            "draws": 3,
+            "wins": 5,
+            "losses": 3,
+            "draws": 4,
             "penta_WW": 1,
-            "penta_WD": 1,
-            "penta_WL": 0,
+            "penta_WD": 2,
+            "penta_WL": 1,
             "penta_DD": 0,
             "penta_LD": 2,
-            "penta_LL": 8
+            "penta_LL": 0
         }
     }
 }

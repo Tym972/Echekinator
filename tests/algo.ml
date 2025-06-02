@@ -5,8 +5,6 @@ open Libs.Strategie1
 open Libs.Strategie2
 open Libs.Traduction2
 open Libs.Quiescence
-open Libs.Transposition
-open Libs.Total
 
 let rec negamax plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau profondeur evaluation = incr compteur_recherche;
   let best_score = ref (-99999) in
@@ -351,7 +349,14 @@ let runidd_total affichage plateau trait_aux_blancs dernier_coup droit_au_roque 
     let k1 = (float_of_int tableau_1.(i)) /. (float_of_int !n1) in
     let k2 = (float_of_int tableau_2.(i)) /. (float_of_int !n2) in
     print_endline (Printf.sprintf "Index_%i - Hash_best : %f et Best_move : %f" i k1 k2);
-  done*)
+  done
+  
+  let tab_hash_1 = Array.make 100 0
+let tab_hash_2 = Array.make 100 0
+let tab_hash_best = Array.make 2 0
+
+let a1 = ref 0
+let a2 = ref 0*)
 
 let main b1 b2 b3 b4 b5 b6 b7 b8 b9 b10 b11 plateau =
   print_endline ("\nProfondeur " ^ (string_of_int profondeur));
@@ -402,8 +407,8 @@ let main b1 b2 b3 b4 b5 b6 b7 b8 b9 b10 b11 plateau =
   end;
   print_endline ("Noeuds explorés : " ^ string_of_int !compteur_recherche);
   print_endline ("Noeuds recherche quiescente : " ^ string_of_int !compteur_quiescent);
-  print_endline ("Noeuds hashtable : " ^ string_of_int !compteur_trans);
+  print_endline ("Noeuds hashtable : " ^ string_of_int !compteur_transposition);
   print_endline ("EBF : " ^ string_of_float (float_of_int !compteur_recherche /. float_of_int (!compteur_recherche - !compteur_noeuds_terminaux)));
-  actualise table 10; (*;stat tab_hash_1 tab_hash_2 tab_hash_best*)print_endline (Printf.sprintf "oui : %i et non : %i et taux : %f" !a1 !a2 ((float_of_int !a1)/.(float_of_int !a1 +. float_of_int !a2)))
+  actualise table 10 (*;stat tab_hash_1 tab_hash_2 tab_hash_best print_endline (Printf.sprintf "oui : %i et non : %i et taux : %f" !a1 !a2 ((float_of_int !a1)/.(float_of_int !a1 +. float_of_int !a2)))*)
 
 let () = main false false false false false false false false false false true plateau

@@ -1,5 +1,4 @@
 open Libs.Plateau
-open Libs.Config
 open Libs.Traduction1
 open Libs.Zobrist
 open Libs.Generateur

@@ -1269,7 +1269,7 @@ let traitement2 trait_aux_blancs materiel position =
 let evolved plateau trait_aux_blancs position_roi roi_en_echec (alpha : int) (beta : int) =
   let _ = alpha, beta, position_roi, roi_en_echec in
   let tab_pieces = [|ref 0; ref 0; ref 0; ref 0; ref 0; ref 0|] in
-  let tab_position = [|ref 0; ref 0; ref 0|] in
+  let note_ouverture(*, note_mdj*), note_finale = ref 0(*, ref 0*), ref 0 in
   let tab_phase = [|1; 1; 2; 4|] in
   let materiel = ref 0 in
   for i = 0 to 63 do
@@ -1277,17 +1277,15 @@ let evolved plateau trait_aux_blancs position_roi roi_en_echec (alpha : int) (be
     if piece > 0 then begin
       incr tab_pieces.(piece - 1);
       materiel := !materiel + tabvalue.(piece);
-      let note_ouverture, note_mdj, note_finale = tab_position.(0), tab_position.(1), tab_position.(2) in
       note_ouverture := !note_ouverture + tab_pieces_blanches_ouverture.(piece - 1).(i);
-      note_mdj := !note_mdj + tab_pieces_blanches_mdg.(piece - 1).(i);
+      (*note_mdj := !note_mdj + tab_pieces_blanches_mdg.(piece - 1).(i);*)
       note_finale := !note_finale + tab_pieces_blanches_finale.(piece - 1).(i)
     end
     else if piece < 0 then begin
       incr tab_pieces.(- piece - 1);
       materiel := !materiel - tabvalue.(- piece);
-      let note_ouverture, note_mdj, note_finale = tab_position.(0), tab_position.(1), tab_position.(2) in
       note_ouverture := !note_ouverture - tab_pieces_noires_ouverture.(abs piece - 1).(i);
-      note_mdj := !note_mdj - tab_pieces_noires_mdg.(abs piece - 1).(i);
+      (*note_mdj := !note_mdj - tab_pieces_noires_mdg.(abs piece - 1).(i);*)
       note_finale := !note_finale - tab_pieces_noires_finale.(abs piece - 1).(i)
     end
   done;
@@ -1300,5 +1298,67 @@ let evolved plateau trait_aux_blancs position_roi roi_en_echec (alpha : int) (be
   end
   else begin
     let phase_2 = ((float_of_int !phase) *. 256. +. ((float_of_int !phase) /. 2.)) /. (float_of_int !phase) in
-    traitement trait_aux_blancs ( !materiel) (int_of_float (((float_of_int !(tab_position.(0)) *. (256. -. phase_2)) +. ((float_of_int !(tab_position.(2)) *. phase_2) /. 256.)) /. 5.))
+    traitement trait_aux_blancs !materiel (int_of_float (((float_of_int !note_ouverture *. (256. -. phase_2)) +. ((float_of_int !note_finale *. phase_2) /. 256.)) /. 5.))
   end
+
+(*Fonction indiquant si les deux tours d'un joueur son connectées*)
+let tours_connectees plateau joueur = 
+  let b = ref false in
+  if Array.mem (tour joueur) plateau then begin
+    let t = tab64.(index_tableau plateau (tour joueur)) in
+    let s1 = ref true in
+    let i = ref 0 in
+    while (!i < 4 && !s1) do
+      let dir = vect_tour.(!i) in
+      let k = ref 1 in
+      let s2 = ref true in
+      while (tab120.(t + (!k * dir)) <> (-1) && !s2) do
+        let dest = plateau.(tab120.(t + (!k * dir))) in
+        if dest <> 0 then begin
+          if dest = tour joueur then begin
+            b := true;
+            s1 := false
+          end;
+          s2 := false
+        end
+        else
+          incr k
+      done;
+      incr i
+    done;
+  end;
+  !b
+
+(*Fonction indiquant si chaque joueur à moins de 3 pièces hors roi et pion sur l'échiquier, ou si leur nombre est inférieur à 6*)
+let pieces_esseulee plateau =
+  let pieces_blanches = ref 0 in
+  let pieces_noires = ref 0 in
+  for i = 0 to 63 do
+    let case = plateau.(i) in
+    if case > 1 then begin
+      pieces_blanches := !pieces_blanches + 1
+    end
+    else if case < (-1) then begin
+      pieces_noires := !pieces_noires + 1
+    end
+  done;
+  (!pieces_blanches < 3 && !pieces_noires < 3) || ((!pieces_blanches + !pieces_noires) < 6)
+
+(*Fonction indiquant si l'un des deux joueurs n'a plus que son roi*)
+let roi_seul plateau =
+  let blancs = ref true in
+  let noirs = ref true in
+  for i = 0 to 63 do
+    let case = plateau.(i) in
+    if case > 0 && case <> 6 then begin
+      blancs := false
+    end;
+    if case < 0 && case <> (-6) then begin
+      noirs := false
+    end
+  done;
+  !blancs || !noirs
+
+(*Fonction indiquant si une partie est dans sa phase finale*)
+let finale plateau =
+  pieces_esseulee plateau || roi_seul plateau

@@ -2,7 +2,6 @@
 
 open Plateau
 open Generateur
-open Strategie1
 open Evaluations
 
 (*Fonction construisant une liste des déplacements possible d'une tour*)
@@ -507,55 +506,3 @@ let traitement_quiescent_profondeur_0 profondeur_initiale evaluation plateau tra
       recherche_quiescente plateau trait_aux_blancs alpha beta evaluation cap (-1) position_roi roi_en_echec
     end
   end
-
-let rec negalphabeta_quiescent plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau profondeur profondeur_initiale alpha beta evaluation = incr compteur_recherche;
-  let best_score = ref (-infinity) in
-  let best_move = ref Aucun in
-  if !stop_calculating || repetition releve_plateau 3 then begin incr compteur_noeuds_terminaux;
-    best_score := 0
-  end
-  else if profondeur = 0 then begin incr compteur_noeuds_terminaux;
-    best_score := traitement_quiescent_profondeur_0 profondeur_initiale evaluation plateau trait_aux_blancs dernier_coup alpha beta
-  end
-  else begin
-    let cp = ref (tab_tri.(profondeur - 1) plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau evaluation negalphabeta)
-    in if !cp = [] then begin incr compteur_noeuds_terminaux;
-      if (menacee plateau (index_tableau plateau (roi trait_aux_blancs)) trait_aux_blancs) then begin
-        best_score := (profondeur_initiale - (profondeur + 99999))
-      end 
-      else begin
-        best_score := 0
-      end
-    end
-    else begin
-      let b = ref true in
-      let alpha0 = ref alpha in
-      while (!b && !cp <> []) do
-        let coup = List.hd !cp in
-        joue plateau coup;
-        cp := List.tl !cp;
-        let nouveau_droit_au_roque = modification_roque coup droit_au_roque in
-        let nouveau_releve = adapte_releve plateau coup profondeur trait_aux_blancs nouveau_droit_au_roque releve_plateau
-        in let score =
-          let note, _ = negalphabeta_quiescent plateau (not trait_aux_blancs) coup nouveau_droit_au_roque nouveau_releve (profondeur - 1) profondeur_initiale (- beta) (- !alpha0) evaluation
-          in - note 
-        in if score > !best_score then begin
-          best_score := score;
-          best_move := coup;
-          if score >= beta then begin
-            b := false
-          end
-          else begin
-            alpha0 := max !alpha0 score
-          end
-        end;
-        dejoue plateau coup
-      done
-    end
-  end;
-  !best_score, !best_move
-
-let negalphabetime_quiescent plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau profondeur evaluation = (*if dernier_coup = Aucun then begin affiche plateau end;*)
-  let t = Sys.time () in
-  let fx = negalphabeta_quiescent plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau profondeur profondeur (-infinity) infinity evaluation in
-  fx, (Sys.time () -. t)

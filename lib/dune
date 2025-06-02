@@ -10,8 +10,6 @@
   zobrist
   strategie1
   quiescence
-  transposition
-  total
   evaluations
   strategie2
   config

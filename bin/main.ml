@@ -1,3 +1,4 @@
+open Libs.Plateau
 open Libs.Interfaces
 open Libs.Config
 open Libs.Uci

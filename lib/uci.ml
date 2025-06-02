@@ -6,11 +6,8 @@ open Zobrist
 open Traduction1
 open Traduction2
 open Traduction3
-open Config
 open Strategie1
 open Evaluations
-open Transposition
-open Total
 
 (*Supprime les n premiers éléments d'une liste*)
 let rec pop list n = 
@@ -96,23 +93,22 @@ let score score =
     end
   end
 
-(*Probe the pv from the transposition table*)
-let pv_finder plateau dernier_coup droit_au_roque releve_plateau profondeur_initial =
+let pv_finder plateau dernier_coup droit_au_roque releve_plateau profondeur_initial demi_coups =
   let pv = ref "" in
   let _, _, _, best_move, _ = try ZobristHashtbl.find table (List.hd releve_plateau) with _ -> (All, (-1), 0, Aucun, 0) in
-  let rec aux zobrist_position droit_au_roque releve_plateau coup dernier_coup profondeur =
-    if not (profondeur <= 0 || coup = Aucun || (profondeur <> profondeur_initial && (repetition releve_plateau 3) || List.length releve_plateau = 101)) then begin
+  let rec aux zobrist_position droit_au_roque releve_plateau coup dernier_coup profondeur demi_coups =
+    if not (profondeur <= 0 || coup = Aucun || (profondeur <> profondeur_initial && (repetition releve_plateau 3) || demi_coups = 100)) then begin
       let nouveau_droit_au_roque = modification_roque coup droit_au_roque
       in let nouveau_zobrist = nouveau_zobrist coup dernier_coup zobrist_position droit_au_roque nouveau_droit_au_roque plateau
-      in let nouveau_releve = adapte_releve2 nouveau_zobrist coup 1000 releve_plateau in
+      in let nouveau_releve, nouveau_demi_coups = adapte_releve3 nouveau_zobrist coup 1000 releve_plateau demi_coups in
       joue plateau coup;
       pv := !pv ^ (uci_of_mouvement coup) ^ " ";
       let _, _, _, hash_move, _ =
         try ZobristHashtbl.find table nouveau_zobrist with _ -> (All, (-1), 0, Aucun, 0)
-      in aux nouveau_zobrist nouveau_droit_au_roque nouveau_releve hash_move coup (profondeur - 1);
+      in aux nouveau_zobrist nouveau_droit_au_roque nouveau_releve hash_move coup (profondeur - 1) nouveau_demi_coups;
       dejoue plateau coup
     end
-  in aux (List.hd releve_plateau) droit_au_roque releve_plateau best_move dernier_coup profondeur_initial;
+  in aux (List.hd releve_plateau) droit_au_roque releve_plateau best_move dernier_coup profondeur_initial demi_coups;
   !pv
 
 let rec algoperft plateau trait_aux_blancs dernier_coup droit_au_roque profondeur racine zobrist_position table_perft =
@@ -215,7 +211,7 @@ let go instruction plateau trait_aux_blancs dernier_coup droit_au_roque releve_p
       if not !stop_calculating then begin
         let exec_time = Sys.time () -. t in
         best_score := score new_score;
-        pv := (pv_finder plateau dernier_coup droit_au_roque releve_plateau !var_depth);
+        pv := (pv_finder plateau dernier_coup droit_au_roque releve_plateau !var_depth demi_coups);
         print_endline (Printf.sprintf "info depth %i seldepth %i multipv 1 score %s nodes %i nps %i hashfull %i time %i pv %s" !var_depth !var_depth !best_score !compteur_recherche (int_of_float (float_of_int !compteur_recherche /. exec_time)) (int_of_float (1000. *. (float_of_int !compteur_transposition /. (float_of_int taille_transposition)))) (int_of_float (1000. *. exec_time)) !pv);
       end
     done;

@@ -37,37 +37,6 @@ let dicocoord =
       ("a1", 56); ("b1", 57); ("c1", 58); ("d1", 59); ("e1", 60); ("f1", 61); ("g1", 62); ("h1", 63)];
   ht
 
-(*Dictionnaire associant la représentation graphique des pièces à leur représentation dans le tableau-échiquier*)
-let dicorespondance =
-  let ht = Hashtbl.create 12 in
-  List.iter (fun (key, value) -> Hashtbl.add ht key value)
-    [ ('t', (-4)); ('T', 4); ('c', (-2)); ('C', 2); ('f', (-3)); ('F', 3);
-      ('d', (-5)); ('D', 5); ('r', (-6)); ('R', 6); ('p', (-1)); ('P', 1)];
-  ht
-
-(*Dictionnaire liant représentation affichée à l'utilisateur des roques et valeur correspondante dans les fonctions*)
-let dicoroque =
-  let ht = Hashtbl.create 4 in
-  List.iter (fun (key, value) -> Hashtbl.add ht key value)
-    [ ("PR", 1); ("GR", 2); ("pr", 3); ("gr", 4)];
-  ht
-
-(*Fonction condensant l'écriture d'un roque*)
-let castle sorte =
-  Roque {sorte = if (Hashtbl.mem dicoroque sorte) then (Hashtbl.find dicoroque sorte) else 0}
-
-(*Fonction condensant l'écriture d'une prise en passant*)
-let prise_en_passant (depart, arrivee) =
-  Enpassant {depart = if (Hashtbl.mem dicocoord depart) then (Hashtbl.find dicocoord depart) else 0; arrivee = if (Hashtbl.mem dicocoord arrivee) then (Hashtbl.find dicocoord arrivee) else 0}
-
-(*Fonction condensant l'écriture d'un coup classique*)
-let classic (piece, depart, arrivee) =
-  Classique {piece = if (Hashtbl.mem dicorespondance piece) then (Hashtbl.find dicorespondance piece) else 0; depart = if (Hashtbl.mem dicocoord depart) then (Hashtbl.find dicocoord depart) else 0; arrivee = if (Hashtbl.mem dicocoord arrivee) then (Hashtbl.find dicocoord arrivee) else 0; prise =  0}
-
-(*Fonction condensant l'écriture d'une promotion*)
-let estac (depart, arrivee, promotion) =
-  Promotion {depart = if (Hashtbl.mem dicocoord depart) then (Hashtbl.find dicocoord depart) else 0; arrivee = if (Hashtbl.mem dicocoord arrivee) then (Hashtbl.find dicocoord arrivee) else 0; promotion = if (Hashtbl.mem dicorespondance promotion) then (Hashtbl.find dicorespondance promotion) else 0; prise = 0}
-
 (*Tableau de 120 éléments, où les -1 représentent l'extérieur de l'échiquier*)
 let tab120 = [| 
   -1; -1; -1; -1; -1; -1; -1; -1; -1; -1;
@@ -159,6 +128,12 @@ let pion joueur_est_blanc = if joueur_est_blanc then 1 else (-1)
 (*Fonction renvoyant la représentation d'une tour du joueur dans le tableau-échiquier*)
 let tour joueur_est_blanc = if joueur_est_blanc then 4 else (-4)
 
+(*Fonction indiquant si un coup est irrémédiable (poussée de pion ou capture)*)
+let est_irremediable coup = match coup with
+  |Enpassant _ | Promotion _ -> true
+  |Classique {piece; depart = _; arrivee = _; prise} when (abs piece = 1 || prise <> 0) -> true
+  |_ -> false
+
 let rec select liste n = match liste with
   |[] -> []
   |h::t -> if n = 0 then [] else h :: select t (n - 1)
@@ -189,3 +164,24 @@ let tri_fusion l =
     |[] | [_] -> l
     |_ -> let lg, ld = divise l in fusionne (tri_f lg) (tri_f ld)
   in tri_f l
+
+(*Fonction supprimant les caractères dispensables de la notation algébrique*)
+let supprimer chaine =
+  let nc = ref "" in
+  for i = 0 to ((String.length chaine) - 1) do
+    let k = chaine.[i] in
+    if not (List.mem k ['x'; '('; ')'; '+'; '.'; '?'; '!'; '"'; '\n']) then begin
+      nc := !nc ^ (String.make 1 k)
+    end
+  done;
+  !nc
+
+(*Fonction permettant la lecture d'une réponse*)
+let lire_entree message suppression =
+  print_string message;
+  flush stdout;
+  let entree = input_line stdin in
+  if suppression then
+    supprimer entree
+  else
+    entree
