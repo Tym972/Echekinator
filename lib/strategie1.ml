@@ -182,7 +182,7 @@ type noeuds =
 let (table : (noeuds * int * int * mouvement * int) ZobristHashtbl.t) =  ZobristHashtbl.create taille_transposition
 
 (*PV node : Exact value, Cut Node : Lower Bound, All Node : Upper Bound*)
-let traitement_hash (hash_node_type : noeuds) (hash_depth : int) (hash_value : int) (hash_move : mouvement) depth alpha beta best_score best_move continuation ply =
+let traitement_hash (hash_node_type : noeuds) (hash_depth : int) (hash_value : int) (hash_move : mouvement) depth alpha beta best_score best_move no_tt_cut ply =
   if depth <= hash_depth then begin
     let score = ref hash_value in
     if abs hash_value > 99000 then begin
@@ -192,18 +192,18 @@ let traitement_hash (hash_node_type : noeuds) (hash_depth : int) (hash_value : i
       |Pv ->
         best_score := !score;
         best_move := hash_move;
-        continuation := false
+        no_tt_cut := false
       |Cut ->
         alpha := max !alpha !score;
         if !score >= !beta then begin
           best_score := !score;
-          continuation := false
+          no_tt_cut := false
         end
       |All ->
         beta := min !beta !score;
         if !alpha >= !score then begin
           best_score := !score;
-          continuation := false
+          no_tt_cut := false
         end 
   end
 
@@ -241,28 +241,23 @@ let rec pvs plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau 
     let ply = profondeur_initiale - profondeur in
     let presence = ref true in
     let hash_node_type, hash_depth, hash_value, hash_move, _ =
-      if ispv then begin
+      try
+        if ispv then raise Not_found;
+        ZobristHashtbl.find table zobrist_position
+      with _ ->
         presence := false;
         (All, (-1), 0, Aucun, 0)
-      end
-      else begin
-        try ZobristHashtbl.find table zobrist_position with _ ->
-          begin
-            presence := false;
-            (All, (-1), 0, Aucun, 0)
-          end
-      end
-    in let continuation = ref true in
-    if !presence then begin
-      traitement_hash hash_node_type hash_depth hash_value hash_move profondeur alpha0 beta0 best_score best_move continuation ply
+    in let no_tt_cut = ref true in
+    if !presence && not ispv then begin
+      traitement_hash hash_node_type hash_depth hash_value hash_move profondeur alpha0 beta0 best_score best_move no_tt_cut ply
     end;
-    if !continuation then begin
+    if !no_tt_cut then begin
       if profondeur = 0 then begin
         incr compteur_noeuds_terminaux;
         best_score := traitement_quiescent_profondeur_0 profondeur_initiale evaluation plateau trait_aux_blancs dernier_coup !alpha0 !beta0
       end
       else begin
-        let b = ref true in
+        let no_cut = ref true in
         let hash_ordering = hash_move <> Aucun && not (hash_node_type = Cut && hash_value <= beta) in
         if hash_ordering then begin
           let nouveau_droit_au_roque = modification_roque hash_move droit_au_roque in
@@ -275,12 +270,12 @@ let rec pvs plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau 
             best_move := hash_move;
             alpha0 := max !alpha0 score;
             if score >= !beta0 then begin
-              b := false
+              no_cut := false
             end
           end;
           dejoue plateau hash_move;
         end;
-        if !b then begin
+        if !no_cut then begin
           let cp =
             if hash_ordering then
               ref (List.filter (fun c -> c <> hash_move) (tab_tri.(profondeur - 1) plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau evaluation negalphabeta))
@@ -297,7 +292,7 @@ let rec pvs plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau 
           end
           else begin
             let first_move = ref true in
-            while (!b && !cp <> []) do
+            while (!no_cut && !cp <> []) do
               let coup = List.hd !cp in
               let nouveau_droit_au_roque = modification_roque coup droit_au_roque in
               let nouveau_zobrist = nouveau_zobrist coup dernier_coup zobrist_position droit_au_roque nouveau_droit_au_roque plateau in
@@ -323,7 +318,7 @@ let rec pvs plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau 
                 best_move := coup;
                 alpha0 := max !alpha0 score;
                 if score >= !beta0 then begin
-                  b := false
+                  no_cut := false
                 end
               end;
               dejoue plateau coup
@@ -357,7 +352,7 @@ let rec pvs plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau 
           end
         end
       in if !presence then begin
-        if profondeur > hash_depth then begin
+        if profondeur > hash_depth (*|| (ispv && not (hash_node_type = Pv)*) then begin
           ZobristHashtbl.replace table zobrist_position (node_type, profondeur, stored_value, !best_move, 0)
         end
       end

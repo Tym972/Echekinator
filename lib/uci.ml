@@ -1,4 +1,4 @@
-(*Module implémentan la communication UCI*)
+(*Module implémentant la communication UCI*)
 
 open Plateau
 open Generateur
@@ -10,7 +10,7 @@ open Strategie1
 open Evaluations
 
 (*Supprime les n premiers éléments d'une liste*)
-let rec pop list n = 
+let rec pop list n =
   if n = 0 then begin
     list
   end

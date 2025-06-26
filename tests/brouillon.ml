@@ -1,9 +1,21 @@
+open Libs.Bitboards
 open Libs.Plateau
+open Libs.Traduction1
+open Libs.Generateur
 open Config
-open Libs.Interfaces
-open Libs.Config
 
-let main plateau =
+let coup = tolerance plateau "0-0-0" !trait_aux_blancs (coups_valides plateau !trait_aux_blancs !dernier_coup !droit_au_roque)
+let bitboard = [|0L; 0L; 0L; 0L; 0L; 0L; 0L; 0L; 0L; 0L; 0L; 0L|]
+let main bitboard =
+  affiche (mailbox_of_bitboard bitboard);
+  joue plateau coup;
+  affiche plateau;
+  update_bitboard coup bitboard;
+  affiche (mailbox_of_bitboard bitboard)
+
+let () = main bitboard
+
+(*let main plateau =
   if false then begin
     let b = ref true in
     for i = 0 to 959 do
@@ -23,9 +35,7 @@ let main plateau =
   else begin
     affiche plateau;
     print_endline (san_of_uci (uci_of_san liste_coup !trait_aux_blancs_initial !dernier_coup_initial !droit_au_roque_initial position_de_depart) !trait_aux_blancs_initial !dernier_coup_initial !droit_au_roque_initial position_de_depart)
-  end
-
-let () = main plateau
+  end*)
 
 
   (* fastchess   -openings order=random file=/home/tym972/openbench-books/UHO_Lichess_4852_v1.epd   -engine name=new cmd=/home/tym972/Echekinator/_build/install/default/bin/main_new   -engine name=base cmd=/home/tym972/Echekinator/_build/install/default/bin/main   -concurrency 4   -each tc=8+0.08 -rounds 4000 -repeat -recover   -sprt alpha=0.05 beta=0.10 elo0=0 elo1=10 -pgnout file=/home/tym972/Pgn_fastchess.pgn notation=san seldepth=true -pgnout notation=san file=/home/tym972/Echekinator/Résultats/Pgn_fastchess.pgn

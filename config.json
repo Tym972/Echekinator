@@ -31,7 +31,7 @@
         "track_nodes": false,
         "track_seldepth": false,
         "track_nps": false,
-        "track_hashfull": true,
+        "track_hashfull": false,
         "track_tbhits": false,
         "track_timeleft": false,
         "track_latency": false,
@@ -51,7 +51,7 @@
     },
     "config_name": "",
     "output": 0,
-    "seed": 6114769719799356632,
+    "seed": 8523259217896323705,
     "variant": 0,
     "ratinginterval": 10,
     "scoreinterval": 1,
@@ -59,7 +59,7 @@
     "autosaveinterval": 20,
     "games": 2,
     "rounds": 8000,
-    "concurrency": 3,
+    "concurrency": 4,
     "force_concurrency": false,
     "recover": true,
     "noswap": false,
@@ -68,8 +68,8 @@
     "affinity": false,
     "show_latency": false,
     "log": {
-        "file": "",
-        "level": 2,
+        "file": "fastchess.log",
+        "level": 3,
         "compress": false,
         "realtime": true
     },
@@ -117,26 +117,26 @@
     ],
     "stats": {
         "base vs new": {
-            "wins": 4,
-            "losses": 4,
-            "draws": 2,
-            "penta_WW": 0,
-            "penta_WD": 1,
-            "penta_WL": 3,
-            "penta_DD": 0,
-            "penta_LD": 1,
-            "penta_LL": 0
+            "wins": 459,
+            "losses": 476,
+            "draws": 249,
+            "penta_WW": 49,
+            "penta_WD": 73,
+            "penta_WL": 288,
+            "penta_DD": 50,
+            "penta_LD": 76,
+            "penta_LL": 56
         },
         "new vs base": {
-            "wins": 5,
-            "losses": 3,
-            "draws": 4,
-            "penta_WW": 1,
-            "penta_WD": 2,
-            "penta_WL": 1,
-            "penta_DD": 0,
-            "penta_LD": 2,
-            "penta_LL": 0
+            "wins": 173,
+            "losses": 165,
+            "draws": 156,
+            "penta_WW": 22,
+            "penta_WD": 54,
+            "penta_WL": 75,
+            "penta_DD": 25,
+            "penta_LD": 52,
+            "penta_LL": 19
         }
     }
 }
