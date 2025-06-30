@@ -134,6 +134,11 @@ let est_irremediable coup = match coup with
   |Classique {piece; depart = _; arrivee = _; prise} when (abs piece = 1 || prise <> 0) -> true
   |_ -> false
 
+let isquiet coup = match coup with
+  |Classique {piece = _; depart = _; arrivee = _; prise} when prise <> 0 -> false
+  |Enpassant _ | Promotion _ -> false
+  |_ -> true
+
 let rec select liste n = match liste with
   |[] -> []
   |h::t -> if n = 0 then [] else h :: select t (n - 1)

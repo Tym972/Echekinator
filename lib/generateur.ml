@@ -795,7 +795,21 @@ let dejoue plateau coup = match coup with
 (*Fonction donnant la case de départ d'un coup classique et d'une promotion*)
 let depart coup = match coup with
   |Classique {piece = _; depart; arrivee = _; prise = _} | Enpassant {depart; arrivee = _} | Promotion {depart; arrivee = _; prise = _; promotion = _} -> depart
+  |Roque {sorte} -> if sorte < 3 then !depart_roi_blanc else !depart_roi_noir
   |_ -> (-1)
+
+(*Fonction donnant la case d'arrivée d'un coup*)
+let arrivee coup = match coup with
+  |Classique {piece = _; depart = _; arrivee; prise = _} | Promotion {depart = _; arrivee; prise = _; promotion = _} | Enpassant {depart = _; arrivee} -> arrivee
+  |Roque {sorte} -> begin
+    match sorte with
+      |1 -> 62
+      |2 -> 58
+      |3 -> 6
+      |_ -> 2
+  end
+  |_ -> (-1)
+
 
 (*Fonction donnant la prise d'un coup*)
 let prise coup = match coup with
@@ -807,11 +821,6 @@ let prise coup = match coup with
 let piece coup = match coup with
   |Classique {piece; depart = _; arrivee = _; prise = _} -> piece
   |_ -> 0
-
-(*Fonction donnant la case d'arrivée d'un coup*)
-let arrivee coup = match coup with
-  |Classique {piece = _; depart = _; arrivee; prise = _} | Promotion {depart = _; arrivee; prise = _; promotion = _} | Enpassant {depart = _; arrivee} -> arrivee
-  |_ -> (-1)
 
 (*Fonction indiquant si une pièce cloue une pièce clouable*)
 let cloue plateau chessman trait_aux_blancs cord64 vect distance =

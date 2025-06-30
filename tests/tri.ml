@@ -3,7 +3,6 @@ open Libs.Plateau
 open Libs.Generateur
 open Libs.Evaluations
 open Libs.Zobrist
-open Libs.Strategie1
 open Libs.Strategie2
 open Libs.Traduction2
 open Libs.Traduction3
@@ -115,7 +114,21 @@ let do_tri_see () =
   affiche_liste (tri_algo3 plateau !trait_aux_blancs !dernier_coup !droit_au_roque) plateau coups_valides_joueur;
   print_endline (string_of_float (Sys.time () -. t))
 
-let main b1 b2 b3 b4 =
+let rec auxmvvlva liste = match liste with
+  |[] -> []
+  |h :: t -> (0, h) :: auxmvvlva t
+
+let do_tri_mvvlva () =
+  print_newline ();
+  print_endline "Tri MVV-LVA";
+  affiche plateau;
+  print_endline (fen plateau !trait_aux_blancs !dernier_coup !droit_au_roque !releve_coups !releve_plateau);
+  print_newline ();
+  let t = Sys.time () in
+  affiche_liste (auxmvvlva (tri_mvvlva plateau !trait_aux_blancs !dernier_coup !droit_au_roque releve_plateau evaluation 0)) plateau coups_valides_joueur;
+  print_endline (string_of_float (Sys.time () -. t))
+
+let main b1 b2 b3 b4 b5 =
   print_endline ("\nProfondeur " ^ (string_of_int profondeur));
   if b1 then begin
     do_tri_negalphabeta ()
@@ -128,6 +141,9 @@ let main b1 b2 b3 b4 =
   end;
   if b4 then begin
     do_tri_see ();
+  end;
+  if b5 then begin
+    do_tri_mvvlva ()
   end
 
-let () = main false false true false
+let () = main false false false false true

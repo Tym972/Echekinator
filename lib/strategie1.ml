@@ -6,6 +6,15 @@ open Zobrist
 open Evaluations
 open Quiescence
 
+(*Variable utilisée pour arrêter la recherche de force*)
+let stop_calculating = ref false
+
+(*Biger integer*)
+let infinity = (Int64.to_int (Random.int64 4611686018427387903L))
+
+(*Max depth reached by the search*)
+let max_depth = 255
+
 (*Fonction permettant d'évaluer un plateau à la profondeur 0*)
 let traitement_profondeur_0 evaluation plateau trait_aux_blancs dernier_coup alpha beta =
   let position_roi = index_tableau plateau (roi trait_aux_blancs) in
@@ -22,81 +31,19 @@ let traitement_profondeur_0 evaluation plateau trait_aux_blancs dernier_coup alp
     evaluation plateau trait_aux_blancs position_roi false alpha beta
   end
 
-(*Fonction adaptant le relevé des positions*)
-let adapte_releve plateau coup profondeur trait_aux_blancs nouveau_droit_au_roque releve_plateau =
-  if est_irremediable coup then begin
-    if profondeur < 8 then begin
-      []
-    end
-    else begin
-      [zobrist plateau (not trait_aux_blancs) coup nouveau_droit_au_roque]
-    end
-  end
-  else if List.length releve_plateau + profondeur < 8 then begin
-    []
-  end
-  else begin 
-    zobrist plateau (not trait_aux_blancs) coup nouveau_droit_au_roque :: releve_plateau
-  end
-
-(*Fonction triant une liste de coups selon leur potentiel*)
-let tri plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau profondeur evaluation algo =
-  let rec association liste_coups =
-    match liste_coups with
-    |[] -> []
-    |coup :: liste_coup ->
-      begin
-        joue plateau coup;
-        let nouveau_droit_au_roque = modification_roque coup droit_au_roque in
-        let x, _ = algo plateau (not trait_aux_blancs) coup nouveau_droit_au_roque (adapte_releve plateau coup profondeur trait_aux_blancs nouveau_droit_au_roque releve_plateau) profondeur profondeur (-99999) 99999 evaluation in
-        dejoue plateau coup;
-        (- x, coup) :: association liste_coup
-      end
-  in List.map snd (tri_fusion (association (coups_valides plateau trait_aux_blancs dernier_coup droit_au_roque)))
-
 (*Fonction triant une liste de coups selon la logique Most Valuable Victim - Least Valuable Agressor*)
-let mvvlva liste =
-  let rec association liste_coups = match liste_coups with
-    |[] -> []
-    |Classique {piece; depart; arrivee; prise} :: t ->
-      ((tabvalue.(abs prise) - abs (piece)), Classique {piece; depart; arrivee; prise}) :: association t
-    |Promotion {depart; arrivee; prise; promotion} :: t ->
-      ((tabvalue.(abs prise) + tabvalue.(abs promotion) - 10), Promotion {depart; arrivee; prise; promotion}) :: association t
-    |h :: t -> (0, h) :: association t
-  in List.map snd (tri_fusion (association liste))
+let mvvlva coup = match coup with
+  |Classique {piece; depart = _; arrivee = _; prise} when prise <> 0 ->
+    10 * tabvalue.(abs prise) - tabvalue.(abs piece)
+  |Enpassant {depart = _; arrivee = _} ->
+    10 * tabvalue.(1) - tabvalue.(1)
+  |Promotion {depart = _; arrivee = _; prise; promotion} ->
+    10 * (tabvalue.(abs prise) + tabvalue.(abs promotion)) - tabvalue.(1)
+  |_ -> 0
 
-(*Fonction renvoyant la liste des coups après mvvlva*)
-let tri_mvvlva plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau evaluation algo =
-  let _ = evaluation, releve_plateau, algo in
-  mvvlva (coups_valides plateau trait_aux_blancs dernier_coup droit_au_roque)
+let killer_moves = Array.make (2 * max_depth) Aucun
 
-(*Fonction renvoyant la liste de coups non triée*)
-let non_tri plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau evaluation algo =
-  let _ = evaluation, algo, releve_plateau in
-  coups_valides plateau trait_aux_blancs dernier_coup droit_au_roque
-
-(*Fonction renvoyant la liste de coups après tri 0 pour des profondeurs paires*)
-let tri_0 plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau evaluation =
-  tri plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau 0 evaluation
-
-(*Fonction renvoyant la liste de coups après tri 1 pour des profondeurs paires*)
-let tri_1 plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau evaluation =
-  tri plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau 1 evaluation
-
-(*Fonction renvoyant la liste de coups après tri 2 pour des profondeurs paires*)
-let tri_2 plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau evaluation =
-  tri plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau 2 evaluation
-
-(*Fonction renvoyant la liste de coups après tri 3 pour des profondeurs paires*)
-let tri_3 plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau evaluation =
-  tri plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau 3 evaluation
-
-(*Fonction renvoyant la liste de coups après tri 4 pour des profondeurs paires*)
-let tri_4 plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau evaluation =
-  tri plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau 4 evaluation
-
-(*Tableaux contenant les stratégies d'ordonnancement des coups aux pofondeurs correspondant à l'index + 1*)
-let tab_tri = Array.concat [[|non_tri; tri_mvvlva; tri_0; tri_0; tri_1; tri_1|]; Array.make 300 tri_2]
+let history_moves = [| Array.init 64 (fun _ -> Array.make 64 0); Array.init 64 (fun _ -> Array.make 64 0)|]
 
 let compteur_recherche = ref 0
 let compteur_noeuds_terminaux = ref 0
@@ -110,58 +57,6 @@ let repetition liste_releve_plateau n = match liste_releve_plateau with
       |[] | [_] -> false
       |_::j::t -> (h = j && (k + 1 = n || aux t (k + 1))) || aux t k
     in aux q 1
-
-(*Variable utilisée pour arrêter la recherche de force*)
-let stop_calculating = ref false
-let infinity = (Int64.to_int (Random.int64 4611686018427387903L))
-
-(*Implémentation d'un algorithme de recherche minimax avec élagage alpha-bêta et negamax, utilisé après l'ouverture. Les pat par répétitions sont pris en comptes*)
-let rec negalphabeta plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau profondeur profondeur_initiale alpha beta evaluation = (*incr compteur_recherche;*)
-  let best_score = ref (-infinity) in
-  let best_move = ref Aucun in
-  if !stop_calculating || repetition releve_plateau 3 then begin (*incr compteur_noeuds_terminaux;*)
-    best_score := 0
-  end
-  else if profondeur = 0 then begin (*incr compteur_noeuds_terminaux;*)
-    best_score := traitement_profondeur_0 evaluation plateau trait_aux_blancs dernier_coup alpha beta
-  end
-  else begin
-    let cp = ref (tab_tri.(profondeur - 1) plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau evaluation negalphabeta)
-    in if !cp = [] then begin (*incr compteur_noeuds_terminaux;*)
-      if menacee plateau (index_tableau plateau (roi trait_aux_blancs)) trait_aux_blancs then begin
-        best_score := profondeur_initiale - (profondeur + 99999)
-      end
-      else begin
-        best_score := 0
-      end
-    end
-    else begin
-      let b = ref true in
-      let alpha0 = ref alpha in
-      while (!b && !cp <> []) do
-        let coup = List.hd !cp in
-        joue plateau coup;
-        cp := List.tl !cp;
-        let nouveau_droit_au_roque = modification_roque coup droit_au_roque in
-        let nouveau_releve = adapte_releve plateau coup profondeur trait_aux_blancs nouveau_droit_au_roque releve_plateau
-        in let score =
-          let note, _ = negalphabeta plateau (not trait_aux_blancs) coup nouveau_droit_au_roque nouveau_releve (profondeur - 1) profondeur_initiale (- beta) (- !alpha0) evaluation
-          in - note
-        in if score > !best_score then begin
-          best_score := score;
-          best_move := coup;
-          if score >= beta then begin
-            b := false
-          end
-          else begin
-            alpha0 := max !alpha0 score
-          end
-        end;
-        dejoue plateau coup
-      done
-    end
-  end;
-  !best_score, !best_move
 
 let taille_transposition = 10000000
 
@@ -226,7 +121,29 @@ let adapte_releve3 zobrist_position coup profondeur releve_plateau demi_coups =
   else begin 
     zobrist_position :: releve_plateau, demi_coups + 1
   end
-  
+
+let aux_history trait_aux_blancs =
+  if trait_aux_blancs then 0 else 1
+
+let nouveau_tri liste trait_aux_blancs ply =
+  let joueur = if trait_aux_blancs then 0 else 1 in
+  let score coup =
+    if isquiet coup then begin
+      if killer_moves.(2 * ply) = coup then begin
+        90000000
+      end 
+      else if killer_moves.(2 * ply + 1) = coup then begin
+        80000000
+      end
+      else begin
+        history_moves.(joueur).(depart coup).(arrivee coup)
+      end
+    end
+    else begin
+      100000000 + mvvlva coup
+    end
+  in List.map snd (tri_fusion (List.map (fun coup -> (score coup, coup)) liste))
+
 let rec pvs plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau demi_coups profondeur profondeur_initiale alpha beta evaluation zobrist_position ispv =
   incr compteur_recherche;
   if !stop_calculating || repetition releve_plateau 3 || demi_coups = 100 then begin
@@ -242,7 +159,6 @@ let rec pvs plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau 
     let presence = ref true in
     let hash_node_type, hash_depth, hash_value, hash_move, _ =
       try
-        if ispv then raise Not_found;
         ZobristHashtbl.find table zobrist_position
       with _ ->
         presence := false;
@@ -258,7 +174,7 @@ let rec pvs plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau 
       end
       else begin
         let no_cut = ref true in
-        let hash_ordering = hash_move <> Aucun && not (hash_node_type = Cut && hash_value <= beta) in
+        let hash_ordering = hash_move <> Aucun (*&& not (hash_node_type = Cut && hash_value <= beta)*) in
         if hash_ordering then begin
           let nouveau_droit_au_roque = modification_roque hash_move droit_au_roque in
           let nouveau_zobrist = nouveau_zobrist hash_move dernier_coup zobrist_position droit_au_roque nouveau_droit_au_roque plateau in
@@ -269,8 +185,16 @@ let rec pvs plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau 
             best_score := score;
             best_move := hash_move;
             alpha0 := max !alpha0 score;
+            let quiet_move = isquiet !best_move in
+            if quiet_move then begin
+              history_moves.(aux_history trait_aux_blancs).(depart !best_move).(arrivee !best_move) <- profondeur * profondeur
+            end;
             if score >= !beta0 then begin
-              no_cut := false
+              no_cut := false;
+              if quiet_move then begin
+                killer_moves.(2 * ply + 1) <- killer_moves.(2 * ply);
+                killer_moves.(2 * ply) <- !best_move
+              end;
             end
           end;
           dejoue plateau hash_move;
@@ -278,9 +202,9 @@ let rec pvs plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau 
         if !no_cut then begin
           let cp =
             if hash_ordering then
-              ref (List.filter (fun c -> c <> hash_move) (tab_tri.(profondeur - 1) plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau evaluation negalphabeta))
+              ref (List.filter (fun c -> c <> hash_move) (nouveau_tri (coups_valides plateau trait_aux_blancs dernier_coup droit_au_roque) trait_aux_blancs ply))
             else
-              ref (tab_tri.(profondeur - 1) plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau evaluation negalphabeta)
+              ref (nouveau_tri (coups_valides plateau trait_aux_blancs dernier_coup droit_au_roque) trait_aux_blancs ply)
           in if !cp = [] && not hash_ordering then begin
             incr compteur_noeuds_terminaux;
             if (menacee plateau (index_tableau plateau (roi trait_aux_blancs)) trait_aux_blancs) then begin
@@ -317,8 +241,16 @@ let rec pvs plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau 
                 best_score := score;
                 best_move := coup;
                 alpha0 := max !alpha0 score;
+                let quiet_move = isquiet !best_move in
+                if quiet_move then begin
+                  history_moves.(aux_history trait_aux_blancs).(depart !best_move).(arrivee !best_move) <- profondeur * profondeur
+                end;
                 if score >= !beta0 then begin
-                  no_cut := false
+                  no_cut := false;
+                  if quiet_move then begin
+                    killer_moves.(2 * ply + 1) <- killer_moves.(2 * ply);
+                    killer_moves.(2 * ply) <- !best_move
+                  end;
                 end
               end;
               dejoue plateau coup
@@ -352,7 +284,7 @@ let rec pvs plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau 
           end
         end
       in if !presence then begin
-        if profondeur > hash_depth (*|| (ispv && not (hash_node_type = Pv)*) then begin
+        if profondeur > hash_depth || ispv && not (hash_node_type = Pv) then begin
           ZobristHashtbl.replace table zobrist_position (node_type, profondeur, stored_value, !best_move, 0)
         end
       end

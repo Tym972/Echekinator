@@ -97,3 +97,7 @@ let test_fisher17 = "bnqnrbkr/1pp2pp1/p7/3pP2p/4P1P1/8/PPPP3P/BNQNRBKR w HEhe d6
 let test_fisher18 = "b1qnrrkb/ppp1pp1p/n2p1Pp1/8/8/P7/1PPPP1PP/BNQNRKRB w GE - 0 9"
 let test_fisher19 = "n1bqnrkr/pp1ppp1p/2p5/6p1/2P2b2/PN6/1PNPPPPP/1BBQ1RKR w HFhf - 2 9"
 let test_fisher20 = "n1bb1rkr/qpnppppp/2p5/p7/P1P5/5P2/1P1PPRPP/NQBBN1KR w Hhf - 1 9"
+
+(*Tests tri*)
+let tri1 = "r1b1r1k1/p1p2ppp/2n5/1pbqp3/Q7/3P1NP1/PP2PPBP/R1B2RK1 w - - 0 11"
+let tri2 = "rnbqkb1r/1ppp1ppp/p4n2/3Pp3/5B2/8/PPP1PPPP/RN1QKBNR w KQkq e6 0 4"

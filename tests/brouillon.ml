@@ -15,7 +15,30 @@ let main bitboard =
 
 let () = main bitboard
 
-(*let main plateau =
+(*
+
+let tab_mvvlva = [|
+  6; 12; 18; 24; 30;
+  5; 11; 17; 23; 29;
+  4; 10; 16; 22; 28;
+  3;  9; 15; 21; 27;
+  2;  8; 14; 20; 26;
+  1;  7; 13; 19; 25
+  |]
+
+let bmvvlva2 liste =
+  let rec association liste_coups = match liste_coups with
+    |[] -> []
+    |Classique {piece; depart; arrivee; prise} :: t when prise <> 0 ->
+      (tab_mvvlva.(5 * (abs piece - 1) + (abs prise - 1)), Classique {piece; depart; arrivee; prise}) :: association t
+    |Promotion {depart; arrivee; prise; promotion} :: t ->
+      (tab_mvvlva.((if prise <> 0 then (abs prise - 1) else 0)) + tabvalue.(abs promotion), Promotion {depart; arrivee; prise; promotion}) :: association t
+    |h :: t -> (0, h) :: association t
+  in List.map snd (tri_fusion (association liste))
+
+
+
+let main plateau =
   if false then begin
     let b = ref true in
     for i = 0 to 959 do

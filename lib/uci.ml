@@ -157,7 +157,7 @@ let go instruction plateau trait_aux_blancs dernier_coup droit_au_roque releve_p
     let winc = ref 0. in
     let binc = ref 0. in
     let movestogo = ref (-1) in
-    let depth = ref 255 in
+    let depth = ref max_depth in
     let nodes = ref infinity in
     let mate = ref false in
     let movetime = ref (-1.) in

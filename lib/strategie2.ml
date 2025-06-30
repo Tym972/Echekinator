@@ -316,6 +316,119 @@ let algo_hasard plateau regle_des_50_coups dernier_coup releve_coups releve_plat
   let coup = List.nth valides (Random.int (List.length valides)) in
   changement_du_trait plateau coup trait_aux_blancs dernier_coup releve_coups releve_plateau droit_au_roque regle_des_50_coups verif partie_finie
 
+(*Fonction adaptant le relevé des positions*)
+let adapte_releve plateau coup profondeur trait_aux_blancs nouveau_droit_au_roque releve_plateau =
+  if est_irremediable coup then begin
+    if profondeur < 8 then begin
+      []
+    end
+    else begin
+      [zobrist plateau (not trait_aux_blancs) coup nouveau_droit_au_roque]
+    end
+  end
+  else if List.length releve_plateau + profondeur < 8 then begin
+    []
+  end
+  else begin 
+    zobrist plateau (not trait_aux_blancs) coup nouveau_droit_au_roque :: releve_plateau
+  end
+
+(*Fonction triant une liste de coups selon leur potentiel*)
+let tri plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau profondeur evaluation algo =
+  let rec association liste_coups =
+    match liste_coups with
+    |[] -> []
+    |coup :: liste_coup ->
+      begin
+        joue plateau coup;
+        let nouveau_droit_au_roque = modification_roque coup droit_au_roque in
+        let x, _ = algo plateau (not trait_aux_blancs) coup nouveau_droit_au_roque (adapte_releve plateau coup profondeur trait_aux_blancs nouveau_droit_au_roque releve_plateau) profondeur profondeur (-99999) 99999 evaluation in
+        dejoue plateau coup;
+        (- x, coup) :: association liste_coup
+      end
+  in List.map snd (tri_fusion (association (coups_valides plateau trait_aux_blancs dernier_coup droit_au_roque)))
+
+(*Fonction renvoyant la liste des coups après mvvlva*)
+let tri_mvvlva plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau evaluation algo =
+  let _ = evaluation, releve_plateau, algo in
+  List.map snd (tri_fusion (List.map (fun coup -> (mvvlva coup, coup)) (coups_valides plateau trait_aux_blancs dernier_coup droit_au_roque)))
+
+(*Fonction renvoyant la liste de coups non triée*)
+let non_tri plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau evaluation algo =
+  let _ = evaluation, algo, releve_plateau in
+  coups_valides plateau trait_aux_blancs dernier_coup droit_au_roque
+
+(*Fonction renvoyant la liste de coups après tri 0 pour des profondeurs paires*)
+let tri_0 plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau evaluation =
+  tri plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau 0 evaluation
+
+(*Fonction renvoyant la liste de coups après tri 1 pour des profondeurs paires*)
+let tri_1 plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau evaluation =
+  tri plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau 1 evaluation
+
+(*Fonction renvoyant la liste de coups après tri 2 pour des profondeurs paires*)
+let tri_2 plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau evaluation =
+  tri plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau 2 evaluation
+
+(*Fonction renvoyant la liste de coups après tri 3 pour des profondeurs paires*)
+let tri_3 plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau evaluation =
+  tri plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau 3 evaluation
+
+(*Fonction renvoyant la liste de coups après tri 4 pour des profondeurs paires*)
+let tri_4 plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau evaluation =
+  tri plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau 4 evaluation
+
+(*Tableaux contenant les stratégies d'ordonnancement des coups aux pofondeurs correspondant à l'index + 1*)
+let tab_tri = Array.concat [[|non_tri; tri_mvvlva; tri_0; tri_0; tri_1; tri_1|]; Array.make 300 tri_2]
+
+(*Implémentation d'un algorithme de recherche minimax avec élagage alpha-bêta et negamax, utilisé après l'ouverture. Les pat par répétitions sont pris en comptes*)
+let rec negalphabeta plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau profondeur profondeur_initiale alpha beta evaluation = (*incr compteur_recherche;*)
+  let best_score = ref (-infinity) in
+  let best_move = ref Aucun in
+  if !stop_calculating || repetition releve_plateau 3 then begin (*incr compteur_noeuds_terminaux;*)
+    best_score := 0
+  end
+  else if profondeur = 0 then begin (*incr compteur_noeuds_terminaux;*)
+    best_score := traitement_profondeur_0 evaluation plateau trait_aux_blancs dernier_coup alpha beta
+  end
+  else begin
+    let cp = ref (tab_tri.(profondeur - 1) plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau evaluation negalphabeta)
+    in if !cp = [] then begin (*incr compteur_noeuds_terminaux;*)
+      if menacee plateau (index_tableau plateau (roi trait_aux_blancs)) trait_aux_blancs then begin
+        best_score := profondeur_initiale - (profondeur + 99999)
+      end
+      else begin
+        best_score := 0
+      end
+    end
+    else begin
+      let b = ref true in
+      let alpha0 = ref alpha in
+      while (!b && !cp <> []) do
+        let coup = List.hd !cp in
+        joue plateau coup;
+        cp := List.tl !cp;
+        let nouveau_droit_au_roque = modification_roque coup droit_au_roque in
+        let nouveau_releve = adapte_releve plateau coup profondeur trait_aux_blancs nouveau_droit_au_roque releve_plateau
+        in let score =
+          let note, _ = negalphabeta plateau (not trait_aux_blancs) coup nouveau_droit_au_roque nouveau_releve (profondeur - 1) profondeur_initiale (- beta) (- !alpha0) evaluation
+          in - note
+        in if score > !best_score then begin
+          best_score := score;
+          best_move := coup;
+          if score >= beta then begin
+            b := false
+          end
+          else begin
+            alpha0 := max !alpha0 score
+          end
+        end;
+        dejoue plateau coup
+      done
+    end
+  end;
+  !best_score, !best_move
+
 (*Fonction renvoyant un appel à la fonction alphabeta_valide ansi que le temps nécessaire à l'éxécution*)
 let negalphabetime plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau profondeur evaluation =
   let t = Sys.time () in
