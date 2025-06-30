@@ -215,7 +215,7 @@ let rec pvs plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau 
             end
           end
           else begin
-            let first_move = ref true in
+            let first_move = ref (not hash_ordering) in
             while (!no_cut && !cp <> []) do
               let coup = List.hd !cp in
               let nouveau_droit_au_roque = modification_roque coup droit_au_roque in
