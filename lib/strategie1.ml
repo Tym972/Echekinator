@@ -174,7 +174,7 @@ let rec pvs plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau 
       end
       else begin
         let no_cut = ref true in
-        let hash_ordering = hash_move <> Aucun (*&& not (hash_node_type = Cut && hash_value <= beta)*) in
+        let hash_ordering = hash_move <> Aucun in
         if hash_ordering then begin
           let nouveau_droit_au_roque = modification_roque hash_move droit_au_roque in
           let nouveau_zobrist = nouveau_zobrist hash_move dernier_coup zobrist_position droit_au_roque nouveau_droit_au_roque plateau in
@@ -284,7 +284,7 @@ let rec pvs plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau 
           end
         end
       in if !presence then begin
-        if profondeur > hash_depth || ispv && not (hash_node_type = Pv) then begin
+        if profondeur > hash_depth || ispv then begin
           ZobristHashtbl.replace table zobrist_position (node_type, profondeur, stored_value, !best_move, 0)
         end
       end
