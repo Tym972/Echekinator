@@ -1,5 +1,5 @@
 open Libs.Plateau
-open Libs.Strategie1
+open Strategie2
 open Libs.Quiescence
 open Config
 

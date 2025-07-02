@@ -7,14 +7,10 @@
   traduction1
   traduction2
   traduction3
-  ouvertures
   zobrist
   strategie1
   quiescence
   evaluations
-  strategie2
-  config
-  interfaces
   piece_square_tables
   uci)
  (libraries

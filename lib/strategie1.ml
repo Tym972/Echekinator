@@ -15,22 +15,6 @@ let infinity = (Int64.to_int (Random.int64 4611686018427387903L))
 (*Max depth reached by the search*)
 let max_depth = 255
 
-(*Fonction permettant d'évaluer un plateau à la profondeur 0*)
-let traitement_profondeur_0 evaluation plateau trait_aux_blancs dernier_coup alpha beta =
-  let position_roi = index_tableau plateau (roi trait_aux_blancs) in
-  if (menacee plateau position_roi trait_aux_blancs) then begin
-    let cp = coups_valides plateau trait_aux_blancs dernier_coup (false, false, false, false)
-    in if cp = [] then begin
-      (- 99950)
-    end
-    else begin
-      evaluation plateau trait_aux_blancs position_roi true alpha beta
-    end
-  end
-  else begin
-    evaluation plateau trait_aux_blancs position_roi false alpha beta
-  end
-
 (*Fonction triant une liste de coups selon la logique Most Valuable Victim - Least Valuable Agressor*)
 let mvvlva coup = match coup with
   |Classique {piece; depart = _; arrivee = _; prise} when prise <> 0 ->
@@ -125,13 +109,14 @@ let adapte_releve3 zobrist_position coup profondeur releve_plateau demi_coups =
 let aux_history trait_aux_blancs =
   if trait_aux_blancs then 0 else 1
 
-let nouveau_tri liste trait_aux_blancs ply =
+let nouveau_tri plateau trait_aux_blancs dernier_coup droit_au_roque ply =
+  let coups_valides = coups_valides plateau trait_aux_blancs dernier_coup droit_au_roque in
   let joueur = if trait_aux_blancs then 0 else 1 in
   let score coup =
     if isquiet coup then begin
       if killer_moves.(2 * ply) = coup then begin
         90000000
-      end 
+      end
       else if killer_moves.(2 * ply + 1) = coup then begin
         80000000
       end
@@ -142,7 +127,7 @@ let nouveau_tri liste trait_aux_blancs ply =
     else begin
       100000000 + mvvlva coup
     end
-  in List.map snd (tri_fusion (List.map (fun coup -> (score coup, coup)) liste))
+  in List.map snd (tri_fusion (List.map (fun coup -> (score coup, coup)) coups_valides))
 
 let rec pvs plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau demi_coups profondeur profondeur_initiale alpha beta evaluation zobrist_position ispv =
   incr compteur_recherche;
@@ -202,9 +187,9 @@ let rec pvs plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau 
         if !no_cut then begin
           let cp =
             if hash_ordering then
-              ref (List.filter (fun c -> c <> hash_move) (nouveau_tri (coups_valides plateau trait_aux_blancs dernier_coup droit_au_roque) trait_aux_blancs ply))
+              ref (List.filter (fun c -> c <> hash_move) (nouveau_tri plateau trait_aux_blancs dernier_coup droit_au_roque ply))
             else
-              ref (nouveau_tri (coups_valides plateau trait_aux_blancs dernier_coup droit_au_roque) trait_aux_blancs ply)
+              ref (nouveau_tri plateau trait_aux_blancs dernier_coup droit_au_roque ply)
           in if !cp = [] && not hash_ordering then begin
             incr compteur_noeuds_terminaux;
             if (menacee plateau (index_tableau plateau (roi trait_aux_blancs)) trait_aux_blancs) then begin

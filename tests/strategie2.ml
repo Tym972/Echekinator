@@ -1,14 +1,14 @@
 (*Module implémentant des stratégies à suivre par le programme*)
 
-open Plateau
-open Generateur
-open Strategie1
-open Evaluations
-open Quiescence
-open Traduction1
-open Traduction3
+open Libs.Plateau
+open Libs.Generateur
+open Libs.Strategie1
+open Libs.Evaluations
+open Libs.Quiescence
+open Libs.Traduction1
+open Libs.Traduction3
 open Ouvertures
-open Zobrist
+open Libs.Zobrist
 
 (*Premier coup évité par le moteur s'il joue les blancs*)
 let a_eviter =
@@ -380,6 +380,22 @@ let tri_4 plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau ev
 
 (*Tableaux contenant les stratégies d'ordonnancement des coups aux pofondeurs correspondant à l'index + 1*)
 let tab_tri = Array.concat [[|non_tri; tri_mvvlva; tri_0; tri_0; tri_1; tri_1|]; Array.make 300 tri_2]
+
+(*Fonction permettant d'évaluer un plateau à la profondeur 0*)
+let traitement_profondeur_0 evaluation plateau trait_aux_blancs dernier_coup alpha beta =
+  let position_roi = index_tableau plateau (roi trait_aux_blancs) in
+  if (menacee plateau position_roi trait_aux_blancs) then begin
+    let cp = coups_valides plateau trait_aux_blancs dernier_coup (false, false, false, false)
+    in if cp = [] then begin
+      (- 99950)
+    end
+    else begin
+      evaluation plateau trait_aux_blancs position_roi true alpha beta
+    end
+  end
+  else begin
+    evaluation plateau trait_aux_blancs position_roi false alpha beta
+  end
 
 (*Implémentation d'un algorithme de recherche minimax avec élagage alpha-bêta et negamax, utilisé après l'ouverture. Les pat par répétitions sont pris en comptes*)
 let rec negalphabeta plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau profondeur profondeur_initiale alpha beta evaluation = (*incr compteur_recherche;*)

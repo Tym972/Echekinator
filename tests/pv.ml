@@ -1,7 +1,7 @@
 open Libs.Plateau
 open Libs.Generateur
 open Libs.Strategie1
-open Libs.Strategie2
+open Strategie2
 open Config
 
 (*Implémentation d'un algorithme de recherche minimax avec élagage alpha-bêta et negamax*)

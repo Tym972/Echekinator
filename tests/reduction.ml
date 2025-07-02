@@ -1,6 +1,6 @@
 (*Module récupérant les ouvertures non doublées, d'une longueur minimale, d'un fichier d'ouverture*)
 
-open Libs.Ouvertures
+open Ouvertures
 
 let supprime_doublon biggie n=
   let table = Hashtbl.create 5000 in

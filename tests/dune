@@ -1,6 +1,6 @@
 (tests
  (names 
- ouvertures
+ ouvertures_test
  reduction
  algo
  tri
@@ -17,7 +17,7 @@
  brouillon
  trad)
  (modules
- ouvertures
+ ouvertures_test
  reduction
  algo
  tri
@@ -34,7 +34,9 @@
  brouillon
  config
  positions
- trad)
+ trad
+ ouvertures
+ strategie2)
  (libraries 
  unix
  threads

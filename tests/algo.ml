@@ -2,7 +2,7 @@ open Config
 open Libs.Plateau
 open Libs.Generateur
 open Libs.Strategie1
-open Libs.Strategie2
+open Strategie2
 open Libs.Traduction2
 open Libs.Quiescence
 

@@ -3,7 +3,7 @@ open Libs.Plateau
 open Libs.Generateur
 open Libs.Evaluations
 open Libs.Zobrist
-open Libs.Strategie2
+open Strategie2
 open Libs.Traduction2
 open Libs.Traduction3
 open Libs.Quiescence
