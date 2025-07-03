@@ -100,7 +100,7 @@ let pv_finder plateau dernier_coup droit_au_roque releve_plateau profondeur_init
     if not (profondeur <= 0 || coup = Aucun || (profondeur <> profondeur_initial && (repetition releve_plateau 3) || demi_coups = 100)) then begin
       let nouveau_droit_au_roque = modification_roque coup droit_au_roque
       in let nouveau_zobrist = nouveau_zobrist coup dernier_coup zobrist_position droit_au_roque nouveau_droit_au_roque plateau
-      in let nouveau_releve, nouveau_demi_coups = adapte_releve3 nouveau_zobrist coup 1000 releve_plateau demi_coups in
+      in let nouveau_releve, nouveau_demi_coups = adapte_releve nouveau_zobrist coup 1000 releve_plateau demi_coups in
       joue plateau coup;
       pv := !pv ^ (uci_of_mouvement coup) ^ " ";
       let _, _, _, hash_move, _ =

@@ -16,7 +16,7 @@
         "enabled": false
     },
     "opening": {
-        "file": "/home/tym972/openbench-books/UHO_Lichess_4852_v1.epd",
+        "file": "/home/tym972/openbench-books/test1.epd",
         "format": 0,
         "order": 0,
         "plies": -1,
@@ -51,7 +51,7 @@
     },
     "config_name": "",
     "output": 0,
-    "seed": 2671637863686448064,
+    "seed": 12041002608841000325,
     "variant": 0,
     "ratinginterval": 10,
     "scoreinterval": 1,
@@ -117,26 +117,26 @@
     ],
     "stats": {
         "base vs new": {
-            "wins": 220,
-            "losses": 248,
-            "draws": 174,
-            "penta_WW": 27,
-            "penta_WD": 55,
-            "penta_WL": 111,
-            "penta_DD": 28,
-            "penta_LD": 63,
-            "penta_LL": 37
+            "wins": 544,
+            "losses": 562,
+            "draws": 280,
+            "penta_WW": 92,
+            "penta_WD": 104,
+            "penta_WL": 256,
+            "penta_DD": 31,
+            "penta_LD": 114,
+            "penta_LL": 96
         },
         "new vs base": {
-            "wins": 92,
-            "losses": 116,
-            "draws": 92,
-            "penta_WW": 10,
-            "penta_WD": 31,
-            "penta_WL": 41,
-            "penta_DD": 10,
-            "penta_LD": 41,
-            "penta_LL": 17
+            "wins": 212,
+            "losses": 210,
+            "draws": 168,
+            "penta_WW": 24,
+            "penta_WD": 71,
+            "penta_WL": 93,
+            "penta_DD": 20,
+            "penta_LD": 57,
+            "penta_LL": 30
         }
     }
 }
