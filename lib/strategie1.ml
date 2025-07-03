@@ -102,8 +102,7 @@ let mvvlva coup = match coup with
   |_ -> 0
 
 let killer_moves = Array.make (2 * max_depth) Aucun
-
-let history_moves = [| Array.init 64 (fun _ -> Array.make 64 0); Array.init 64 (fun _ -> Array.make 64 0)|]
+let history_moves = Array.make 8192 0
 
 let aux_history trait_aux_blancs =
   if trait_aux_blancs then 0 else 1
@@ -119,7 +118,7 @@ let nouveau_tri plateau trait_aux_blancs dernier_coup droit_au_roque ply =
         80000000
       end
       else begin
-        history_moves.(aux_history trait_aux_blancs).(depart coup).(arrivee coup)
+        history_moves.(4096 * aux_history trait_aux_blancs + 64 * depart coup + arrivee coup)
       end
     end
     else begin
@@ -170,7 +169,7 @@ let rec pvs plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau 
             alpha0 := max !alpha0 score;
             let quiet_move = isquiet !best_move in
             if quiet_move then begin
-              history_moves.(aux_history trait_aux_blancs).(depart !best_move).(arrivee !best_move) <- profondeur * profondeur
+              history_moves.(4096 * aux_history trait_aux_blancs + 64 * depart !best_move + arrivee !best_move) <- profondeur * profondeur
             end;
             if score >= !beta0 then begin
               no_cut := false;
@@ -226,7 +225,7 @@ let rec pvs plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau 
                 alpha0 := max !alpha0 score;
                 let quiet_move = isquiet !best_move in
                 if quiet_move then begin
-                  history_moves.(aux_history trait_aux_blancs).(depart !best_move).(arrivee !best_move) <- profondeur * profondeur
+                  history_moves.(4096 * aux_history trait_aux_blancs + 64 * depart !best_move + arrivee !best_move) <- profondeur * profondeur
                 end;
                 if score >= !beta0 then begin
                   no_cut := false;
