@@ -101,6 +101,9 @@ let mvvlva coup = match coup with
     10 * (tabvalue.(abs prise) + tabvalue.(abs promotion)) - tabvalue.(1)
   |_ -> 0
 
+let max_pv_length = max_depth
+let pv_table = Array.make ((max_pv_length) * (max_pv_length + 1) / 2) Aucun
+let pv_length = Array.make max_pv_length 0
 let killer_moves = Array.make (2 * max_depth) Aucun
 let history_moves = Array.make 8192 0
 
@@ -130,6 +133,9 @@ let rec pvs plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau 
   incr compteur_recherche;
   if !stop_calculating || repetition releve_plateau 3 || demi_coups = 100 then begin
     incr compteur_noeuds_terminaux;
+    if ispv then begin
+      pv_length.(profondeur_initiale - profondeur) <- 0
+    end;
     0
   end
   else begin
@@ -166,6 +172,13 @@ let rec pvs plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau 
           in if score > !best_score then begin
             best_score := score;
             best_move := hash_move;
+            if ispv then begin
+              pv_table.(ply * (2 * max_pv_length + 1 - ply) / 2) <- !best_move;
+              for i = 1 to pv_length.(ply + 1) do
+                pv_table.(ply * (2 * max_pv_length + 1 - ply) / 2 + i) <- pv_table.((ply + 1) * (2 * max_pv_length - ply) / 2 + i - 1)
+              done;
+              pv_length.(ply) <- pv_length.(ply + 1) + 1
+            end;
             alpha0 := max !alpha0 score;
             let quiet_move = isquiet !best_move in
             if quiet_move then begin
@@ -189,6 +202,9 @@ let rec pvs plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau 
               ref (nouveau_tri plateau trait_aux_blancs dernier_coup droit_au_roque ply)
           in if !cp = [] && not hash_ordering then begin
             incr compteur_noeuds_terminaux;
+            if ispv then begin
+              pv_length.(profondeur_initiale - profondeur) <- 0
+            end;
             if (menacee plateau (index_tableau plateau (roi trait_aux_blancs)) trait_aux_blancs) then begin
               best_score := ply - 99999
             end 
@@ -222,6 +238,13 @@ let rec pvs plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau 
               in if score > !best_score then begin
                 best_score := score;
                 best_move := coup;
+                if ispv then begin
+                  pv_table.(ply * (2 * max_pv_length + 1 - ply) / 2) <- !best_move;
+                  for i = 1 to pv_length.(ply + 1) do
+                    pv_table.(ply * (2 * max_pv_length + 1 - ply) / 2 + i) <- pv_table.((ply + 1) * (2 * max_pv_length - ply) / 2 + i - 1)
+                  done;
+                  pv_length.(ply) <- pv_length.(ply + 1) + 1
+                end;
                 alpha0 := max !alpha0 score;
                 let quiet_move = isquiet !best_move in
                 if quiet_move then begin

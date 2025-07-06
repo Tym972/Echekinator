@@ -16,7 +16,7 @@
         "enabled": false
     },
     "opening": {
-        "file": "/home/tym972/openbench-books/test1.epd",
+        "file": "/home/tym972/openbench-books/UHO_Lichess_4852_v1.epd",
         "format": 0,
         "order": 0,
         "plies": -1,
@@ -44,14 +44,14 @@
     "sprt": {
         "alpha": 0.05,
         "beta": 0.1,
-        "elo0": 0.0,
-        "elo1": 10.0,
+        "elo0": -5.0,
+        "elo1": 0.0,
         "model": "normalized",
         "enabled": true
     },
     "config_name": "",
     "output": 0,
-    "seed": 1491492929510515031,
+    "seed": 1718655484971454715,
     "variant": 0,
     "ratinginterval": 10,
     "scoreinterval": 1,
@@ -68,7 +68,7 @@
     "affinity": false,
     "show_latency": false,
     "log": {
-        "file": "fastchess.log",
+        "file": "/home/tym972/Echekinator/Résultats/fastchess.log",
         "level": 3,
         "compress": false,
         "realtime": true
@@ -116,27 +116,27 @@
         }
     ],
     "stats": {
-        "new vs base": {
-            "wins": 197,
-            "losses": 199,
-            "draws": 168,
-            "penta_WW": 31,
-            "penta_WD": 55,
-            "penta_WL": 80,
-            "penta_DD": 21,
-            "penta_LD": 71,
-            "penta_LL": 24
-        },
         "base vs new": {
-            "wins": 547,
-            "losses": 552,
-            "draws": 323,
-            "penta_WW": 99,
-            "penta_WD": 112,
-            "penta_WL": 237,
-            "penta_DD": 39,
-            "penta_LD": 133,
-            "penta_LL": 91
+            "wins": 620,
+            "losses": 644,
+            "draws": 334,
+            "penta_WW": 112,
+            "penta_WD": 100,
+            "penta_WL": 296,
+            "penta_DD": 54,
+            "penta_LD": 126,
+            "penta_LL": 111
+        },
+        "new vs base": {
+            "wins": 261,
+            "losses": 291,
+            "draws": 202,
+            "penta_WW": 43,
+            "penta_WD": 62,
+            "penta_WL": 113,
+            "penta_DD": 27,
+            "penta_LD": 86,
+            "penta_LL": 46
         }
     }
 }

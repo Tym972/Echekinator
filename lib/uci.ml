@@ -93,23 +93,21 @@ let score score =
     end
   end
 
-let pv_finder plateau dernier_coup droit_au_roque releve_plateau profondeur_initial demi_coups =
+let pv_finder depth =
   let pv = ref "" in
-  let _, _, _, best_move, _ = try ZobristHashtbl.find table (List.hd releve_plateau) with _ -> (All, (-1), 0, Aucun, 0) in
-  let rec aux zobrist_position droit_au_roque releve_plateau coup dernier_coup profondeur demi_coups =
-    if not (profondeur <= 0 || coup = Aucun || (profondeur <> profondeur_initial && (repetition releve_plateau 3) || demi_coups = 100)) then begin
-      let nouveau_droit_au_roque = modification_roque coup droit_au_roque
-      in let nouveau_zobrist = nouveau_zobrist coup dernier_coup zobrist_position droit_au_roque nouveau_droit_au_roque plateau
-      in let nouveau_releve, nouveau_demi_coups = adapte_releve nouveau_zobrist coup 1000 releve_plateau demi_coups in
-      joue plateau coup;
-      pv := !pv ^ (uci_of_mouvement coup) ^ " ";
-      let _, _, _, hash_move, _ =
-        try ZobristHashtbl.find table nouveau_zobrist with _ -> (All, (-1), 0, Aucun, 0)
-      in aux nouveau_zobrist nouveau_droit_au_roque nouveau_releve hash_move coup (profondeur - 1) nouveau_demi_coups;
-      dejoue plateau coup
-    end
-  in aux (List.hd releve_plateau) droit_au_roque releve_plateau best_move dernier_coup profondeur_initial demi_coups;
+  for i = 0 to (min pv_length.(0) depth) - 1 do 
+    pv := !pv ^ (uci_of_mouvement pv_table.(i)) ^ " ";
+  done;
   !pv
+
+(*
+let g () =
+  for i = 0 to (2 * max_depth) - 1 do
+    killer_moves.(i) <- Aucun
+  done;
+  for i = 0 to 8191 do
+    history_moves.(i) <- 0
+  done;*)
 
 let rec algoperft plateau trait_aux_blancs dernier_coup droit_au_roque profondeur racine zobrist_position table_perft =
   if profondeur = 0 then begin
@@ -211,7 +209,7 @@ let go instruction plateau trait_aux_blancs dernier_coup droit_au_roque releve_p
       if not !stop_calculating then begin
         let exec_time = Sys.time () -. t in
         best_score := score new_score;
-        pv := (pv_finder plateau dernier_coup droit_au_roque releve_plateau !var_depth demi_coups);
+        pv := pv_finder !var_depth;
         print_endline (Printf.sprintf "info depth %i seldepth %i multipv 1 score %s nodes %i nps %i hashfull %i time %i pv %s" !var_depth !var_depth !best_score !compteur_recherche (int_of_float (float_of_int !compteur_recherche /. exec_time)) (int_of_float (1000. *. (float_of_int !compteur_transposition /. (float_of_int taille_transposition)))) (int_of_float (1000. *. exec_time)) !pv);
       end
     done;
