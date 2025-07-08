@@ -451,6 +451,8 @@ let negalphabetime plateau trait_aux_blancs dernier_coup droit_au_roque releve_p
   let fx = negalphabeta plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau profondeur profondeur (-infinity) infinity evaluation in
   fx, (Sys.time () -. t)
 
+let compteur_noeuds_terminaux = ref 0
+
 let rec negalphabeta_quiescent plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau profondeur profondeur_initiale alpha beta evaluation = incr compteur_recherche;
   let best_score = ref (-infinity) in
   let best_move = ref Aucun in

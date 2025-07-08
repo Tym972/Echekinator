@@ -2,7 +2,6 @@
  (name libs)
  (modules
   plateau
-  bitboards
   generateur
   traduction1
   traduction2

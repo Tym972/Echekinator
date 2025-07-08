@@ -47,7 +47,9 @@ let setoption instructions =
 (*Answer to the command "ucinewgame"*)
 let ucinewgame plateau trait_aux_blancs dernier_coup droit_au_roque releve_coups releve_plateau position_de_depart trait_aux_blancs_initial dernier_coup_initial droit_au_roque_initial releve_coups_initial releve_plateau_initial =
   actualise table 1000;
-  compteur_transposition := 0;
+  for i = 0 to 8191 do
+    history_moves.(i) <- 0
+  done;
   reinitialise plateau trait_aux_blancs dernier_coup droit_au_roque releve_coups releve_plateau echiquier true Aucun (true, true, true, true) [] [zobrist echiquier true Aucun (true, true, true, true)];
   reinitialise position_de_depart trait_aux_blancs_initial dernier_coup_initial droit_au_roque_initial releve_coups_initial releve_plateau_initial  echiquier true Aucun (true, true, true, true) [] [zobrist echiquier true Aucun (true, true, true, true)]
 
@@ -76,7 +78,7 @@ let position instructions plateau trait_aux_blancs dernier_coup droit_au_roque r
 
 (*Fonction utilisée pour terminer la recherche après le temps alloué*)
 let monitor_time time control =
-  Thread.delay (time /. 1000.);
+  Thread.delay ((time /. 1000.) -. 0.01);
   control := true
 
 (*Fonction mettant en forme le score retourné*)
@@ -99,15 +101,6 @@ let pv_finder depth =
     pv := !pv ^ (uci_of_mouvement pv_table.(i)) ^ " ";
   done;
   !pv
-
-(*
-let g () =
-  for i = 0 to (2 * max_depth) - 1 do
-    killer_moves.(i) <- Aucun
-  done;
-  for i = 0 to 8191 do
-    history_moves.(i) <- 0
-  done;*)
 
 let rec algoperft plateau trait_aux_blancs dernier_coup droit_au_roque profondeur racine zobrist_position table_perft =
   if profondeur = 0 then begin
@@ -265,7 +258,10 @@ let echekinator () =
       |"go" ->
         let _ = Thread.create (fun () -> go command_line (Array.copy plateau) !trait_aux_blancs !dernier_coup !droit_au_roque !releve_plateau (List.length !releve_plateau - 1) evaluation) () in
         stop_calculating := false;
-        compteur_recherche := 0
+        compteur_recherche := 0;
+        for i = 0 to (2 * max_depth) - 1 do
+          killer_moves.(i) <- Aucun
+        done;
       |"quit" -> exit := true
       |"stop" -> stop_calculating := true
       |"d" -> display plateau !trait_aux_blancs !dernier_coup !droit_au_roque !releve_coups !releve_plateau

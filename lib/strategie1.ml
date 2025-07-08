@@ -15,7 +15,6 @@ let infinity = (Int64.to_int (Random.int64 4611686018427387903L))
 (*Max depth reached by the search*)
 let max_depth = 255
 let compteur_recherche = ref 0
-let compteur_noeuds_terminaux = ref 0
 let compteur_transposition = ref 0
 
 (*Fonction détectant les répétitions à partir d'une liste de code zobrist*)
@@ -73,7 +72,8 @@ let traitement_hash (hash_node_type : noeuds) (hash_depth : int) (hash_value : i
 
 (*Fonction retirant les entrées de la hash table datant d'avant le n-ième coup.*)
 let actualise table n =
-  ZobristHashtbl.iter (fun key value -> let _, _, _, _, coup = value in if coup < n then ZobristHashtbl.remove table key) table
+  ZobristHashtbl.iter (fun key value -> let _, _, _, _, coup = value in if coup < n then ZobristHashtbl.remove table key) table;
+  compteur_transposition := 0
 
 let adapte_releve zobrist_position coup profondeur releve_plateau demi_coups =
   if est_irremediable coup then begin
@@ -110,7 +110,7 @@ let history_moves = Array.make 8192 0
 let aux_history trait_aux_blancs =
   if trait_aux_blancs then 0 else 1
 
-let nouveau_tri plateau trait_aux_blancs dernier_coup droit_au_roque ply =
+let tri plateau trait_aux_blancs dernier_coup droit_au_roque ply =
   let coups_valides = coups_valides plateau trait_aux_blancs dernier_coup droit_au_roque in
   let score coup =
     if isquiet coup then begin
@@ -131,10 +131,10 @@ let nouveau_tri plateau trait_aux_blancs dernier_coup droit_au_roque ply =
 
 let rec pvs plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau demi_coups profondeur profondeur_initiale alpha beta evaluation zobrist_position ispv =
   incr compteur_recherche;
+  let ply = profondeur_initiale - profondeur in
   if !stop_calculating || repetition releve_plateau 3 || demi_coups = 100 then begin
-    incr compteur_noeuds_terminaux;
     if ispv then begin
-      pv_length.(profondeur_initiale - profondeur) <- 0
+      pv_length.(ply) <- 0
     end;
     0
   end
@@ -143,7 +143,6 @@ let rec pvs plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau 
     let beta0 = ref beta in
     let best_score = ref (-infinity) in
     let best_move = ref Aucun in
-    let ply = profondeur_initiale - profondeur in
     let presence = ref true in
     let hash_node_type, hash_depth, hash_value, hash_move, _ =
       try
@@ -157,7 +156,6 @@ let rec pvs plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau 
     end;
     if !no_tt_cut then begin
       if profondeur = 0 then begin
-        incr compteur_noeuds_terminaux;
         best_score := traitement_quiescent_profondeur_0 profondeur_initiale evaluation plateau trait_aux_blancs dernier_coup !alpha0 !beta0
       end
       else begin
@@ -197,13 +195,12 @@ let rec pvs plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau 
         if !no_cut then begin
           let cp =
             if hash_ordering then
-              ref (List.filter (fun c -> c <> hash_move) (nouveau_tri plateau trait_aux_blancs dernier_coup droit_au_roque ply))
+              ref (List.filter (fun c -> c <> hash_move) (tri plateau trait_aux_blancs dernier_coup droit_au_roque ply))
             else
-              ref (nouveau_tri plateau trait_aux_blancs dernier_coup droit_au_roque ply)
+              ref (tri plateau trait_aux_blancs dernier_coup droit_au_roque ply)
           in if !cp = [] && not hash_ordering then begin
-            incr compteur_noeuds_terminaux;
             if ispv then begin
-              pv_length.(profondeur_initiale - profondeur) <- 0
+              pv_length.(ply) <- 0
             end;
             if (menacee plateau (index_tableau plateau (roi trait_aux_blancs)) trait_aux_blancs) then begin
               best_score := ply - 99999

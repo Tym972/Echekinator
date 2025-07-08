@@ -19,7 +19,7 @@ let dernier_coup_initial = ref Aucun
 let droit_au_roque_initial = ref (true, true, true, true)
 let releve_coups_initial = ref []
 let releve_plateau_initial = ref [zobrist plateau true !dernier_coup !droit_au_roque]
-let chaine_fen = tri2
+let chaine_fen = standard
 let liste_coup = ""
 
 let () = 

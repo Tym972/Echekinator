@@ -1,10 +1,11 @@
-open Libs.Bitboards
-open Libs.Plateau
+(*open Libs.Plateau
 open Libs.Traduction1
 open Libs.Generateur
-open Config
+open Config*)
 
-let coup = tolerance plateau "0-0-0" !trait_aux_blancs (coups_valides plateau !trait_aux_blancs !dernier_coup !droit_au_roque)
+let () = ()
+
+(*let coup = tolerance plateau "0-0-0" !trait_aux_blancs (coups_valides plateau !trait_aux_blancs !dernier_coup !droit_au_roque)
 let bitboard = [|0L; 0L; 0L; 0L; 0L; 0L; 0L; 0L; 0L; 0L; 0L; 0L|]
 let main bitboard =
   affiche (mailbox_of_bitboard bitboard);
@@ -13,7 +14,7 @@ let main bitboard =
   update_bitboard coup bitboard;
   affiche (mailbox_of_bitboard bitboard)
 
-let () = main bitboard
+let () = main bitboard*)
 
 (*
 
