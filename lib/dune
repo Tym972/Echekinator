@@ -1,15 +1,17 @@
 (library
  (name libs)
  (modules
-  plateau
-  generateur
-  traduction1
-  traduction2
-  traduction3
+  board
+  generator
+  of_algebraic
+  to_algebraic
+  fen
   zobrist
-  strategie1
+  move_ordering
+  transposition
   quiescence
-  evaluations
+  search
+  evaluation
   piece_square_tables
   uci)
  (libraries

@@ -1,9 +1,10 @@
 open Config
-open Libs.Plateau
-open Libs.Generateur
-open Libs.Strategie1
+open Libs.Board
+open Libs.Zobrist
+open Libs.Generator
+open Libs.Transposition
 open Strategie2
-open Libs.Traduction2
+open Libs.To_algebraic
 open Libs.Quiescence
 
 let rec negamax plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau profondeur evaluation = incr compteur_recherche;

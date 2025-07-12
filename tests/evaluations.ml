@@ -1,7 +1,7 @@
 open Config
-open Libs.Plateau
-open Libs.Generateur
-open Libs.Traduction2
+open Libs.Board
+open Libs.Generator
+open Libs.To_algebraic
 let main =
   print_newline ();
   let position_roi = index_tableau plateau (roi !trait_aux_blancs) in

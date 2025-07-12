@@ -1,7 +1,6 @@
 (*Module contenant des répertoires d'ouvertures*)
 
-open Libs.Plateau
-open Libs.Traduction1
+open Libs.Of_algebraic
 
 let chess_openings_exhaustif =
   "1 a3 a5 2 b4
@@ -2998,6 +2997,12 @@ let ouvertures_exhaustif = traduction chess_openings_exhaustif
 
 (*Ouvertures suffisament longues*)
 let ouvertures_efficaces = traduction chess_openings_efficace
+
+
+
+let rec select liste n = match liste with
+  |[] -> []
+  |h::t -> if n = 0 then [] else h :: select t (n - 1)
 
 (*Echantillon d'ouvertures*)
 let ouvertures_echantillon = select (ouvertures_exhaustif) 10

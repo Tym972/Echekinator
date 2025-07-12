@@ -1,6 +1,6 @@
-open Libs.Plateau
-open Libs.Generateur
-open Libs.Traduction3
+open Libs.Board
+open Libs.Generator
+open Libs.Fen
 open Config
 
 let rec algoperft plateau trait_aux_blancs dernier_coup droit_au_roque profondeur =
@@ -8,14 +8,14 @@ let rec algoperft plateau trait_aux_blancs dernier_coup droit_au_roque profondeu
     1
   end
   else begin
-    let cp = ref (coups_valides plateau trait_aux_blancs dernier_coup droit_au_roque) in
+    let cp = ref (legal_moves plateau trait_aux_blancs dernier_coup droit_au_roque) in
     let nodes = ref 0 in
     while !cp <> [] do
       let coup = List.hd !cp in
-      joue plateau coup;
+      make plateau coup;
       cp := List.tl !cp;
       nodes := !nodes + (algoperft plateau (not trait_aux_blancs) coup (modification_roque coup droit_au_roque) (profondeur - 1));
-      dejoue plateau coup
+      unmake plateau coup
     done;
     !nodes 
   end
@@ -28,7 +28,7 @@ let algoperftime plateau trait_aux_blancs historique droit_au_roque profondeur =
 let perft profondeur plateau =
   let nodes, time = algoperftime plateau !trait_aux_blancs !dernier_coup !droit_au_roque profondeur in
   print_newline ();
-  affiche plateau;
+  print_board plateau;
   print_endline (fen plateau !trait_aux_blancs !dernier_coup !droit_au_roque !releve_coups !releve_plateau);
   print_endline ("\nPerft " ^ (string_of_int profondeur));
   print_endline ("Total time (s) : " ^ (string_of_float time));

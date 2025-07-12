@@ -1,9 +1,9 @@
 open Config
-open Libs.Plateau
-open Libs.Generateur
-open Libs.Traduction1
-open Libs.Traduction2
-open Libs.Traduction3
+open Libs.Board
+open Libs.Generator
+open Libs.Of_algebraic
+open Libs.To_algebraic
+open Libs.Fen
 
 let rec algoperft plateau trait_aux_blancs dernier_coup droit_au_roque profondeur =
   if profondeur = 0 then begin

@@ -1,7 +1,6 @@
 open Config
-open Libs.Plateau
-open Libs.Generateur
-open Libs.Quiescence
+open Libs.Board
+open Libs.Generator
 
 let main =
   print_newline ();

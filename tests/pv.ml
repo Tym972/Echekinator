@@ -1,6 +1,6 @@
-open Libs.Plateau
-open Libs.Generateur
-open Libs.Strategie1
+open Libs.Board
+open Libs.Generator
+open Libs.Zobrist
 open Strategie2
 open Config
 
@@ -17,7 +17,7 @@ let rec negalphabeta_pv plateau trait_aux_blancs dernier_coup droit_au_roque rel
   else begin
     let cp = ref (tab_tri.(profondeur - 1) plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau evaluation negalphabeta)
     in if !cp = [] then begin
-      if menacee plateau (index_tableau plateau (roi trait_aux_blancs)) trait_aux_blancs then begin
+      if threatened plateau (index_array plateau (king trait_aux_blancs)) trait_aux_blancs then begin
         best_score := (profondeur_initiale - (profondeur + 99999))
       end 
       else begin
@@ -29,7 +29,7 @@ let rec negalphabeta_pv plateau trait_aux_blancs dernier_coup droit_au_roque rel
       let alpha0 = ref alpha in
       while (!b && !cp <> []) do
         let coup = List.hd !cp in
-        joue plateau coup;
+        make plateau coup;
         cp := List.tl !cp;
         let nouveau_droit_au_roque = modification_roque coup droit_au_roque in
         let nouveau_releve = adapte_releve plateau coup profondeur trait_aux_blancs nouveau_droit_au_roque releve_plateau
@@ -43,7 +43,7 @@ let rec negalphabeta_pv plateau trait_aux_blancs dernier_coup droit_au_roque rel
             b := false
           end
         end;
-        dejoue plateau coup
+        unmake plateau coup
       done
     end
   end;
@@ -56,19 +56,19 @@ let negalphabetime_pv plateau trait_aux_blancs dernier_coup droit_au_roque relev
 
 let runnegalphabeta_pv b1 b2 plateau =
   if b1 then begin
-    affiche plateau
+    print_board plateau
   end;
   let (a,b),c = negalphabetime_pv plateau !trait_aux_blancs !dernier_coup !droit_au_roque !releve_plateau profondeur profondeur evaluation in
   if b2 then begin
     print_endline ("Matériel : " ^ (string_of_float ((float_of_int a)/. 1000.)));
     print_endline ("Temps : " ^ (string_of_float c))
   end; 
-  affiche_liste b plateau (coups_valides plateau !trait_aux_blancs !dernier_coup !droit_au_roque);
+  affiche_liste b plateau (legal_moves plateau !trait_aux_blancs !dernier_coup !droit_au_roque);
   print_newline ()
 
 let main b1 plateau =
   print_endline ("\nProfondeur " ^ (string_of_int profondeur));
-  affiche plateau;
+  print_board plateau;
   if b1 then begin
     print_endline "Negalphabeta";
     runnegalphabeta_pv false true (Array.copy plateau);

@@ -1,15 +1,17 @@
 (*Module implémentant la communication UCI*)
 
-open Plateau
-open Generateur
+open Board
+open Generator
 open Zobrist
-open Traduction1
-open Traduction2
-open Traduction3
-open Strategie1
-open Evaluations
+open Of_algebraic
+open To_algebraic
+open Fen
+open Move_ordering
+open Transposition
+open Search
+open Evaluation
 
-(*Supprime les n premiers éléments d'une liste*)
+(*Supprime les n premiers éléments d'une list*)
 let rec pop list n =
   if n = 0 then begin
     list
@@ -20,7 +22,17 @@ let rec pop list n =
       |_ :: t -> pop t (n - 1)
   end
 
-(*Fonction transformant une liste de string en string*)
+(*Fonction permettant la lecture d'une réponse*)
+let lire_entree message suppression =
+  print_string message;
+  flush stdout;
+  let entree = input_line stdin in
+  if suppression then
+    remove entree
+  else
+    entree
+
+(*Fonction transformant une list de string en string*)
 let rec string_of_list list = match list with
   |[] -> ""
   |h :: t -> h ^ " " ^ string_of_list t
@@ -28,7 +40,7 @@ let rec string_of_list list = match list with
 (*Answer to the command "uci"*)
 let uci () =
   print_endline (
-    "id name " ^ nom_du_projet ^ "\n"
+    "id name " ^ project_name ^ "\n"
     ^ "id author Timothée Fixy" ^ "\n"
     ^ "\n"
     ^ "option name Clear Hash type button" ^ "\n"
@@ -45,19 +57,19 @@ let setoption instructions =
   end
 
 (*Answer to the command "ucinewgame"*)
-let ucinewgame plateau trait_aux_blancs dernier_coup droit_au_roque releve_coups releve_plateau position_de_depart trait_aux_blancs_initial dernier_coup_initial droit_au_roque_initial releve_coups_initial releve_plateau_initial =
-  actualise table 1000;
+let ucinewgame board white_to_move last_move castling_right moves_record board_record start_position initial_white_to_move initial_last_move initial_castling_right initial_moves_record initial_board_record =
+  update table 1000;
   for i = 0 to 8191 do
     history_moves.(i) <- 0
   done;
-  reinitialise plateau trait_aux_blancs dernier_coup droit_au_roque releve_coups releve_plateau echiquier true Aucun (true, true, true, true) [] [zobrist echiquier true Aucun (true, true, true, true)];
-  reinitialise position_de_depart trait_aux_blancs_initial dernier_coup_initial droit_au_roque_initial releve_coups_initial releve_plateau_initial  echiquier true Aucun (true, true, true, true) [] [zobrist echiquier true Aucun (true, true, true, true)]
+  reset board white_to_move last_move castling_right moves_record board_record chessboard true Null (true, true, true, true) [] [zobrist chessboard true Null (true, true, true, true)];
+  reset start_position initial_white_to_move initial_last_move initial_castling_right initial_moves_record initial_board_record  chessboard true Null (true, true, true, true) [] [zobrist chessboard true Null (true, true, true, true)]
 
 (*Answer to the command "command"*)
-let position instructions plateau trait_aux_blancs dernier_coup droit_au_roque releve_coups releve_plateau position_de_depart trait_aux_blancs_initial dernier_coup_initial droit_au_roque_initial releve_coups_initial releve_plateau_initial =
+let position instructions board white_to_move last_move castling_right moves_record board_record start_position initial_white_to_move initial_last_move initial_castling_right initial_moves_record initial_board_record =
   let length_list = List.length instructions in
   if length_list > 1 then begin
-    reinitialise position_de_depart trait_aux_blancs_initial dernier_coup_initial droit_au_roque_initial releve_coups_initial releve_plateau_initial echiquier true Aucun (true, true, true, true) [] [zobrist echiquier true Aucun (true, true, true, true)];
+    reset start_position initial_white_to_move initial_last_move initial_castling_right initial_moves_record initial_board_record chessboard true Null (true, true, true, true) [] [zobrist chessboard true Null (true, true, true, true)];
     let index_moves = ref 2 in
     if List.nth instructions 1 = "fen" then begin
       let rec aux_fen list  = match list with
@@ -67,12 +79,12 @@ let position instructions plateau trait_aux_blancs dernier_coup droit_au_roque r
           h ^ " " ^ aux_fen t 
         end
       |_ -> ""
-    in position_of_fen (aux_fen (pop instructions 2)) position_de_depart trait_aux_blancs_initial dernier_coup_initial droit_au_roque_initial releve_coups_initial releve_plateau_initial;
+    in position_of_fen (aux_fen (pop instructions 2)) start_position initial_white_to_move initial_last_move initial_castling_right initial_moves_record initial_board_record;
     end;
-    reinitialise plateau trait_aux_blancs dernier_coup droit_au_roque releve_coups releve_plateau position_de_depart !trait_aux_blancs_initial !dernier_coup_initial !droit_au_roque_initial !releve_coups_initial !releve_plateau_initial;
+    reset board white_to_move last_move castling_right moves_record board_record start_position !initial_white_to_move !initial_last_move !initial_castling_right !initial_moves_record !initial_board_record;
     if (length_list > !index_moves && List.nth instructions !index_moves = "moves") then begin
-      let reverse_historique = move_list_of_san (string_of_list (pop instructions (!index_moves + 1))) !trait_aux_blancs_initial !dernier_coup_initial !droit_au_roque_initial plateau in
-      joue_liste reverse_historique plateau dernier_coup releve_coups releve_plateau droit_au_roque trait_aux_blancs
+      let reverse_historique = move_list_of_san (string_of_list (pop instructions (!index_moves + 1))) !initial_white_to_move !initial_last_move !initial_castling_right board in
+      make_list reverse_historique board last_move moves_record board_record castling_right white_to_move
     end
   end
 
@@ -102,42 +114,42 @@ let pv_finder depth =
   done;
   !pv
 
-let rec algoperft plateau trait_aux_blancs dernier_coup droit_au_roque profondeur racine zobrist_position table_perft =
-  if profondeur = 0 then begin
+let rec algoperft board white_to_move last_move castling_right depth root zobrist_position table_perft =
+  if depth = 0 then begin
     1
   end
   else begin
     let nombre, hash_depth = try ZobristHashtbl.find table_perft zobrist_position with _ -> (-1),(-1) in
-    if profondeur = hash_depth then begin
+    if depth = hash_depth then begin
       nombre
     end
     else begin
-      let cp = ref (coups_valides plateau trait_aux_blancs dernier_coup droit_au_roque) in
+      let cp = ref (legal_moves board white_to_move last_move castling_right) in
       let nodes = ref 0 in
       while !cp <> [] do
-        let coup = List.hd !cp in
-        let nouveau_doit_au_roque = modification_roque coup droit_au_roque in
-        let nouveau_zobrist = if profondeur > 1 then (nouveau_zobrist coup dernier_coup zobrist_position droit_au_roque nouveau_doit_au_roque plateau) else 0 in
-        joue plateau coup;
+        let move = List.hd !cp in
+        let new_casling_right = modification_roque move castling_right in
+        let nouveau_zobrist = if depth > 1 then (new_zobrist move last_move zobrist_position castling_right new_casling_right board) else 0 in
+        make board move;
         cp := List.tl !cp;
-        let perft = (algoperft plateau (not trait_aux_blancs) coup nouveau_doit_au_roque (profondeur - 1) false nouveau_zobrist table_perft) in
+        let perft = (algoperft board (not white_to_move) move new_casling_right (depth - 1) false nouveau_zobrist table_perft) in
         nodes := !nodes + perft;
-        if racine then begin
-          print_endline (uci_of_mouvement coup ^ ": " ^ string_of_int perft)
+        if root then begin
+          print_endline (uci_of_mouvement move ^ ": " ^ string_of_int perft)
         end;
-        dejoue plateau coup
+        unmake board move
       done;
-      ZobristHashtbl.add table_perft zobrist_position (!nodes, profondeur);
+      ZobristHashtbl.add table_perft zobrist_position (!nodes, depth);
       !nodes
     end
   end
 
 (*Answer to the command "go"*)
-let go instruction plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau demi_coups evaluation =
-  if (List.length instruction > 1 && List.nth instruction 1 = "perft" && est_entier_string (List.nth instruction 2)) then begin
+let go instruction board white_to_move last_move castling_right board_record demi_coups evaluation =
+  if (List.length instruction > 1 && List.nth instruction 1 = "perft" && is_integer_string (List.nth instruction 2)) then begin
     let depth = int_of_string (List.nth instruction 2) in
-    let table_perft = ZobristHashtbl.create taille_transposition in
-    print_endline ("\n" ^ "Nodes searched : " ^ (string_of_int (algoperft plateau trait_aux_blancs dernier_coup droit_au_roque depth true (List.hd releve_plateau) table_perft)));
+    let table_perft = ZobristHashtbl.create transposition_size in
+    print_endline ("\n" ^ "Nodes searched : " ^ (string_of_int (algoperft board white_to_move last_move castling_right depth true (List.hd board_record) table_perft)));
   end
   else begin
     let t = Sys.time () in
@@ -156,13 +168,13 @@ let go instruction plateau trait_aux_blancs dernier_coup droit_au_roque releve_p
       |[] -> ()
       |h::t ->
         if not (List.mem h commands) then begin
-          searchmoves := !searchmoves @ [tolerance plateau h trait_aux_blancs coups_valides_joueur];
+          searchmoves := !searchmoves @ [tolerance board h white_to_move coups_valides_joueur];
           aux_searchmoves t coups_valides_joueur
         end
     in let rec aux instruction = match instruction with
       |h :: g :: t ->
         begin match h with
-          |"searchmoves" -> aux_searchmoves (g :: t) (coups_valides plateau trait_aux_blancs dernier_coup droit_au_roque)
+          |"searchmoves" -> aux_searchmoves (g :: t) (legal_moves board white_to_move last_move castling_right)
           |"wtime" -> begin try wtime := (float_of_string g) with _ -> () end
           |"btime" -> begin try btime := (float_of_string g) with _ -> () end
           |"winc" -> begin try winc := (float_of_string g) with _ -> () end
@@ -185,86 +197,86 @@ let go instruction plateau trait_aux_blancs dernier_coup droit_au_roque releve_p
         !movetime
       end
       else begin
-        if trait_aux_blancs then begin
+        if white_to_move then begin
           (if !wtime > !winc then !wtime +. !winc else !wtime) /. (if !movestogo > 0 then (float_of_int !movestogo) else 40.)
         end
         else begin
           (if !btime > !binc then !btime +. !binc else !btime) /. (if !movestogo > 0 then (float_of_int !movestogo) else 40.)
         end
       end
-    in let _ = Thread.create (fun () -> monitor_time time stop_calculating) () in
+    in let _ = Thread.create (fun () -> monitor_time time stop_calculation) () in
     let best_score = ref "cp 0" in
     let pv = ref "" in
     let var_depth = ref 0 in
-    while not !stop_calculating && !var_depth < !depth do
+    while not !stop_calculation && !var_depth < !depth do
       incr var_depth;
-      let new_score = pvs plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau demi_coups !var_depth !var_depth (-infinity) infinity evaluation (List.hd releve_plateau) true in
-      if not !stop_calculating then begin
+      let new_score = pvs board white_to_move last_move castling_right board_record demi_coups !var_depth !var_depth (-infinity) infinity evaluation (List.hd board_record) true in
+      if not !stop_calculation then begin
         let exec_time = Sys.time () -. t in
         best_score := score new_score;
         pv := pv_finder !var_depth;
-        print_endline (Printf.sprintf "info depth %i seldepth %i multipv 1 score %s nodes %i nps %i hashfull %i time %i pv %s" !var_depth !var_depth !best_score !compteur_recherche (int_of_float (float_of_int !compteur_recherche /. exec_time)) (int_of_float (1000. *. (float_of_int !compteur_transposition /. (float_of_int taille_transposition)))) (int_of_float (1000. *. exec_time)) !pv);
+        print_endline (Printf.sprintf "info depth %i seldepth %i multipv 1 score %s nodes %i nps %i hashfull %i time %i pv %s" !var_depth !var_depth !best_score !search_counter (int_of_float (float_of_int !search_counter /. exec_time)) (int_of_float (1000. *. (float_of_int !transposition_counter /. (float_of_int transposition_size)))) (int_of_float (1000. *. exec_time)) !pv);
       end
     done;
-    print_endline (Printf.sprintf "bestmove %s ponder %s" (try (List.nth (detecte_mots !pv) 0) with _ -> "0000") (try (List.nth (detecte_mots !pv) 1) with _ -> "0000"))
+    print_endline (Printf.sprintf "bestmove %s ponder %s" (try (List.nth (word_detection !pv) 0) with _ -> "0000") (try (List.nth (word_detection !pv) 1) with _ -> "0000"))
   end
 
-let checkers plateau trait_aux_blancs =
-  let position_roi = (index_tableau plateau (roi trait_aux_blancs)) in
-  let rec aux liste = match liste with
+let checkers board white_to_move =
+  let position_roi = (index_array board (king white_to_move)) in
+  let rec aux list = match list with
     |[] -> ""
-    |coup :: t -> if arrivee coup = position_roi then coord.(depart coup) ^ " " ^ aux t else aux t
-  in let moves,_ = (deplacements plateau (not trait_aux_blancs) (index_tableau plateau (roi (not trait_aux_blancs))))
+    |move :: t -> if to_ move = position_roi then coord.(from move) ^ " " ^ aux t else aux t
+  in let moves,_ = (pseudo_legal_moves board (not white_to_move) (index_array board (king (not white_to_move))))
   in aux moves
 
-let display plateau trait_aux_blancs dernier_coup droit_au_roque releve_coups releve_plateau =
-  affiche plateau;
-  print_endline (Printf.sprintf "Fen: %s" (fen plateau trait_aux_blancs dernier_coup droit_au_roque releve_coups releve_plateau));
-  print_endline (Printf.sprintf "Key: %i" (List.hd releve_plateau));
-  print_endline (Printf.sprintf "Checkers: %s" (checkers plateau trait_aux_blancs))
+let display board white_to_move last_move castling_right moves_record board_record =
+  print_board board;
+  print_endline (Printf.sprintf "Fen: %s" (fen board white_to_move last_move castling_right moves_record board_record));
+  print_endline (Printf.sprintf "Key: %i" (List.hd board_record));
+  print_endline (Printf.sprintf "Checkers: %s" (checkers board white_to_move))
 
 (*Fonction lançant le programme*)
 let echekinator () =
-  let plateau = Array.copy echiquier in
-  let position_de_depart = Array.copy echiquier in
-  let dernier_coup = ref Aucun in
-  let dernier_coup_initial = ref Aucun in
-  let droit_au_roque = ref (true, true, true, true) in
-  let droit_au_roque_initial = ref (true, true, true, true) in
-  let releve_coups = ref [] in
-  let releve_coups_initial = ref [] in
-  let releve_plateau = ref [zobrist echiquier true Aucun (true, true, true, true)] in
-  let releve_plateau_initial = ref [zobrist echiquier true Aucun (true, true, true, true)] in
-  let trait_aux_blancs = ref true in
-  let trait_aux_blancs_initial = ref true in
+  let board = Array.copy chessboard in
+  let start_position = Array.copy chessboard in
+  let last_move = ref Null in
+  let initial_last_move = ref Null in
+  let castling_right = ref (true, true, true, true) in
+  let initial_castling_right = ref (true, true, true, true) in
+  let moves_record = ref [] in
+  let initial_moves_record = ref [] in
+  let board_record = ref [zobrist chessboard true Null (true, true, true, true)] in
+  let initial_board_record = ref [zobrist chessboard true Null (true, true, true, true)] in
+  let white_to_move = ref true in
+  let initial_white_to_move = ref true in
   let evaluation =
-    if not (List.length !releve_coups > 30 || tours_connectees plateau !trait_aux_blancs) then
+    if not (List.length !moves_record > 30 || tours_connectees board !white_to_move) then
       eval1_q
-    else if not (finale plateau || List.length !releve_coups > 90) then
+    else if not (finale board || List.length !moves_record > 90) then
       eval2_q
     else
       eval3_q
   in
   let exit = ref false in
   while not !exit do
-    let command_line = detecte_mots (lire_entree "" true) in
+    let command_line = word_detection (lire_entree "" true) in
     let command = try List.hd command_line with _ -> "" in
     match command with
       |"uci" -> uci ()
       |"isready" -> print_endline "readyok"
       |"setoption" -> setoption command_line
-      |"ucinewgame" -> ucinewgame plateau trait_aux_blancs dernier_coup droit_au_roque releve_coups releve_plateau position_de_depart trait_aux_blancs_initial dernier_coup_initial droit_au_roque_initial releve_coups_initial releve_plateau_initial
-      |"position" -> position command_line plateau trait_aux_blancs dernier_coup droit_au_roque releve_coups releve_plateau position_de_depart trait_aux_blancs_initial dernier_coup_initial droit_au_roque_initial releve_coups_initial releve_plateau_initial
+      |"ucinewgame" -> ucinewgame board white_to_move last_move castling_right moves_record board_record start_position initial_white_to_move initial_last_move initial_castling_right initial_moves_record initial_board_record
+      |"position" -> position command_line board white_to_move last_move castling_right moves_record board_record start_position initial_white_to_move initial_last_move initial_castling_right initial_moves_record initial_board_record
       |"go" ->
-        let _ = Thread.create (fun () -> go command_line (Array.copy plateau) !trait_aux_blancs !dernier_coup !droit_au_roque !releve_plateau (List.length !releve_plateau - 1) evaluation) () in
-        stop_calculating := false;
-        compteur_recherche := 0;
+        let _ = Thread.create (fun () -> go command_line (Array.copy board) !white_to_move !last_move !castling_right !board_record (List.length !board_record - 1) evaluation) () in
+        stop_calculation := false;
+        search_counter := 0;
         for i = 0 to (2 * max_depth) - 1 do
-          killer_moves.(i) <- Aucun
+          killer_moves.(i) <- Null
         done;
       |"quit" -> exit := true
-      |"stop" -> stop_calculating := true
-      |"d" -> display plateau !trait_aux_blancs !dernier_coup !droit_au_roque !releve_coups !releve_plateau
+      |"stop" -> stop_calculation := true
+      |"d" -> display board !white_to_move !last_move !castling_right !moves_record !board_record
       |"ponderhit" -> ()
       |_ -> print_endline (Printf.sprintf "Unknown command: '%s'. Type help for more information." command)
   done

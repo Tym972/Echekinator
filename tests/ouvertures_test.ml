@@ -1,10 +1,10 @@
 
 (*Module vérifiant que les ouvertures de la base de donnée sont correctes*)
 
-open Libs.Plateau
-open Libs.Generateur
+open Libs.Board
+open Libs.Generator
 open Ouvertures
-open Libs.Traduction1
+open Libs.Of_algebraic
 open Config
 
 let ouvertures = traduction chess_openings_exhaustif

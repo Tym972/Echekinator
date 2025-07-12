@@ -1,4 +1,4 @@
-open Libs.Plateau
+open Libs.Board
 open Strategie2
 open Libs.Quiescence
 open Config

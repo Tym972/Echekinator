@@ -1,6 +1,6 @@
 open Config
-open Libs.Plateau
-open Libs.Quiescence
+open Libs.Board
+open Libs.Move_ordering
 
 (*let depart = Hashtbl.find dicocoord "d8"*)
 

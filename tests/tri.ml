@@ -1,11 +1,12 @@
 open Config
-open Libs.Plateau
-open Libs.Generateur
-open Libs.Evaluations
+open Libs.Board
+open Libs.Generator
+open Libs.Evaluation
 open Libs.Zobrist
 open Strategie2
-open Libs.Traduction2
-open Libs.Traduction3
+open Libs.To_algebraic
+open Libs.Fen
+open Libs.Move_ordering
 open Libs.Quiescence
 
 let rec affiche_liste liste plateau coups_valides_joueur = match liste with

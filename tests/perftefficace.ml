@@ -1,10 +1,10 @@
-open Libs.Plateau
-open Libs.Strategie1
-open Libs.Traduction3
+open Libs.Board
+open Libs.Fen
 open Libs.Uci
+open Libs.Transposition
 open Config
 
-let table_perft = ZobristHashtbl.create taille_transposition
+let table_perft = ZobristHashtbl.create transposition_size
 
 let algoperftime plateau trait_aux_blancs dernier_coup droit_au_roque profondeur releve_plateau =
   let t = Sys.time () in
@@ -14,7 +14,7 @@ let algoperftime plateau trait_aux_blancs dernier_coup droit_au_roque profondeur
 let perft profondeur plateau =
   let nodes, time = algoperftime plateau !trait_aux_blancs !dernier_coup !droit_au_roque profondeur !releve_plateau in
   print_newline ();
-  affiche plateau;
+  print_board plateau;
   print_endline (fen plateau !trait_aux_blancs !dernier_coup !droit_au_roque !releve_coups !releve_plateau);
   print_endline ("\nPerft " ^ (string_of_int profondeur));
   print_endline ("Total time (s) : " ^ (string_of_float time));
