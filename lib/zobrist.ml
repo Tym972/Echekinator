@@ -70,7 +70,7 @@ let new_zobrist move avant_dernier_move ancien_zobrist (aprb, agrb, aprn, agrn) 
   end;
   let aux move = match move with
     |Normal {piece; from; to_; capture} -> begin
-      if (abs piece = 1 && abs (from - to_) = 16) then begin
+      if (abs piece = 1 && abs (from - to_) = 16) && ((from mod 8 <> 0 && board.(to_ - 1) = - piece) || (from mod 8 <> 7 && board.(to_ + 1) = - piece)) then begin
         h := !h lxor tab_zobrist.(773 + (from mod 8))
       end;
       if piece > 0 then begin
