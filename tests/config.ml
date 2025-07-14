@@ -29,7 +29,7 @@ let () =
 
 let evaluation = eval1_q
 let profondeur = 8
-let profondeur_perft = 5
+let profondeur_perft = 6
 let nombre_de_coups = 1
 
 let coups_valides_joueur = legal_moves plateau !trait_aux_blancs !dernier_coup !droit_au_roque

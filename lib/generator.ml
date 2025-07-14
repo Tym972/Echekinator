@@ -11,9 +11,9 @@ let threatened board square white_to_move =
   let pawn_vect = [|(-9) * player_sign; (-11) * player_sign|] in
   let i = ref 0 in
   while (not !threat && !i < 2) do
-    let dir = pawn_vect.(!i) in
-    if tab120.(tab64_square + dir) <> (-1) then begin
-      let candidate = tab120.(tab64_square + dir) in
+    let direction = pawn_vect.(!i) in
+    if tab120.(tab64_square + direction) <> (-1) then begin
+      let candidate = tab120.(tab64_square + direction) in
       if board.(candidate) = (- player_sign) then begin
         threat := true
       end
@@ -23,9 +23,9 @@ let threatened board square white_to_move =
   if not !threat then begin
     let i = ref 0 in
     while (not !threat && !i < 8) do
-      let dir = knight_vect.(!i) in
-      if tab120.(tab64_square + dir) <> (-1) then begin
-        let candidate = tab120.(tab64_square + dir) in
+      let direction = knight_vect.(!i) in
+      if tab120.(tab64_square + direction) <> (-1) then begin
+        let candidate = tab120.(tab64_square + direction) in
         if board.(candidate) = (-2) * player_sign then begin
           threat := true
         end
@@ -36,11 +36,11 @@ let threatened board square white_to_move =
   if not !threat then begin
     let i = ref 0 in
     while (not !threat && !i < 4) do
-      let dir = bishop_vect.(!i) in
+      let direction = bishop_vect.(!i) in
       let k = ref 1 in
       let iterate = ref true in
-      while (tab120.(tab64_square + (!k * dir)) <> (-1) && !iterate) do
-        let candidate = tab120.(tab64_square + (!k * dir)) in
+      while (tab120.(tab64_square + (!k * direction)) <> (-1) && !iterate) do
+        let candidate = tab120.(tab64_square + (!k * direction)) in
         let dest = board.(candidate) * player_sign in
         if dest = 0 then begin
           incr k
@@ -61,11 +61,11 @@ let threatened board square white_to_move =
   if not !threat then begin
     let i = ref 0 in
     while (not !threat && !i < 4) do
-      let dir = rook_vect.(!i) in
+      let direction = rook_vect.(!i) in
       let k = ref 1 in
       let iterate = ref true in
-      while (tab120.(tab64_square + (!k * dir)) <> (-1) && !iterate) do
-        let candidate = tab120.(tab64_square + (!k * dir)) in
+      while (tab120.(tab64_square + (!k * direction)) <> (-1) && !iterate) do
+        let candidate = tab120.(tab64_square + (!k * direction)) in
         let dest = board.(candidate) * player_sign in
         if dest = 0 then begin
           incr k
@@ -90,11 +90,11 @@ let rook_moves board square list =
   let piece = board.(square) in
   let tab64_square = tab64.(square) in
   for i = 0 to 3 do
-    let dir = rook_vect.(i) in
+    let direction = rook_vect.(i) in
     let k = ref 1 in
     let iterate = ref true in
-    while (!iterate && tab120.(tab64_square + (!k * dir)) <> (-1)) do
-      let candidate = tab120.(tab64_square + (!k * dir)) in
+    while (!iterate && tab120.(tab64_square + (!k * direction)) <> (-1)) do
+      let candidate = tab120.(tab64_square + (!k * direction)) in
       let dest = board.(candidate) in
       if dest = 0 then begin
         list := Normal {piece = piece; from = square; to_ = candidate; capture = 0} :: !list;
@@ -115,11 +115,11 @@ let bishop_moves board square list =
   let piece = board.(square) in
   let tab64_square = tab64.(square) in
   for i = 0 to 3 do
-    let dir = bishop_vect.(i) in
+    let direction = bishop_vect.(i) in
     let k = ref 1 in
     let iterate = ref true in
-    while (!iterate && tab120.(tab64_square + (!k * dir)) <> (-1)) do
-      let candidate = tab120.(tab64_square + (!k * dir)) in
+    while (!iterate && tab120.(tab64_square + (!k * direction)) <> (-1)) do
+      let candidate = tab120.(tab64_square + (!k * direction)) in
       let dest = board.(candidate) in
       if dest = 0 then begin
         list := Normal {piece = piece; from = square; to_ = candidate; capture = 0} :: !list;
@@ -140,9 +140,9 @@ let knight_moves board square list =
   let piece = board.(square) in
   let tab64_square = tab64.(square) in
   for i = 0 to 7 do
-    let dir = knight_vect.(i) in
-    if tab120.(tab64_square + dir) <> (-1) then begin
-      let candidate = tab120.(tab64_square + dir) in
+    let direction = knight_vect.(i) in
+    if tab120.(tab64_square + direction) <> (-1) then begin
+      let candidate = tab120.(tab64_square + direction) in
       let dest = board.(candidate) in
       if piece * dest <= 0 then begin
         list := Normal {piece = piece; from = square; to_ = candidate; capture = dest} :: !list
@@ -155,11 +155,11 @@ let queen_moves board square list =
   let piece = board.(square) in
   let tab64_square = tab64.(square) in
   for i = 0 to 7 do
-    let dir = king_vect.(i) in
+    let direction = king_vect.(i) in
     let k = ref 1 in
     let iterate = ref true in
-    while (!iterate && tab120.(tab64_square + (!k * dir)) <> (-1)) do
-      let candidate = tab120.(tab64_square + (!k * dir)) in
+    while (!iterate && tab120.(tab64_square + (!k * direction)) <> (-1)) do
+      let candidate = tab120.(tab64_square + (!k * direction)) in
       let dest = board.(candidate) in
       if dest = 0 then begin
         list := Normal {piece = piece; from = square; to_ = candidate; capture = 0} :: !list;
@@ -181,9 +181,9 @@ let king_moves board square =
   let piece = board.(square) in
   let tab64_square = tab64.(square) in
   for i = 0 to 7 do
-    let dir = king_vect.(i) in
-    if tab120.(tab64_square + dir) <> (-1) then begin
-      let candidate = tab120.(tab64_square + dir) in
+    let direction = king_vect.(i) in
+    if tab120.(tab64_square + direction) <> (-1) then begin
+      let candidate = tab120.(tab64_square + direction) in
       let dest = board.(candidate) in
       if piece * dest <= 0 then begin
         list := Normal {piece = piece; from = square; to_ = candidate; capture = dest} :: !list
@@ -218,18 +218,18 @@ let pawn_moves board square list =
       end
     end;
     if ((square + 1) mod 8 <> 0) then begin
-      let candidat3 = tab120.(tab64_square - 9) in
-      let dest3 = board.(candidat3) in
+      let candidate_3 = tab120.(tab64_square - 9) in
+      let dest3 = board.(candidate_3) in
       if dest3 < 0 then begin
         if square > 15 then begin
-          list := Normal {piece = 1; from = square; to_ = candidat3; capture = dest3} :: !list
+          list := Normal {piece = 1; from = square; to_ = candidate_3; capture = dest3} :: !list
         end
         else begin
           list :=
-          Promotion {from = square; to_ = candidat3; promotion = 5; capture = dest3} ::
-          Promotion {from = square; to_ = candidat3; promotion = 4; capture = dest3} ::
-          Promotion {from = square; to_ = candidat3; promotion = 3; capture = dest3} ::
-          Promotion {from = square; to_ = candidat3; promotion = 2; capture = dest3} ::
+          Promotion {from = square; to_ = candidate_3; promotion = 5; capture = dest3} ::
+          Promotion {from = square; to_ = candidate_3; promotion = 4; capture = dest3} ::
+          Promotion {from = square; to_ = candidate_3; promotion = 3; capture = dest3} ::
+          Promotion {from = square; to_ = candidate_3; promotion = 2; capture = dest3} ::
           !list
         end
       end
@@ -274,18 +274,18 @@ let pawn_moves board square list =
       end
     end;
     if (square mod 8 <> 0) then begin
-      let candidat3 = tab120.(tab64_square + 9) in
-      let dest3 = board.(candidat3) in
+      let candidate_3 = tab120.(tab64_square + 9) in
+      let dest3 = board.(candidate_3) in
       if dest3 > 0 then begin
         if square < 48 then begin
-          list := Normal {piece = (-1); from = square; to_ = candidat3; capture = dest3} :: !list
+          list := Normal {piece = (-1); from = square; to_ = candidate_3; capture = dest3} :: !list
         end
         else begin
           list :=
-          Promotion {from = square; to_ = candidat3; promotion = (-5); capture = dest3} ::
-          Promotion {from = square; to_ = candidat3; promotion = (-4); capture = dest3} ::
-          Promotion {from = square; to_ = candidat3; promotion = (-3); capture = dest3} ::
-          Promotion {from = square; to_ = candidat3; promotion = (-2); capture = dest3} ::
+          Promotion {from = square; to_ = candidate_3; promotion = (-5); capture = dest3} ::
+          Promotion {from = square; to_ = candidate_3; promotion = (-4); capture = dest3} ::
+          Promotion {from = square; to_ = candidate_3; promotion = (-3); capture = dest3} ::
+          Promotion {from = square; to_ = candidate_3; promotion = (-2); capture = dest3} ::
           !list
         end
       end
@@ -338,6 +338,133 @@ let pseudo_legal_moves board white_to_move king_position =
   end;
   !move_list, king_move_list
 
+let pin_table = Array.make 64 0
+
+let pin_generator piece square board pinned_list =
+  let tab64_square = tab64.(square) in
+  let direction = pin_table.(square) in
+  let func direction =
+    let k = ref 1 in
+    let iterate = ref true in
+    while (!iterate && tab120.(tab64_square + (!k * direction)) <> (-1)) do
+      let candidate = tab120.(tab64_square + (!k * direction)) in
+      let dest = board.(candidate) in
+      if dest = 0 then begin
+        pinned_list := Normal {piece = piece; from = square; to_ = candidate; capture = 0} :: !pinned_list;
+        incr k
+      end
+      else if piece * dest > 0 then begin
+        iterate :=  false
+      end
+      else begin 
+        pinned_list := Normal {piece = piece; from = square; to_ = candidate; capture = dest} :: !pinned_list;
+        iterate :=  false
+      end
+    done
+  in match abs piece with
+  |1 ->
+    if piece > 0 then begin
+      if abs direction = 10 then begin
+        let candidate_1 = tab120.(tab64_square - 10) in
+        if board.(candidate_1) = 0 then begin
+          pinned_list := Normal {piece = 1; from = square; to_ = candidate_1; capture = 0} :: !pinned_list;
+          if (square > 47 && square < 56) then begin
+            let candidate_2 = tab120.(tab64_square - 20) in
+            if board.(candidate_2) = 0 then begin
+              pinned_list := Normal {piece = 1; from = square; to_ = candidate_2; capture = 0} :: !pinned_list
+            end
+          end
+        end
+      end;
+      if (square + 1) mod 8 <> 0 && abs direction = 9 then begin
+        let candidate_3 = tab120.(tab64_square - 9) in
+        let dest3 = board.(candidate_3) in
+        if dest3 < 0 then begin
+          if square > 15 then begin
+            pinned_list := Normal {piece = 1; from = square; to_ = candidate_3; capture = dest3} :: !pinned_list
+          end
+          else begin
+            pinned_list :=
+            Promotion {from = square; to_ = candidate_3; promotion = 5; capture = dest3} ::
+            Promotion {from = square; to_ = candidate_3; promotion = 4; capture = dest3} ::
+            Promotion {from = square; to_ = candidate_3; promotion = 3; capture = dest3} ::
+            Promotion {from = square; to_ = candidate_3; promotion = 2; capture = dest3} ::
+            !pinned_list
+          end
+        end
+      end;
+      if square mod 8 <> 0 && abs direction = 11 then begin
+        let candidat4 = tab120.(tab64_square - 11) in
+        let dest4 = board.(candidat4) in
+        if dest4 < 0 then begin
+          if square > 15 then begin
+            pinned_list := Normal {piece = 1; from = square; to_ = candidat4; capture = dest4} :: !pinned_list
+          end
+          else begin
+            pinned_list :=
+            Promotion {from = square; to_ = candidat4; promotion = 5; capture = dest4} ::
+            Promotion {from = square; to_ = candidat4; promotion = 4; capture = dest4} ::
+            Promotion {from = square; to_ = candidat4; promotion = 3; capture = dest4} ::
+            Promotion {from = square; to_ = candidat4; promotion = 2; capture = dest4} ::
+            !pinned_list
+          end
+        end
+      end
+    end
+    else begin
+      if abs direction = 10 then begin
+        let candidate_1 = tab120.(tab64_square + 10) in
+        if board.(candidate_1) = 0 then begin
+          pinned_list := Normal {piece = (-1); from = square; to_ = candidate_1; capture = 0} :: !pinned_list;
+          if (square > 7 && square < 16) then begin
+            let candidate_2 = tab120.(tab64_square + 20) in
+            if (board.(candidate_2) = 0) then begin
+              pinned_list := Normal {piece = (-1); from = square; to_ = candidate_2; capture = 0} :: !pinned_list
+            end
+          end
+        end
+      end;
+      if square mod 8 <> 0 && abs direction = 9 then begin
+        let candidate_3 = tab120.(tab64_square + 9) in
+        let dest3 = board.(candidate_3) in
+        if dest3 > 0 then begin
+          if square < 48 then begin
+            pinned_list := Normal {piece = (-1); from = square; to_ = candidate_3; capture = dest3} :: !pinned_list
+          end
+          else begin
+            pinned_list :=
+            Promotion {from = square; to_ = candidate_3; promotion = (-5); capture = dest3} ::
+            Promotion {from = square; to_ = candidate_3; promotion = (-4); capture = dest3} ::
+            Promotion {from = square; to_ = candidate_3; promotion = (-3); capture = dest3} ::
+            Promotion {from = square; to_ = candidate_3; promotion = (-2); capture = dest3} ::
+            !pinned_list
+          end
+        end
+      end;
+      if (square + 1) mod 8 <> 0 && abs direction = 11 then begin
+        let candidat4 = tab120.(tab64_square + 11) in
+        let dest4 = board.(candidat4) in
+        if dest4 > 0 then begin
+          if square < 48 then begin
+            pinned_list := Normal {piece = (-1); from = square; to_ = candidat4; capture = dest4} :: !pinned_list
+          end
+          else begin
+            pinned_list :=
+            Promotion {from = square; to_ = candidat4; promotion = (-5); capture = dest4} ::
+            Promotion {from = square; to_ = candidat4; promotion = (-4); capture = dest4} ::
+            Promotion {from = square; to_ = candidat4; promotion = (-3); capture = dest4} ::
+            Promotion {from = square; to_ = candidat4; promotion = (-2); capture = dest4} ::
+            !pinned_list
+          end
+        end
+      end
+    end
+  |3 when List.mem (abs direction) [9; 11] -> List.iter (fun direction -> func direction) [direction; - direction]
+  |4 when List.mem (abs direction) [1; 10] -> List.iter (fun direction -> func direction) [direction; - direction]
+  |5 -> List.iter (fun direction -> func direction) [direction; - direction]
+  |_ -> ()
+
+
 (*Fonction construisant une list des déplacements classique possibles d'un joueur*)
 let pin_moves board white_to_move king_position pinned_pieces =
   let move_list = ref [] in
@@ -345,29 +472,29 @@ let pin_moves board white_to_move king_position pinned_pieces =
   let pinned_list = ref [] in
   if white_to_move then begin
     let aux from to_ = 
-    for i = from downto to_ do
-      if not (List.mem i pinned_pieces) then begin
-        let piece = board.(i) in
+    for square = from downto to_ do
+      let piece = board.(square) in
+      if not (List.mem square pinned_pieces) then begin
         if piece > 0 then begin
-          (tabfun.(piece - 1) board i move_list)
+          tabfun.(piece - 1) board square move_list
         end
       end
       else begin
-        let piece = board.(i) in (tabfun.(piece - 1) board i pinned_list)
+        pin_generator piece square board pinned_list
       end
     done in List.iter (fun (a, b) -> aux a b) [63, king_position + 1; king_position - 1, 0]
   end
   else begin
     let aux from to_ =
-      for i = from to to_ do
-        if not (List.mem i pinned_pieces) then begin
-          let piece = board.(i) in
+      for square = from to to_ do
+        let piece = board.(square) in
+        if not (List.mem square pinned_pieces) then begin
           if piece < 0 then begin
-            (tabfun.(- piece - 1) board i move_list)
+            tabfun.(- piece - 1) board square move_list
           end
         end
         else begin
-          let piece = board.(i) in (tabfun.(- piece - 1) board i pinned_list)
+          pin_generator piece square board pinned_list
         end
       done
     in List.iter (fun (a, b) -> aux a b) [0, king_position - 1; king_position + 1, 63]
@@ -555,11 +682,11 @@ let castling_threats board player_sign clouage_roi pseudo_e2 path path_lenght ve
       end;
       let j = ref 0 in
       while (not !b && !j < !bishop_dir) do
-        let dir = vect_bishop.(!j) in
+        let direction = vect_bishop.(!j) in
         let k = ref 1 in
         let iterate = ref true in
-        while (tab120.(m + (!k * dir)) <> (-1) && !iterate) do
-          let candidate = tab120.(m + (!k * dir)) in
+        while (tab120.(m + (!k * direction)) <> (-1) && !iterate) do
+          let candidate = tab120.(m + (!k * direction)) in
           let dest = player_sign * board.(candidate) in
           if dest = 0 then begin
             incr k
@@ -579,9 +706,9 @@ let castling_threats board player_sign clouage_roi pseudo_e2 path path_lenght ve
       if not !b then begin
         let k = ref 0 in
         while (not !b && !k < 4) do
-          let dir = vect_knight.(!k) in
-          if tab120.(m + dir) <> (-1) then begin
-            let candidate = tab120.(m + dir) in
+          let direction = vect_knight.(!k) in
+          if tab120.(m + direction) <> (-1) then begin
+            let candidate = tab120.(m + direction) in
             if player_sign * board.(candidate) = (-2) then begin
               b := true
             end
@@ -597,11 +724,11 @@ let castling_threats board player_sign clouage_roi pseudo_e2 path path_lenght ve
           b := true
         end
         else if !diagonale = 0 then begin
-          let dir = player_sign * (-10) in
+          let direction = player_sign * (-10) in
           let k = ref 2 in
           let iterate = ref true in
-          while (tab120.(m + (!k * dir)) <> (-1) && !iterate) do
-            let candidate = tab120.(m + (!k * dir)) in
+          while (tab120.(m + (!k * direction)) <> (-1) && !iterate) do
+            let candidate = tab120.(m + (!k * direction)) in
             let dest = player_sign * board.(candidate) in
             if dest = 0 then begin
               incr k
@@ -821,44 +948,45 @@ let piece move = match move with
   |Normal {piece; from = _; to_ = _; capture = _} -> piece
   |_ -> 0
 
-(*Fonction indiquant si une pièce cloue une pièce clouable*)
-let cloue board chessman white_to_move cord64 vect distance =
-  let b = ref false in
+(*Fonction indiquant si une pièce pin une pièce clouable*)
+let pin board chessman white_to_move tab64_square direction distance =
+  let pinned = ref false in
   let k = ref distance in
   let iterate = ref true in
-  let dame_adverse = queen (not white_to_move) in
-  while (!iterate && tab120.(cord64 + (!k * vect)) <> (-1)) do
-    let candidate = tab120.(cord64 + (!k * vect)) in
+  let opponent_queen = queen (not white_to_move) in
+  while (!iterate && tab120.(tab64_square + (!k * direction)) <> (-1)) do
+    let candidate = tab120.(tab64_square + (!k * direction)) in
     let dest = board.(candidate) in
-    if dame_adverse * dest < 0 then begin
+    if opponent_queen * dest < 0 then begin
       iterate :=  false
     end
-    else if dame_adverse * dest > 0 then begin 
-      if dest = chessman || dest = dame_adverse then begin
-        b := true;
+    else if opponent_queen * dest > 0 then begin 
+      if dest = chessman || dest = opponent_queen then begin
+        pinned:= true;
       end;
       iterate :=  false
     end;
     incr k
   done;
-  !b
+  !pinned
 
 (*Fonction donnant les cases des pièces clouées (indépendanmment de leur possibilité de mouvement) en considérant que le roi est dans la square en argument*)
-let clouees board case_roi white_to_move =
-  let ensemble = ref [] in
-  let t = tab64.(case_roi) in
+let pinned_squares board king_square white_to_move =
+  let list = ref [] in
+  let tab64_square = tab64.(king_square) in
   let player_sign = if white_to_move then 1 else (-1) in
   let aux vect piece =
     for i = 0 to 3 do
-      let dir = vect.(i) in
+      let direction = vect.(i) in
       let k = ref 1 in
       let iterate = ref true in
-      while (!iterate && tab120.(t + (!k * dir)) <> (-1)) do
-        let candidate = tab120.(t + (!k * dir)) in
+      while (!iterate && tab120.(tab64_square + (!k * direction)) <> (-1)) do
+        let candidate = tab120.(tab64_square + (!k * direction)) in
         let dest = player_sign * board.(candidate) in
         if dest > 0 then begin
-          if cloue board (-piece * player_sign) white_to_move t dir (!k + 1) then begin
-            ensemble := candidate :: !ensemble
+          if pin board (- piece * player_sign) white_to_move tab64_square direction (!k + 1) then begin
+            list := candidate :: !list;
+            pin_table.(candidate) <- direction
           end;
           iterate :=  false
         end
@@ -869,7 +997,7 @@ let clouees board case_roi white_to_move =
       done
     done;
   in List.iter (fun (vect, piece) -> aux vect piece ) [(rook_vect, 4); (bishop_vect, 3)];
-  !ensemble
+  !list
 
 (*Fonction construisant une list des moves légaux du joueur*)
 let legal_moves board white_to_move last_move (white_short, white_long, black_short, black_long) =
@@ -891,17 +1019,16 @@ let legal_moves board white_to_move last_move (white_short, white_long, black_sh
   end
   else begin
     let castling_rights = if white_to_move then white_short || white_long else black_short || black_long in
-    let pinned_pieces = clouees board king_position white_to_move in
+    let pinned_pieces = pinned_squares board king_position white_to_move in
     if pinned_pieces = [] then begin
       let moves, king_moves = pseudo_legal_moves board white_to_move king_position in
       List.iter (fun king_move -> aux king_move (to_ king_move)) king_moves;
       if castling_rights then (castlings board white_to_move (white_short, white_long, black_short, black_long)) @ !move_list @ moves else !move_list @ moves
     end
     else begin
-      let moves, king_moves, coups_clouees = pin_moves board white_to_move king_position pinned_pieces in
+      let moves, king_moves, pinned_moves = pin_moves board white_to_move king_position pinned_pieces in
       List.iter (fun king_move -> aux king_move (to_ king_move)) king_moves;
-      List.iter (fun pinned_move -> aux pinned_move king_position) coups_clouees;
-      if castling_rights then (castlings board white_to_move (white_short, white_long, black_short, black_long)) @ !move_list @ moves else !move_list @ moves
+      if castling_rights then (castlings board white_to_move (white_short, white_long, black_short, black_long)) @ !move_list @ pinned_moves @ moves else !move_list @ pinned_moves @ moves
     end
   end
 
@@ -910,11 +1037,11 @@ let rook_captures board square list =
   let piece = board.(square) in
   let tab64_square = tab64.(square) in
   for i = 0 to 3 do
-    let dir = rook_vect.(i) in
+    let direction = rook_vect.(i) in
     let k = ref 1 in
     let iterate = ref true in
-    while (!iterate && tab120.(tab64_square + (!k * dir)) <> (-1)) do
-      let candidate = tab120.(tab64_square + (!k * dir)) in
+    while (!iterate && tab120.(tab64_square + (!k * direction)) <> (-1)) do
+      let candidate = tab120.(tab64_square + (!k * direction)) in
       let dest = board.(candidate) in
       if dest = 0 then begin
         incr k
@@ -934,11 +1061,11 @@ let bishop_captures board square list =
   let piece = board.(square) in
   let tab64_square = tab64.(square) in
   for i = 0 to 3 do
-    let dir = bishop_vect.(i) in
+    let direction = bishop_vect.(i) in
     let k = ref 1 in
     let iterate = ref true in
-    while (!iterate && tab120.(tab64_square + (!k * dir)) <> (-1)) do
-      let candidate = tab120.(tab64_square + (!k * dir)) in
+    while (!iterate && tab120.(tab64_square + (!k * direction)) <> (-1)) do
+      let candidate = tab120.(tab64_square + (!k * direction)) in
       let dest = board.(candidate) in
       if dest = 0 then begin
         incr k
@@ -958,9 +1085,9 @@ let knight_captures board square list =
   let piece = board.(square) in
   let tab64_square = tab64.(square) in
   for i = 0 to 7 do
-    let dir = knight_vect.(i) in
-    if tab120.(tab64_square + dir) <> (-1) then begin
-      let candidate = tab120.(tab64_square + dir) in
+    let direction = knight_vect.(i) in
+    if tab120.(tab64_square + direction) <> (-1) then begin
+      let candidate = tab120.(tab64_square + direction) in
       let dest = board.(candidate) in
       if piece * dest < 0 then begin
         list := Normal {piece = piece; from = square; to_ = candidate; capture = dest} :: !list
@@ -973,11 +1100,11 @@ let queen_captures board square list =
   let piece = board.(square) in
   let tab64_square = tab64.(square) in
   for i = 0 to 7 do
-    let dir = king_vect.(i) in
+    let direction = king_vect.(i) in
     let k = ref 1 in
     let iterate = ref true in
-    while (!iterate && tab120.(tab64_square + (!k * dir)) <> (-1)) do
-      let candidate = tab120.(tab64_square + (!k * dir)) in
+    while (!iterate && tab120.(tab64_square + (!k * direction)) <> (-1)) do
+      let candidate = tab120.(tab64_square + (!k * direction)) in
       let dest = board.(candidate) in
       if dest = 0 then begin
         incr k
@@ -998,9 +1125,9 @@ let king_captures board square =
   let piece = board.(square) in
   let tab64_square = tab64.(square) in
   for i = 0 to 7 do
-    let dir = king_vect.(i) in
-    if tab120.(tab64_square + dir) <> (-1) then begin
-      let candidate = tab120.(tab64_square + dir) in
+    let direction = king_vect.(i) in
+    if tab120.(tab64_square + direction) <> (-1) then begin
+      let candidate = tab120.(tab64_square + direction) in
       let dest = board.(candidate) in
       if piece * dest < 0 then begin
         list := Normal {piece = piece; from = square; to_ = candidate; capture = dest} :: !list
@@ -1024,18 +1151,18 @@ let pawn_captures board square list =
       !list
     end;
     if ((square + 1) mod 8 <> 0) then begin
-      let candidat3 = tab120.(p - 9) in
-      let dest3 = board.(candidat3) in
+      let candidate_3 = tab120.(p - 9) in
+      let dest3 = board.(candidate_3) in
       if dest3 < 0 then begin
         if square > 15 then begin
-          list := Normal {piece = 1; from = square; to_ = candidat3; capture = dest3} :: !list
+          list := Normal {piece = 1; from = square; to_ = candidate_3; capture = dest3} :: !list
         end
         else begin
           list :=
-          Promotion {from = square; to_ = candidat3; promotion = 5; capture = dest3} ::
-          Promotion {from = square; to_ = candidat3; promotion = 4; capture = dest3} ::
-          Promotion {from = square; to_ = candidat3; promotion = 3; capture = dest3} ::
-          Promotion {from = square; to_ = candidat3; promotion = 2; capture = dest3} ::
+          Promotion {from = square; to_ = candidate_3; promotion = 5; capture = dest3} ::
+          Promotion {from = square; to_ = candidate_3; promotion = 4; capture = dest3} ::
+          Promotion {from = square; to_ = candidate_3; promotion = 3; capture = dest3} ::
+          Promotion {from = square; to_ = candidate_3; promotion = 2; capture = dest3} ::
           !list
         end
       end
@@ -1068,18 +1195,18 @@ let pawn_captures board square list =
       Promotion {from = square; to_ = candidate_1; promotion = (-2); capture = 0} :: !list
     end;
     if (square mod 8 <> 0) then begin
-      let candidat3 = tab120.(p + 9) in
-      let dest3 = board.(candidat3) in
+      let candidate_3 = tab120.(p + 9) in
+      let dest3 = board.(candidate_3) in
       if dest3 > 0 then begin
         if square < 48 then begin
-          list := Normal {piece = (-1); from = square; to_ = candidat3; capture = dest3} :: !list
+          list := Normal {piece = (-1); from = square; to_ = candidate_3; capture = dest3} :: !list
         end
         else begin
           list :=
-          Promotion {from = square; to_ = candidat3; promotion = (-5); capture = dest3} ::
-          Promotion {from = square; to_ = candidat3; promotion = (-4); capture = dest3} ::
-          Promotion {from = square; to_ = candidat3; promotion = (-3); capture = dest3} ::
-          Promotion {from = square; to_ = candidat3; promotion = (-2); capture = dest3} ::
+          Promotion {from = square; to_ = candidate_3; promotion = (-5); capture = dest3} ::
+          Promotion {from = square; to_ = candidate_3; promotion = (-4); capture = dest3} ::
+          Promotion {from = square; to_ = candidate_3; promotion = (-3); capture = dest3} ::
+          Promotion {from = square; to_ = candidate_3; promotion = (-2); capture = dest3} ::
           !list
         end
       end
@@ -1130,6 +1257,105 @@ let pseudo_legal_captures board white_to_move king_position =
   end;
   !move_list, king_move_list
 
+let pin_captures_generator piece square board pinned_list =
+  let tab64_square = tab64.(square) in
+  let direction = pin_table.(square) in
+  let func direction =
+    let k = ref 1 in
+    let iterate = ref true in
+    while (!iterate && tab120.(tab64_square + (!k * direction)) <> (-1)) do
+      let candidate = tab120.(tab64_square + (!k * direction)) in
+      let dest = board.(candidate) in
+      if dest = 0 then begin
+        incr k
+      end
+      else if piece * dest > 0 then begin
+        iterate :=  false
+      end
+      else begin 
+        pinned_list := Normal {piece = piece; from = square; to_ = candidate; capture = dest} :: !pinned_list;
+        iterate :=  false
+      end
+    done
+  in match abs piece with
+  |1 ->
+    if piece > 0 then begin
+      if (square + 1) mod 8 <> 0 && abs direction = 9 then begin
+        let candidate_3 = tab120.(tab64_square - 9) in
+        let dest3 = board.(candidate_3) in
+        if dest3 < 0 then begin
+          if square > 15 then begin
+            pinned_list := Normal {piece = 1; from = square; to_ = candidate_3; capture = dest3} :: !pinned_list
+          end
+          else begin
+            pinned_list :=
+            Promotion {from = square; to_ = candidate_3; promotion = 5; capture = dest3} ::
+            Promotion {from = square; to_ = candidate_3; promotion = 4; capture = dest3} ::
+            Promotion {from = square; to_ = candidate_3; promotion = 3; capture = dest3} ::
+            Promotion {from = square; to_ = candidate_3; promotion = 2; capture = dest3} ::
+            !pinned_list
+          end
+        end
+      end;
+      if square mod 8 <> 0 && abs direction = 11 then begin
+        let candidat4 = tab120.(tab64_square - 11) in
+        let dest4 = board.(candidat4) in
+        if dest4 < 0 then begin
+          if square > 15 then begin
+            pinned_list := Normal {piece = 1; from = square; to_ = candidat4; capture = dest4} :: !pinned_list
+          end
+          else begin
+            pinned_list :=
+            Promotion {from = square; to_ = candidat4; promotion = 5; capture = dest4} ::
+            Promotion {from = square; to_ = candidat4; promotion = 4; capture = dest4} ::
+            Promotion {from = square; to_ = candidat4; promotion = 3; capture = dest4} ::
+            Promotion {from = square; to_ = candidat4; promotion = 2; capture = dest4} ::
+            !pinned_list
+          end
+        end
+      end
+    end
+    else begin
+      if square mod 8 <> 0 && abs direction = 9 then begin
+        let candidate_3 = tab120.(tab64_square + 9) in
+        let dest3 = board.(candidate_3) in
+        if dest3 > 0 then begin
+          if square < 48 then begin
+            pinned_list := Normal {piece = (-1); from = square; to_ = candidate_3; capture = dest3} :: !pinned_list
+          end
+          else begin
+            pinned_list :=
+            Promotion {from = square; to_ = candidate_3; promotion = (-5); capture = dest3} ::
+            Promotion {from = square; to_ = candidate_3; promotion = (-4); capture = dest3} ::
+            Promotion {from = square; to_ = candidate_3; promotion = (-3); capture = dest3} ::
+            Promotion {from = square; to_ = candidate_3; promotion = (-2); capture = dest3} ::
+            !pinned_list
+          end
+        end
+      end;
+      if (square + 1) mod 8 <> 0 && abs direction = 11 then begin
+        let candidat4 = tab120.(tab64_square + 11) in
+        let dest4 = board.(candidat4) in
+        if dest4 > 0 then begin
+          if square < 48 then begin
+            pinned_list := Normal {piece = (-1); from = square; to_ = candidat4; capture = dest4} :: !pinned_list
+          end
+          else begin
+            pinned_list :=
+            Promotion {from = square; to_ = candidat4; promotion = (-5); capture = dest4} ::
+            Promotion {from = square; to_ = candidat4; promotion = (-4); capture = dest4} ::
+            Promotion {from = square; to_ = candidat4; promotion = (-3); capture = dest4} ::
+            Promotion {from = square; to_ = candidat4; promotion = (-2); capture = dest4} ::
+            !pinned_list
+          end
+        end
+      end
+    end
+  |3 when List.mem (abs direction) [9; 11] -> List.iter (fun direction -> func direction) [direction; - direction]
+  |4 when List.mem (abs direction) [1; 10] -> List.iter (fun direction -> func direction) [direction; - direction]
+  |5 -> List.iter (fun direction -> func direction) [direction; - direction]
+  |_ -> ()
+
 (*Fonction construisant une list des déplacements classique possibles d'un joueur*)
 let pin_captures board white_to_move king_position pinned_pieces =
   let move_list = ref [] in
@@ -1137,29 +1363,29 @@ let pin_captures board white_to_move king_position pinned_pieces =
   let pinned_list = ref [] in
   if white_to_move then begin
     let aux from to_ = 
-    for i = from downto to_ do
-      if not (List.mem i pinned_pieces) then begin
-        let piece = board.(i) in
+    for square = from downto to_ do
+      let piece = board.(square) in
+      if not (List.mem square pinned_pieces) then begin
         if piece > 0 then begin
-          (captures_vect.(piece - 1) board i move_list)
+          captures_vect.(piece - 1) board square move_list
         end
       end
       else begin
-        let piece = board.(i) in (captures_vect.(piece - 1) board i pinned_list)
+        pin_captures_generator piece square board pinned_list
       end
     done in List.iter (fun (a, b) -> aux a b) [63, king_position + 1; king_position - 1, 0]
   end
   else begin
     let aux from to_ =
-      for i = from to to_ do
-        if not (List.mem i pinned_pieces) then begin
-          let piece = board.(i) in
+      for square = from to to_ do
+        let piece = board.(square) in
+        if not (List.mem square pinned_pieces) then begin
           if piece < 0 then begin
-            (captures_vect.(- piece - 1) board i move_list)
+            captures_vect.(- piece - 1) board square move_list
           end
         end
         else begin
-          let piece = board.(i) in (captures_vect.(- piece - 1) board i pinned_list)
+          pin_captures_generator piece square board pinned_list
         end
       done
     in List.iter (fun (a, b) -> aux a b) [0, king_position - 1; king_position + 1, 63]
@@ -1184,17 +1410,16 @@ let captures board white_to_move last_move =
     !move_list
   end
   else begin
-    let pinned_pieces = clouees board king_position white_to_move in
+    let pinned_pieces = pinned_squares board king_position white_to_move in
     if pinned_pieces = [] then begin
       let moves, king_moves = pseudo_legal_captures board white_to_move king_position in
       List.iter (fun king_move -> aux king_move (to_ king_move)) king_moves;
       !move_list @ moves
     end
     else begin
-      let moves, king_moves, coups_clouees = pin_captures board white_to_move king_position pinned_pieces in
+      let moves, king_moves, pinned_moves = pin_captures board white_to_move king_position pinned_pieces in
       List.iter (fun king_move -> aux king_move (to_ king_move)) king_moves;
-      List.iter (fun pinned_move -> aux pinned_move king_position) coups_clouees;
-     !move_list @ moves
+     !move_list @ pinned_moves @ moves
     end
   end
 

@@ -1050,7 +1050,7 @@ let rec eval_noirs liste_cases board trait_aux_blancs defendues attaque_noirs po
       eval_noirs t board trait_aux_blancs defendues attaque_noirs position_roi roi_en_echec piece_clouees materiel position
 
 let evaluation_double board trait_aux_blancs position_roi roi_en_echec materiel position =
-  let piece_clouees = clouees board position_roi trait_aux_blancs in
+  let piece_clouees = pinned_squares board position_roi trait_aux_blancs in
   let defendues = ref [] in
   let pieces_joueur = ref [] in
   let attaque_blancs = ref 0 in
@@ -1067,7 +1067,7 @@ let evaluation_double board trait_aux_blancs position_roi roi_en_echec materiel 
   end
 
 let evaluation_double_finale board trait_aux_blancs position_roi roi_en_echec materiel position =
-  let piece_clouees = clouees board position_roi trait_aux_blancs in
+  let piece_clouees = pinned_squares board position_roi trait_aux_blancs in
   let defendues = ref [] in
   let pieces_joueur = ref [] in
   let attaque_blancs = ref 0 in
