@@ -142,7 +142,7 @@ let mvvlva move = match move with
   |Normal {piece; from = _; to_ = _; capture} when capture <> 0 ->
     10 * tabvalue.(abs capture) - tabvalue.(abs piece)
   |Enpassant {from = _; to_ = _} ->
-    10 * tabvalue.(1) - tabvalue.(1)
+    9 * tabvalue.(1)                                                          (*10 * tabvalue.(1) - tabvalue.(1)*)
   |Promotion {from = _; to_ = _; capture; promotion} ->
     10 * (tabvalue.(abs capture) + tabvalue.(abs promotion)) - tabvalue.(1)
   |_ -> 0

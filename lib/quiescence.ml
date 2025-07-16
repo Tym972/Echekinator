@@ -19,7 +19,7 @@ let rec adapte_delta liste_coups = match liste_coups with
 let compteur_quiescent = ref 0
 
 (*Fonction implémentant la recherche quiescente*)
-let rec recherche_quiescente board white_to_move alpha beta evaluation cap profondeur position_roi roi_en_echec = incr compteur_quiescent;
+let rec quiescence_search board white_to_move alpha beta evaluation cap profondeur position_roi roi_en_echec = incr compteur_quiescent;
   let delta = evaluation board white_to_move position_roi roi_en_echec alpha beta in
   let best_score = ref delta in
   if profondeur = 0 then begin
@@ -41,7 +41,7 @@ let rec recherche_quiescente board white_to_move alpha beta evaluation cap profo
       cps := List.tl !cps;
       let nouveau_trait = not white_to_move in
       let position_roi_adverse = index_array board (king nouveau_trait) in
-      let score = - recherche_quiescente board (not white_to_move) (- beta) (- !alpha0) evaluation (captures board nouveau_trait coup) (profondeur - 1) position_roi_adverse (threatened board position_roi_adverse nouveau_trait) 
+      let score = - quiescence_search board (not white_to_move) (- beta) (- !alpha0) evaluation (captures board nouveau_trait coup) (profondeur - 1) position_roi_adverse (threatened board position_roi_adverse nouveau_trait) 
       in if score > !best_score then begin
         best_score := score;
         if score >= beta then begin
@@ -57,7 +57,7 @@ let rec recherche_quiescente board white_to_move alpha beta evaluation cap profo
   !best_score
 
 (*Fonction permettant d'évaluer un board à la profondeur 0*)
-let traitement_quiescent_profondeur_0 initial_depth evaluation board white_to_move last_move alpha beta =
+let quiescence_treatment_depth_0 initial_depth evaluation board white_to_move last_move alpha beta =
   let position_roi = index_array board (king white_to_move) in
   let cp = legal_moves board white_to_move last_move (false, false, false, false)
   in if cp = [] then begin
@@ -72,9 +72,9 @@ let traitement_quiescent_profondeur_0 initial_depth evaluation board white_to_mo
     let cap = detecte_extension cp in
     let roi_en_echec = threatened board position_roi white_to_move in
     if cap = [] then begin
-      recherche_quiescente board white_to_move alpha beta evaluation cap 0 position_roi roi_en_echec
+      quiescence_search board white_to_move alpha beta evaluation cap 0 position_roi roi_en_echec
     end
     else begin
-      recherche_quiescente board white_to_move alpha beta evaluation cap (-1) position_roi roi_en_echec
+      quiescence_search board white_to_move alpha beta evaluation cap (-1) position_roi roi_en_echec
     end
   end

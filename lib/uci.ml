@@ -44,24 +44,77 @@ let uci () =
     ^ "id author Timothée Fixy" ^ "\n"
     ^ "\n"
     ^ "option name Clear Hash type button" ^ "\n"
+    ^ "option name Hash type spin default 16 min 1 max 33554432" ^ "\n"
+    ^ "option name MultiPV type spin default 1 min 1 max 256" ^ "\n"
     ^ "option name Ponder type check default false" ^ "\n"
+    ^ "option name Threads type spin default 1 min 1 max 1024" ^ "\n"
     ^ "option name UCI_Chess960 type check default false" ^ "\n"
     ^ "uciok")
+    
 
-let setoption instructions =
-  let longueur = List.length instructions in
-  if longueur > 2 then begin
-    match (List.nth instructions 2) with
-      |"UCI_Chess960" when longueur = 5 -> chess_960 := (bool_of_string (List.nth instructions 4))
-      |_ -> ()
-  end
+(*Time allocated for a search*)  
+let search_time = ref 0.
 
-(*Answer to the command "ucinewgame"*)
-let ucinewgame board white_to_move last_move castling_right moves_record board_record start_position initial_white_to_move initial_last_move initial_castling_right initial_moves_record initial_board_record =
+(*Number of moves expected to play*)
+let horizon = ref 40.
+
+(*Variable indication if Pondering is allowed*)
+let ponder = ref false
+
+(*A implémenter*)
+let multipv = ref 1
+let min_multipv = 1
+let max_multipv = 256
+
+(*A implémenter*)
+let mb_trasposition_size = ref 16
+let min_mb_trasposition_size = 1
+let max_mb_tansposition_size = 33554432
+
+(*A implémenter*)
+let threads_number = ref 1
+let min_threads_number = 1
+let max_threads_number = 1024
+
+let reset_hash () =
   update table 1000;
   for i = 0 to 8191 do
     history_moves.(i) <- 0
-  done;
+  done
+
+let setoption instructions =
+  let type_check instructions boolean =
+    match instructions with
+    |_ :: _ :: _ :: "value" :: value :: _ -> begin try boolean := (bool_of_string value) with _ -> () end
+    |_ -> ()
+  in 
+  let type_spin instructions variable min_value max_value =
+    match instructions with
+    |_ :: _ :: _ :: "value" :: value :: _ ->
+      let value = try int_of_string value with _ -> !variable
+      in if min_value <= value && value <= max_value then begin
+        variable := value
+      end
+    |_ -> ()
+  in match (List.tl instructions) with
+    |"name" :: "Ponder" :: _ ->
+      type_check instructions ponder;
+      if !ponder then begin
+        horizon := 25.
+      end
+      else begin
+        horizon := 40.
+      end
+    |"name" :: "UCI_Chess960" :: _ -> type_check instructions chess_960
+    |"name" :: "Clear" :: "Hash" :: _ -> reset_hash ()
+    |"name" :: "MultiPV" :: _ -> type_spin instructions multipv min_multipv max_multipv
+    |"name" :: "Hash" :: _ -> type_spin instructions mb_trasposition_size min_mb_trasposition_size max_mb_tansposition_size 
+    |"name" :: "Threads" :: _ -> type_spin instructions threads_number min_threads_number max_threads_number
+    |_ -> ()
+
+(*Answer to the command "ucinewgame"*)
+let ucinewgame board white_to_move last_move castling_right moves_record board_record start_position initial_white_to_move initial_last_move initial_castling_right initial_moves_record initial_board_record =
+  reset_hash ();
   reset board white_to_move last_move castling_right moves_record board_record chessboard true Null (true, true, true, true) [] [zobrist chessboard true Null (true, true, true, true)];
   reset start_position initial_white_to_move initial_last_move initial_castling_right initial_moves_record initial_board_record  chessboard true Null (true, true, true, true) [] [zobrist chessboard true Null (true, true, true, true)]
 
@@ -145,81 +198,83 @@ let rec algoperft board white_to_move last_move castling_right depth root zobris
   end
 
 (*Answer to the command "go"*)
-let go instruction board white_to_move last_move castling_right board_record demi_coups evaluation =
-  if (List.length instruction > 1 && List.nth instruction 1 = "perft" && is_integer_string (List.nth instruction 2)) then begin
-    let depth = int_of_string (List.nth instruction 2) in
-    let table_perft = ZobristHashtbl.create transposition_size in
-    print_endline ("\n" ^ "Nodes searched : " ^ (string_of_int (algoperft board white_to_move last_move castling_right depth true (List.hd board_record) table_perft)));
-  end
-  else begin
-    let t = Sys.time () in
-    let commands = ["searchmoves"; "ponder"; "wtime"; "btime"; "winc"; "binc"; "movestogo"; "depth"; "nodes"; "mate"; "movetime"; "infinite"] in
-    let searchmoves = ref [] in
-    let wtime = ref (float_of_int infinity) in
-    let btime = ref (float_of_int infinity) in
-    let winc = ref 0. in
-    let binc = ref 0. in
-    let movestogo = ref (-1) in
-    let depth = ref max_depth in
-    let nodes = ref infinity in
-    let mate = ref false in
-    let movetime = ref (-1.) in
-    let rec aux_searchmoves list coups_valides_joueur = match list with
-      |[] -> ()
-      |h::t ->
-        if not (List.mem h commands) then begin
-          searchmoves := !searchmoves @ [tolerance board h white_to_move coups_valides_joueur];
-          aux_searchmoves t coups_valides_joueur
-        end
-    in let rec aux instruction = match instruction with
-      |h :: g :: t ->
-        begin match h with
-          |"searchmoves" -> aux_searchmoves (g :: t) (legal_moves board white_to_move last_move castling_right)
-          |"wtime" -> begin try wtime := (float_of_string g) with _ -> () end
-          |"btime" -> begin try btime := (float_of_string g) with _ -> () end
-          |"winc" -> begin try winc := (float_of_string g) with _ -> () end
-          |"binc" -> begin try binc := (float_of_string g) with _ -> () end
-          |"movestogo" -> begin try movestogo := (int_of_string g) with _ -> () end
-          |"depth" -> begin try depth := (int_of_string g) with _ -> () end
-          |"nodes" -> begin try nodes := (int_of_string g) with _ -> () end
-          |"mate" -> mate := true
-          |"movetime" -> begin
-            try
-              movetime := (float_of_string g)
-            with _ -> () end
-          |_ -> ()
-      end;
-      aux (g :: t)
-      |_ -> ()
-    in aux instruction;
-    let time =
-      if !movetime > 0. then begin
-        !movetime
-      end
-      else begin
-        if white_to_move then begin
-          (if !wtime > !winc then !wtime +. !winc else !wtime) /. (if !movestogo > 0 then (float_of_int !movestogo) else 40.)
+let go instructions board white_to_move last_move castling_right board_record demi_coups evaluation start_time =
+  match instructions with
+    |_ :: "perft" :: depth :: _ when is_integer_string depth ->
+      let depth = int_of_string (List.nth instructions 2) in
+      let table_perft = ZobristHashtbl.create transposition_size in
+      print_endline ("\n" ^ "Nodes searched : " ^ (string_of_int (algoperft board white_to_move last_move castling_right depth true (List.hd board_record) table_perft)));
+    |_ ->
+      let commands = ["searchmoves"; "ponder"; "wtime"; "btime"; "winc"; "binc"; "movestogo"; "depth"; "nodes"; "mate"; "movetime"; "infinite"] in
+      let searchmoves = ref [] in
+      let is_pondering = ref false in
+      let wtime = ref (float_of_int infinity) in
+      let btime = ref (float_of_int infinity) in
+      let winc = ref 0. in
+      let binc = ref 0. in
+      let movestogo = ref 500. in
+      let depth = ref max_depth in
+      let nodes = ref infinity in
+      let mate = ref false in
+      let movetime = ref (-1.) in
+      let rec aux_searchmoves list coups_valides_joueur = match list with
+        |[] -> ()
+        |h::t ->
+          if not (List.mem h commands) then begin
+            searchmoves := !searchmoves @ [tolerance board h white_to_move coups_valides_joueur];
+            aux_searchmoves t coups_valides_joueur
+          end
+      in let rec aux instruction = match instruction with
+        |h :: g :: t ->
+          begin match h with
+            |"searchmoves" -> aux_searchmoves (g :: t) (legal_moves board white_to_move last_move castling_right)
+            |"ponder" -> begin is_pondering := true end
+            |"wtime" -> begin try wtime := (float_of_string g) with _ -> () end
+            |"btime" -> begin try btime := (float_of_string g) with _ -> () end
+            |"winc" -> begin try winc := (float_of_string g) with _ -> () end
+            |"binc" -> begin try binc := (float_of_string g) with _ -> () end
+            |"movestogo" -> begin try movestogo := (float_of_string g) with _ -> () end
+            |"depth" -> begin try depth := (int_of_string g) with _ -> () end
+            |"nodes" -> begin try nodes := (int_of_string g) with _ -> () end
+            |"mate" -> mate := true
+            |"movetime" -> begin
+              try
+                movetime := (float_of_string g)
+              with _ -> () end
+            |_ -> ()
+        end;
+        aux (g :: t)
+        |_ -> ()
+      in aux instructions;
+      search_time :=
+        if !movetime > 0. then begin
+          !movetime
         end
         else begin
-          (if !btime > !binc then !btime +. !binc else !btime) /. (if !movestogo > 0 then (float_of_int !movestogo) else 40.)
+          if white_to_move then begin
+            (if !wtime > !winc then !wtime +. !winc else !wtime) /. (min !movestogo !horizon)
+          end
+          else begin
+            (if !btime > !binc then !btime +. !binc else !btime) /. (min !movestogo !horizon)
+          end
+        end;
+      if not !is_pondering then begin
+        let _ = Thread.create (fun () -> monitor_time !search_time stop_calculation) () in ()
+      end;
+      let best_score = ref "cp 0" in
+      let pv = ref "" in
+      let var_depth = ref 0 in
+      while not !stop_calculation && !var_depth < !depth do
+        incr var_depth;
+        let new_score = pvs board white_to_move last_move castling_right board_record demi_coups !var_depth !var_depth (-infinity) infinity evaluation (List.hd board_record) true in
+        if not !stop_calculation then begin
+          let exec_time = Sys.time () -. start_time in
+          best_score := score new_score;
+          pv := pv_finder !var_depth;
+          print_endline (Printf.sprintf "info depth %i seldepth %i multipv 1 score %s nodes %i nps %i hashfull %i time %i pv %s" !var_depth !var_depth !best_score !search_counter (int_of_float (float_of_int !search_counter /. exec_time)) (int_of_float (1000. *. (float_of_int !transposition_counter /. (float_of_int transposition_size)))) (int_of_float (1000. *. exec_time)) !pv);
         end
-      end
-    in let _ = Thread.create (fun () -> monitor_time time stop_calculation) () in
-    let best_score = ref "cp 0" in
-    let pv = ref "" in
-    let var_depth = ref 0 in
-    while not !stop_calculation && !var_depth < !depth do
-      incr var_depth;
-      let new_score = pvs board white_to_move last_move castling_right board_record demi_coups !var_depth !var_depth (-infinity) infinity evaluation (List.hd board_record) true in
-      if not !stop_calculation then begin
-        let exec_time = Sys.time () -. t in
-        best_score := score new_score;
-        pv := pv_finder !var_depth;
-        print_endline (Printf.sprintf "info depth %i seldepth %i multipv 1 score %s nodes %i nps %i hashfull %i time %i pv %s" !var_depth !var_depth !best_score !search_counter (int_of_float (float_of_int !search_counter /. exec_time)) (int_of_float (1000. *. (float_of_int !transposition_counter /. (float_of_int transposition_size)))) (int_of_float (1000. *. exec_time)) !pv);
-      end
-    done;
-    print_endline (Printf.sprintf "bestmove %s ponder %s" (try (List.nth (word_detection !pv) 0) with _ -> "0000") (try (List.nth (word_detection !pv) 1) with _ -> "0000"))
-  end
+      done;
+      print_endline (Printf.sprintf "bestmove %s ponder %s" (try (List.nth (word_detection !pv) 0) with _ -> "0000") (try (List.nth (word_detection !pv) 1) with _ -> "0000"))
 
 let checkers board white_to_move =
   let position_roi = (index_array board (king white_to_move)) in
@@ -268,7 +323,8 @@ let echekinator () =
       |"ucinewgame" -> ucinewgame board white_to_move last_move castling_right moves_record board_record start_position initial_white_to_move initial_last_move initial_castling_right initial_moves_record initial_board_record
       |"position" -> position command_line board white_to_move last_move castling_right moves_record board_record start_position initial_white_to_move initial_last_move initial_castling_right initial_moves_record initial_board_record
       |"go" ->
-        let _ = Thread.create (fun () -> go command_line (Array.copy board) !white_to_move !last_move !castling_right !board_record (List.length !board_record - 1) evaluation) () in
+        let start_time = Sys.time () in
+        let _ = Thread.create (fun () -> go command_line (Array.copy board) !white_to_move !last_move !castling_right !board_record (List.length !board_record - 1) evaluation start_time) () in
         stop_calculation := false;
         search_counter := 0;
         for i = 0 to (2 * max_depth) - 1 do
@@ -277,6 +333,6 @@ let echekinator () =
       |"quit" -> exit := true
       |"stop" -> stop_calculation := true
       |"d" -> display board !white_to_move !last_move !castling_right !moves_record !board_record
-      |"ponderhit" -> ()
+      |"ponderhit" -> let _ = Thread.create (fun () -> monitor_time !search_time stop_calculation) () in ()
       |_ -> print_endline (Printf.sprintf "Unknown command: '%s'. Type help for more information." command)
   done

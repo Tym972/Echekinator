@@ -523,7 +523,7 @@ let white_long_path_length = ref 2
 let black_short_path_length = ref 2
 let black_long_path_length = ref 2
 
-(*Cases devant êtres vides pour le castlings*)
+(*Cases devant êtres empties pour le castlings*)
 let white_short_empties = ref [61; 62]
 let white_long_empties = ref [59; 58; 57]
 let black_short_empties = ref [5; 6]
@@ -547,7 +547,7 @@ let white_king_pin_2 = ref 44
 let black_king_pin_1 = ref 12
 let black_king_pin_2 = ref 20
 
-(*Variable indiquant la direction du grand castlings, valant 1 si le déplacement du roi se fait vers la droite, (-1) sinon*)
+(*Variable indiquant la direction du grand castlings, valant 1 si le déplacement du roi se fait vers la right, (-1) sinon*)
 let white_long_directions = ref (-1)
 let black_long_directions = ref (-1)
 
@@ -611,10 +611,10 @@ let castling_update start_position =
   [((-1), from_black_king, from_short_black_rook, from_long_black_rook, black_king_pin_1, black_king_pin_2, black_king_pinnable, black_long_rook_in_a, black_long_rook_in_b, black_short_rook_in_h, black_long_directions, black_short_bishop_vect, black_long_bishop_vect);
   (1, from_white_king, from_short_white_rook, from_long_white_rook, white_king_pin_1, white_king_pin_2, white_king_pinnable, white_long_rook_in_a, white_long_rook_in_b, white_short_rook_in_h, white_long_directions, white_short_bishop_vect, white_long_bishop_vect)];
   let j = ref 0 in
-  let aux chemin path_lenght vides j i =
-    chemin.(!j) <- i;
+  let aux path path_lenght empties j i =
+    path.(!j) <- i;
     incr path_lenght;
-    vides := i :: !vides;
+    empties := i :: !empties;
     incr j
   in
   for i = !from_white_king + 1 to 62 do
@@ -822,40 +822,40 @@ let rec roques_possibles listes_coups = match listes_coups with
 
 (*Fonction construisant une list des prises en passant possible d'un joueur*)
 let enpassant board white_to_move last_move =
-  let l = ref [] in
+  let list = ref [] in
   if white_to_move then begin
     let aux move = match move with
-      |Normal {piece; from; to_; capture = _} when (piece = (-1) && (from < 16) && (to_ > 23)) -> to_
+      |Normal {piece; from; to_; capture = _} when (piece = (-1) && to_ - from = 16) -> to_
       |_-> (-1)
     in let to_ = aux last_move
     in if to_ <> (-1) then begin
-      let droite = to_ + 1
-      in if (droite <> 32 && board.(droite) = 1) then begin
-        l := Enpassant {from = droite; to_ = droite - 9} :: !l
+      let right = to_ + 1
+      in if (right <> 32 && board.(right) = 1) then begin
+        list := Enpassant {from = right; to_ = right - 9} :: !list
       end;
-      let gauche = to_ - 1
-      in if (gauche <> 23 && board.(gauche) = 1) then begin
-        l := Enpassant {from = gauche; to_ = gauche - 7} :: !l
+      let left = to_ - 1
+      in if (left <> 23 && board.(left) = 1) then begin
+        list := Enpassant {from = left; to_ = left - 7} :: !list
       end
     end
   end
   else begin
     let aux move = match move with
-      |Normal {piece; from; to_; capture = _} when (piece = 1 && (from > 47) && (to_ < 40)) -> to_
+      |Normal {piece; from; to_; capture = _} when (piece = 1 && from - to_ = 16) -> to_
       |_-> (-1)
     in let to_ = aux last_move
     in if to_ <> (-1) then begin
-      let droite = to_ + 1
-      in if (droite <> 40 && board.(droite) = (-1)) then begin
-        l := Enpassant {from = droite; to_ = droite + 7} :: !l
+      let right = to_ + 1
+      in if (right <> 40 && board.(right) = (-1)) then begin
+        list := Enpassant {from = right; to_ = right + 7} :: !list
       end;
-      let gauche = to_ - 1
-      in if (gauche <> 31 && board.(gauche) = (-1)) then begin
-        l := Enpassant {from = gauche; to_ = gauche + 9} :: !l
+      let left = to_ - 1
+      in if (left <> 31 && board.(left) = (-1)) then begin
+        list := Enpassant {from = left; to_ = left + 9} :: !list
       end
     end
   end;
-  !l
+  !list
 
 (*Fonction permettant de jouer un move sur l'échiquier*)
 let make board move = match move with

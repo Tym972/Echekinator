@@ -50,11 +50,11 @@ let rec pvs board white_to_move last_move castling_right board_record half_moves
         (All, (-1), 0, Null, 0)
     in let no_tt_cut = ref true in
     if !presence && not ispv then begin
-      traitement_hash hash_node_type hash_depth hash_value hash_move depth alpha0 beta0 best_score best_move no_tt_cut ply
+      hash_treatment hash_node_type hash_depth hash_value hash_move depth alpha0 beta0 best_score best_move no_tt_cut ply
     end;
     if !no_tt_cut then begin
       if depth = 0 then begin
-        best_score := traitement_quiescent_profondeur_0 initial_depth evaluation board white_to_move last_move !alpha0 !beta0
+        best_score := quiescence_treatment_depth_0 initial_depth evaluation board white_to_move last_move !alpha0 !beta0
       end
       else begin
         let no_cut = ref true in

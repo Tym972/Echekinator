@@ -19,7 +19,7 @@ type node =
 let (table : (node * int * int * move * int) ZobristHashtbl.t) =  ZobristHashtbl.create transposition_size
 
 (*PV node : Exact value, Cut Node : Lower Bound, All Node : Upper Bound*)
-let traitement_hash (hash_node_type : node) (hash_depth : int) (hash_value : int) (hash_move : move) depth alpha beta best_score best_move no_tt_cut ply =
+let hash_treatment (hash_node_type : node) (hash_depth : int) (hash_value : int) (hash_move : move) depth alpha beta best_score best_move no_tt_cut ply =
   if depth <= hash_depth then begin
     let score = ref hash_value in
     if abs hash_value > 99000 then begin
@@ -46,5 +46,4 @@ let traitement_hash (hash_node_type : node) (hash_depth : int) (hash_value : int
 
 (*Fonction retirant les entrées de la hash table datant d'avant le n-ième coup.*)
 let update table n =
-  ZobristHashtbl.iter (fun key value -> let _, _, _, _, coup = value in if coup < n then ZobristHashtbl.remove table key) table;
-  transposition_counter := 0
+  ZobristHashtbl.iter (fun key value -> let _, _, _, _, coup = value in if coup < n then begin ZobristHashtbl.remove table key; transposition_counter:= !transposition_counter - 1 end) table;
