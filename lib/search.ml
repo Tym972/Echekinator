@@ -58,7 +58,20 @@ let rec pvs board white_to_move last_move castling_right board_record half_moves
       end
       else begin
         let no_cut = ref true in
-        let hash_ordering = hash_move <> Null in
+        (*let in_check = threatened board (index_array board (king white_to_move)) white_to_move in
+        if not (in_check || depth < 3 || ispv) then begin
+          let new_zobrist = new_zobrist Null last_move zobrist_position castling_right castling_right board in
+          let new_record, new_half_moves = adapt_record new_zobrist Null depth board_record half_moves in
+          let score = - pvs board (not white_to_move) Null castling_right new_record new_half_moves (depth - 3) initial_depth (- !beta0) (- !alpha0) evaluation new_zobrist false
+          in if score > !best_score then begin
+            best_score := score;
+            alpha0 := max !alpha0 score;
+            if score >= !beta0 then begin
+              no_cut := false;
+            end
+          end;
+        end;*)
+        let hash_ordering = (*!no_cut &&*) hash_move <> Null in
         if hash_ordering then begin
           let new_castling_right = modification_roque hash_move castling_right in
           let new_zobrist = new_zobrist hash_move last_move zobrist_position castling_right new_castling_right board in
@@ -162,7 +175,6 @@ let rec pvs board white_to_move last_move castling_right board_record half_moves
     if not !stop_calculation then begin
       let node_type =
         if !best_score <= alpha then begin
-          best_move := Null;
           All
         end
         else if !best_score >= beta then begin

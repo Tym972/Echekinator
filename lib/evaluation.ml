@@ -177,9 +177,9 @@ let pawn_mobility board square counter =
 
 let mobility_tab = [|pawn_mobility; knight_mobility; bishop_mobility; rook_mobility; queen_mobility; king_mobility|]
 
-let mobilite board trait_aux_blancs =
+let mobilite board white_to_move =
   let counter = ref 0 in
-  if trait_aux_blancs then begin
+  if white_to_move then begin
     for i = 63 downto 0 do
       let pl = board.(i) in
       if pl > 0 then begin
@@ -277,23 +277,23 @@ let passed_pawn board square =
 
 (*Fonction détectant les positions nulles par manque de matériel, si les joueurs jouent correctement*)
 let manque_de_materiel_approximatif board =
-  let b = ref true in
+  let possibly_insufficient = ref true in
   let counter = ref 0 in
   let cavaliers_blancs = ref 0 in
   let cavaliers_noirs = ref 0 in
   let fous_blancs= ref 0 in
   let fous_noirs = ref 0 in
   let i = ref 0 in
-  while (!b && !i < 64) do
+  while (!possibly_insufficient && !i < 64) do
     let square = board.(!i) in
     if square <> 0 then begin
       if insufficient_mating_materiel_vect.(abs square) then begin
-        b := false
+        possibly_insufficient := false
       end
       else if abs square <> 6 then begin
         incr counter;
         if !counter > 2 then begin
-          b := false
+          possibly_insufficient := false
         end
         else begin
           match square with
@@ -307,16 +307,16 @@ let manque_de_materiel_approximatif board =
     end;
     incr i
   done;
-  if !b && !counter = 2 && (!cavaliers_blancs <> 2 && !cavaliers_noirs <> 2) && ((!fous_blancs + !cavaliers_blancs) <> (!fous_noirs + !cavaliers_noirs)) then begin
-    b := false
+  if !possibly_insufficient && !counter = 2 && (!cavaliers_blancs <> 2 && !cavaliers_noirs <> 2) && ((!fous_blancs + !cavaliers_blancs) <> (!fous_noirs + !cavaliers_noirs)) then begin
+    possibly_insufficient := false
   end;
-  !b
+  !possibly_insufficient
 
 (*Valeur des pièces pour l'évaluation*)
 let tabvalue = [|0; 10; 32; 33; 51; 88; 950|]
 
 (*Fonction évaluant le positionnement d'une rook ou d'une dame*)
-let evalue_tour board square trait_aux_blancs defendues attaquee position_roi roi_en_echec piece_clouees =
+let evalue_tour board square white_to_move defendues attaquee king_position king_in_check piece_clouees =
   let counter = ref 0 in
   let co = board.(square) in
   let t = tab64.(square) in
@@ -334,13 +334,13 @@ let evalue_tour board square trait_aux_blancs defendues attaquee position_roi ro
         end
         else if dest > 0 then begin
           counter := !counter + 2;
-          if not trait_aux_blancs then begin
+          if not white_to_move then begin
             defendues := candidat :: !defendues;
           end;
           s := false
         end
         else begin
-          if trait_aux_blancs && (is_legal_effective board (Normal {piece = co; from = square; to_ = candidat; capture = dest}) trait_aux_blancs position_roi roi_en_echec piece_clouees) then begin
+          if white_to_move && (is_legal_effective board (Normal {piece = co; from = square; to_ = candidat; capture = dest}) white_to_move king_position king_in_check piece_clouees) then begin
             if List.mem candidat !defendues then begin
               let difference = tabvalue.(co) - tabvalue.(- dest) in
               if difference < 0 then begin
@@ -370,13 +370,13 @@ let evalue_tour board square trait_aux_blancs defendues attaquee position_roi ro
         end
         else if dest < 0 then begin
           counter := !counter + 2;
-          if trait_aux_blancs then begin
+          if white_to_move then begin
             defendues := candidat :: !defendues;
           end;
           s := false
         end
         else begin
-          if not trait_aux_blancs && (is_legal_effective board (Normal {piece = co; from = square; to_ = candidat; capture = dest}) trait_aux_blancs position_roi roi_en_echec piece_clouees) then begin
+          if not white_to_move && (is_legal_effective board (Normal {piece = co; from = square; to_ = candidat; capture = dest}) white_to_move king_position king_in_check piece_clouees) then begin
             if List.mem candidat !defendues then begin
               let difference = - tabvalue.(- co) + tabvalue.(dest) in
               if difference > 0 then begin
@@ -395,7 +395,7 @@ let evalue_tour board square trait_aux_blancs defendues attaquee position_roi ro
   !counter
 
 (*Fonction évaluant le positionnement d'un fou ou d'une dame*)
-let evalue_fou board square trait_aux_blancs defendues attaquee position_roi roi_en_echec piece_clouees =
+let evalue_fou board square white_to_move defendues attaquee king_position king_in_check piece_clouees =
   let counter = ref 0 in
   let co = board.(square) in
   let t = tab64.(square) in
@@ -413,13 +413,13 @@ let evalue_fou board square trait_aux_blancs defendues attaquee position_roi roi
         end
         else if dest > 0 then begin
           counter := !counter + 2;
-          if not trait_aux_blancs then begin
+          if not white_to_move then begin
             defendues := candidat :: !defendues;
           end;
           s := false
         end
         else begin
-          if trait_aux_blancs && (is_legal_effective board (Normal {piece = co; from = square; to_ = candidat; capture = dest}) trait_aux_blancs position_roi roi_en_echec piece_clouees) then begin
+          if white_to_move && (is_legal_effective board (Normal {piece = co; from = square; to_ = candidat; capture = dest}) white_to_move king_position king_in_check piece_clouees) then begin
             if List.mem candidat !defendues then begin
               let difference = tabvalue.(co) - tabvalue.(- dest) in
               if difference < 0 then begin
@@ -449,13 +449,13 @@ let evalue_fou board square trait_aux_blancs defendues attaquee position_roi roi
         end
         else if dest < 0 then begin
           counter := !counter + 2;
-          if trait_aux_blancs then begin
+          if white_to_move then begin
             defendues := candidat :: !defendues;
           end;
           s := false
         end
         else begin
-          if not trait_aux_blancs && (is_legal_effective board (Normal {piece = co; from = square; to_ = candidat; capture = dest}) trait_aux_blancs position_roi roi_en_echec piece_clouees) then begin
+          if not white_to_move && (is_legal_effective board (Normal {piece = co; from = square; to_ = candidat; capture = dest}) white_to_move king_position king_in_check piece_clouees) then begin
             if List.mem candidat !defendues then begin
               let difference = - tabvalue.(- co) + tabvalue.(dest) in
               if difference > 0 then begin
@@ -474,7 +474,7 @@ let evalue_fou board square trait_aux_blancs defendues attaquee position_roi roi
   !counter
 
 (*Fonction évaluant le positionnement d'un cavalier*)
-let evalue_cavalier board square trait_aux_blancs defendues attaquee position_roi roi_en_echec piece_clouees = 
+let evalue_cavalier board square white_to_move defendues attaquee king_position king_in_check piece_clouees = 
   let counter = ref 0 in
   let co = board.(square) in
   let c = tab64.(square) in
@@ -488,7 +488,7 @@ let evalue_cavalier board square trait_aux_blancs defendues attaquee position_ro
           if dest = 0 then begin
             counter := !counter + 1
           end
-          else if trait_aux_blancs && (is_legal_effective board (Normal {piece = co; from = square; to_ = candidat; capture = dest}) trait_aux_blancs position_roi roi_en_echec piece_clouees) then begin
+          else if white_to_move && (is_legal_effective board (Normal {piece = co; from = square; to_ = candidat; capture = dest}) white_to_move king_position king_in_check piece_clouees) then begin
             if List.mem candidat !defendues then begin
               let difference = tabvalue.(co) - tabvalue.(- dest) in
               if difference < 0 then begin
@@ -502,7 +502,7 @@ let evalue_cavalier board square trait_aux_blancs defendues attaquee position_ro
         end
         else begin
           counter := !counter + 2;
-          if not trait_aux_blancs then begin
+          if not white_to_move then begin
             defendues := candidat :: !defendues;
           end
         end
@@ -519,7 +519,7 @@ let evalue_cavalier board square trait_aux_blancs defendues attaquee position_ro
           if dest = 0 then begin
             counter := !counter + 1
           end
-          else if not trait_aux_blancs && (is_legal_effective board (Normal {piece = co; from = square; to_ = candidat; capture = dest}) trait_aux_blancs position_roi roi_en_echec piece_clouees) then begin
+          else if not white_to_move && (is_legal_effective board (Normal {piece = co; from = square; to_ = candidat; capture = dest}) white_to_move king_position king_in_check piece_clouees) then begin
             if List.mem candidat !defendues then begin
               let difference = - tabvalue.(- co) + tabvalue.(dest) in
               if difference > 0 then begin
@@ -533,7 +533,7 @@ let evalue_cavalier board square trait_aux_blancs defendues attaquee position_ro
         end
         else begin
           counter := !counter + 2;
-          if trait_aux_blancs then begin
+          if white_to_move then begin
             defendues := candidat :: !defendues;
           end
         end
@@ -543,7 +543,7 @@ let evalue_cavalier board square trait_aux_blancs defendues attaquee position_ro
   !counter
 
 (*Fonction donnant le nombre de cases controllées par une dame*)
-let evalue_dame board square trait_aux_blancs defendues attaquee position_roi roi_en_echec piece_clouees =
+let evalue_dame board square white_to_move defendues attaquee king_position king_in_check piece_clouees =
   let counter = ref 0 in
   let co = board.(square) in
   let t = tab64.(square) in
@@ -561,13 +561,13 @@ let evalue_dame board square trait_aux_blancs defendues attaquee position_roi ro
         end
         else if dest > 0 then begin
           counter := !counter + 2;
-          if not trait_aux_blancs then begin
+          if not white_to_move then begin
             defendues := candidat :: !defendues;
           end;
           s := false
         end
         else begin
-          if trait_aux_blancs && (is_legal_effective board (Normal {piece = co; from = square; to_ = candidat; capture = dest}) trait_aux_blancs position_roi roi_en_echec piece_clouees) then begin
+          if white_to_move && (is_legal_effective board (Normal {piece = co; from = square; to_ = candidat; capture = dest}) white_to_move king_position king_in_check piece_clouees) then begin
             if List.mem candidat !defendues then begin
               let difference = tabvalue.(co) - tabvalue.(- dest) in
               if difference < 0 then begin
@@ -597,13 +597,13 @@ let evalue_dame board square trait_aux_blancs defendues attaquee position_roi ro
         end
         else if dest < 0 then begin
           counter := !counter + 2;
-          if trait_aux_blancs then begin
+          if white_to_move then begin
             defendues := candidat :: !defendues;
           end;
           s := false
         end
         else begin
-          if not trait_aux_blancs && (is_legal_effective board (Normal {piece = co; from = square; to_ = candidat; capture = dest}) trait_aux_blancs position_roi roi_en_echec piece_clouees) then begin
+          if not white_to_move && (is_legal_effective board (Normal {piece = co; from = square; to_ = candidat; capture = dest}) white_to_move king_position king_in_check piece_clouees) then begin
             if List.mem candidat !defendues then begin
               let difference = - tabvalue.(- co) + tabvalue.(dest) in
               if difference > 0 then begin
@@ -622,7 +622,7 @@ let evalue_dame board square trait_aux_blancs defendues attaquee position_roi ro
   !counter
 
 (*Fonction évaluant le positionnement d'un roi*) 
-let evalue_roi board square trait_aux_blancs defendues attaquee position_roi roi_en_echec piece_clouees = let _ = position_roi, roi_en_echec, piece_clouees in
+let evalue_roi board square white_to_move defendues attaquee king_position king_in_check piece_clouees = let _ = king_position, king_in_check, piece_clouees in
   let counter = ref 0 in
   let co = board.(square) in
   let c = tab64.(square) in
@@ -637,7 +637,7 @@ let evalue_roi board square trait_aux_blancs defendues attaquee position_roi roi
             counter := !counter + 1
           end
           else begin
-            if trait_aux_blancs && not (List.mem candidat !defendues) then begin
+            if white_to_move && not (List.mem candidat !defendues) then begin
               attaquee := max !attaquee tabvalue.(- dest)
             end;
           incr counter;
@@ -645,7 +645,7 @@ let evalue_roi board square trait_aux_blancs defendues attaquee position_roi roi
         end
         else begin
           counter := !counter + 2;
-          if not trait_aux_blancs then begin
+          if not white_to_move then begin
             defendues := candidat :: !defendues;
           end;
         end
@@ -663,7 +663,7 @@ let evalue_roi board square trait_aux_blancs defendues attaquee position_roi roi
             counter := !counter + 1
           end
           else begin
-            if not (trait_aux_blancs || List.mem candidat !defendues) then begin
+            if not (white_to_move || List.mem candidat !defendues) then begin
               attaquee := max !attaquee tabvalue.(dest)
             end;
           incr counter;
@@ -671,7 +671,7 @@ let evalue_roi board square trait_aux_blancs defendues attaquee position_roi roi
         end
         else begin
           counter := !counter + 2;
-          if trait_aux_blancs then begin
+          if white_to_move then begin
             defendues := candidat :: !defendues;
           end;
         end
@@ -681,7 +681,7 @@ let evalue_roi board square trait_aux_blancs defendues attaquee position_roi roi
   !counter
 
 (*Fonction évaluant le positionnement d'un pion*)
-let evalue_pion board square trait_aux_blancs defendues attaquee position_roi roi_en_echec piece_clouees =
+let evalue_pion board square white_to_move defendues attaquee king_position king_in_check piece_clouees =
   let counter = ref 0 in
   let co = board.(square) in
   let p = tab64.(square) in
@@ -693,7 +693,7 @@ let evalue_pion board square trait_aux_blancs defendues attaquee position_roi ro
         if dest1 = 0 then begin
           counter := !counter + 1
         end
-        else if trait_aux_blancs && (is_legal_effective board (Normal {piece = co; from = square; to_ = candidate_1; capture = dest1}) trait_aux_blancs position_roi roi_en_echec piece_clouees) then begin
+        else if white_to_move && (is_legal_effective board (Normal {piece = co; from = square; to_ = candidate_1; capture = dest1}) white_to_move king_position king_in_check piece_clouees) then begin
           if List.mem candidate_1 !defendues then begin
             let difference = tabvalue.(co) - tabvalue.(- dest1) in
             if difference < 0 then begin
@@ -707,7 +707,7 @@ let evalue_pion board square trait_aux_blancs defendues attaquee position_roi ro
       end
       else begin
         counter := !counter + 2;
-        if not trait_aux_blancs then begin
+        if not white_to_move then begin
           defendues := candidate_1 :: !defendues;
         end
       end
@@ -719,7 +719,7 @@ let evalue_pion board square trait_aux_blancs defendues attaquee position_roi ro
         if dest2 = 0 then begin
           counter := !counter + 1
         end
-        else if trait_aux_blancs && (is_legal_effective board (Normal {piece = co; from = square; to_ = candidate_2; capture = dest2}) trait_aux_blancs position_roi roi_en_echec piece_clouees) then begin
+        else if white_to_move && (is_legal_effective board (Normal {piece = co; from = square; to_ = candidate_2; capture = dest2}) white_to_move king_position king_in_check piece_clouees) then begin
           if List.mem candidate_2 !defendues then begin
             let difference = tabvalue.(co) - tabvalue.(- dest2) in
             if difference < 0 then begin
@@ -733,7 +733,7 @@ let evalue_pion board square trait_aux_blancs defendues attaquee position_roi ro
       end
       else begin
         counter := !counter + 2;
-        if not trait_aux_blancs then begin
+        if not white_to_move then begin
           defendues := candidate_2 :: !defendues;
         end
       end
@@ -747,7 +747,7 @@ let evalue_pion board square trait_aux_blancs defendues attaquee position_roi ro
         if dest1 = 0 then begin
           counter := !counter + 1
         end
-        else if not trait_aux_blancs && (is_legal_effective board (Normal {piece = co; from = square; to_ = candidate_1; capture = dest1}) trait_aux_blancs position_roi roi_en_echec piece_clouees) then begin
+        else if not white_to_move && (is_legal_effective board (Normal {piece = co; from = square; to_ = candidate_1; capture = dest1}) white_to_move king_position king_in_check piece_clouees) then begin
           if List.mem candidate_1 !defendues then begin
             let difference = - tabvalue.(- co) + tabvalue.(dest1) in
             if difference > 0 then begin
@@ -761,7 +761,7 @@ let evalue_pion board square trait_aux_blancs defendues attaquee position_roi ro
       end
       else begin
         counter := !counter + 2;
-        if trait_aux_blancs then begin
+        if white_to_move then begin
           defendues := candidate_1 :: !defendues;
         end
       end
@@ -773,7 +773,7 @@ let evalue_pion board square trait_aux_blancs defendues attaquee position_roi ro
         if dest2 = 0 then begin
           counter := !counter + 1
         end
-        else if not trait_aux_blancs && (is_legal_effective board (Normal {piece = co; from = square; to_ = candidate_2; capture = dest2}) trait_aux_blancs position_roi roi_en_echec piece_clouees) then begin
+        else if not white_to_move && (is_legal_effective board (Normal {piece = co; from = square; to_ = candidate_2; capture = dest2}) white_to_move king_position king_in_check piece_clouees) then begin
           if List.mem candidate_2 !defendues then begin
             let difference = - tabvalue.(- co) + tabvalue.(dest2) in
             if difference > 0 then begin
@@ -787,7 +787,7 @@ let evalue_pion board square trait_aux_blancs defendues attaquee position_roi ro
       end
       else begin
         counter := !counter + 2;
-        if trait_aux_blancs then begin
+        if white_to_move then begin
           defendues := candidate_2 :: !defendues;
         end;
       end
@@ -798,7 +798,7 @@ let evalue_pion board square trait_aux_blancs defendues attaquee position_roi ro
 let tabfun2 = [|evalue_pion; evalue_cavalier; evalue_fou; evalue_tour; evalue_dame; evalue_roi|]
 
 (*Fonction indique la différence du nombre de structure de pions doublées entre les deux joueurs*)
-let doublees board =
+let doubled board =
   let difference_doubles_pions = ref 0 in
   for i = 8 to 55 do
     if board.(i) = (-1) then begin
@@ -814,7 +814,7 @@ let doublees board =
   done;
   !difference_doubles_pions
 
-let placement_ouverture board materiel position =
+let placement_ouverture board material position =
   if board.(59) = 5 then begin
     position := !position + 3
   end;
@@ -900,9 +900,9 @@ let placement_ouverture board materiel position =
     end
   end
   else if board.(60) <> 6 then begin
-    materiel := !materiel - 4;
+    material := !material - 4;
     if board.(59) = 6 || board.(61) = 6 then begin
-      materiel := !materiel + 1
+      material := !material + 1
     end
   end;
   if (board.(6) = (-6) && board.(7) <> (-4))then begin
@@ -936,9 +936,9 @@ let placement_ouverture board materiel position =
     end
   end
   else if board.(4) <> (-6) then begin
-    materiel := !materiel + 4;
+    material := !material + 4;
     if board.(3) = (-6) || board.(5) = (-6) then begin
-      materiel := !materiel - 1
+      material := !material - 1
     end
   end
 
@@ -1004,12 +1004,12 @@ let placement_mdj board position =
     end
   end
 
-let eval_noirs_sl board trait_aux_blancs piece_clouees defendues pieces_joueur attaque_noirs position_roi roi_en_echec materiel position =
+let eval_noirs_sl board white_to_move piece_clouees defendues pieces_joueur attaque_noirs king_position king_in_check material position =
   for i = 0 to 63 do
     let square = board.(i) in
     if square < 0 then begin
-      let eval_piece = (tabfun2.(- square - 1)) board i trait_aux_blancs defendues attaque_noirs position_roi roi_en_echec piece_clouees in
-      materiel := !materiel - tabvalue.(- square);
+      let eval_piece = (tabfun2.(- square - 1)) board i white_to_move defendues attaque_noirs king_position king_in_check piece_clouees in
+      material := !material - tabvalue.(- square);
       position := !position - eval_piece
     end
     else if square > 0 then begin
@@ -1017,22 +1017,22 @@ let eval_noirs_sl board trait_aux_blancs piece_clouees defendues pieces_joueur a
     end
   done
   
-let rec eval_blancs liste_cases board trait_aux_blancs defendues attaque_blancs position_roi roi_en_echec piece_clouees materiel position =
+let rec eval_blancs liste_cases board white_to_move defendues attaque_blancs king_position king_in_check piece_clouees material position =
   match liste_cases with
     |[] -> ()
     |h::t -> 
       let square = board.(h) in
-      let eval_piece = (tabfun2.(square - 1)) board h trait_aux_blancs defendues attaque_blancs position_roi roi_en_echec piece_clouees in
-      materiel := !materiel + tabvalue.(square);
+      let eval_piece = (tabfun2.(square - 1)) board h white_to_move defendues attaque_blancs king_position king_in_check piece_clouees in
+      material := !material + tabvalue.(square);
       position := !position + eval_piece;
-      eval_blancs t board trait_aux_blancs defendues attaque_blancs position_roi roi_en_echec piece_clouees materiel position
+      eval_blancs t board white_to_move defendues attaque_blancs king_position king_in_check piece_clouees material position
 
-let eval_blancs_sl board trait_aux_blancs piece_clouees defendues pieces_joueur attaque_blancs position_roi roi_en_echec materiel position =
+let eval_blancs_sl board white_to_move piece_clouees defendues pieces_joueur attaque_blancs king_position king_in_check material position =
   for i = 0 to 63 do
     let square = board.(i) in
     if square > 0 then begin
-      let eval_piece = (tabfun2.(square - 1)) board i trait_aux_blancs defendues attaque_blancs position_roi roi_en_echec piece_clouees in
-      materiel := !materiel + tabvalue.(square);
+      let eval_piece = (tabfun2.(square - 1)) board i white_to_move defendues attaque_blancs king_position king_in_check piece_clouees in
+      material := !material + tabvalue.(square);
       position := !position + eval_piece;
     end
     else if square < 0 then begin
@@ -1040,52 +1040,52 @@ let eval_blancs_sl board trait_aux_blancs piece_clouees defendues pieces_joueur 
     end
   done
 
-let rec eval_noirs liste_cases board trait_aux_blancs defendues attaque_noirs position_roi roi_en_echec piece_clouees materiel position =
+let rec eval_noirs liste_cases board white_to_move defendues attaque_noirs king_position king_in_check piece_clouees material position =
   match liste_cases with
     |[] -> ()
     |h::t -> let square = board.(h) in
-      let eval_piece = (tabfun2.(- square - 1)) board h trait_aux_blancs defendues attaque_noirs position_roi roi_en_echec piece_clouees in
-      materiel := !materiel - tabvalue.(- square);
+      let eval_piece = (tabfun2.(- square - 1)) board h white_to_move defendues attaque_noirs king_position king_in_check piece_clouees in
+      material := !material - tabvalue.(- square);
       position := !position - eval_piece;
-      eval_noirs t board trait_aux_blancs defendues attaque_noirs position_roi roi_en_echec piece_clouees materiel position
+      eval_noirs t board white_to_move defendues attaque_noirs king_position king_in_check piece_clouees material position
 
-let evaluation_double board trait_aux_blancs position_roi roi_en_echec materiel position =
-  let piece_clouees = pinned_squares board position_roi trait_aux_blancs in
+let evaluation_double board white_to_move king_position king_in_check material position =
+  let piece_clouees = pinned_squares board king_position white_to_move in
   let defendues = ref [] in
   let pieces_joueur = ref [] in
   let attaque_blancs = ref 0 in
   let attaque_noirs = ref 0 in
-  if trait_aux_blancs then begin
-    eval_noirs_sl board trait_aux_blancs piece_clouees defendues pieces_joueur attaque_noirs position_roi roi_en_echec materiel position;
-    eval_blancs !pieces_joueur board trait_aux_blancs defendues attaque_blancs position_roi roi_en_echec piece_clouees materiel position;
-    materiel := !materiel + !attaque_blancs
+  if white_to_move then begin
+    eval_noirs_sl board white_to_move piece_clouees defendues pieces_joueur attaque_noirs king_position king_in_check material position;
+    eval_blancs !pieces_joueur board white_to_move defendues attaque_blancs king_position king_in_check piece_clouees material position;
+    material := !material + !attaque_blancs
   end
   else begin
-    eval_blancs_sl board trait_aux_blancs piece_clouees defendues pieces_joueur attaque_blancs position_roi roi_en_echec materiel position;
-    eval_noirs !pieces_joueur board trait_aux_blancs defendues attaque_noirs position_roi roi_en_echec piece_clouees materiel position;
-    materiel := !materiel - !attaque_noirs
+    eval_blancs_sl board white_to_move piece_clouees defendues pieces_joueur attaque_blancs king_position king_in_check material position;
+    eval_noirs !pieces_joueur board white_to_move defendues attaque_noirs king_position king_in_check piece_clouees material position;
+    material := !material - !attaque_noirs
   end
 
-let evaluation_double_finale board trait_aux_blancs position_roi roi_en_echec materiel position =
-  let piece_clouees = pinned_squares board position_roi trait_aux_blancs in
+let evaluation_double_finale board white_to_move king_position king_in_check material position =
+  let piece_clouees = pinned_squares board king_position white_to_move in
   let defendues = ref [] in
   let pieces_joueur = ref [] in
   let attaque_blancs = ref 0 in
   let attaque_noirs = ref 0 in
-  if trait_aux_blancs then begin
+  if white_to_move then begin
     for i = 0 to 63 do
       let square = board.(i) in
       if square < 0 then begin
         if square = (-1) then begin
-          materiel := !materiel - (2 * (7 - passed_pawn board i));
+          material := !material - (2 * (7 - passed_pawn board i));
         end;
-        let eval_piece = (tabfun2.(- square - 1)) board i trait_aux_blancs defendues attaque_noirs position_roi roi_en_echec piece_clouees in
-        materiel := !materiel - tabvalue.(- square);
+        let eval_piece = (tabfun2.(- square - 1)) board i white_to_move defendues attaque_noirs king_position king_in_check piece_clouees in
+        material := !material - tabvalue.(- square);
         position:= !position - eval_piece
       end
       else if square > 0 then begin
         if square = 1 then begin
-          materiel := !materiel + (2 * (7 - passed_pawn board i))
+          material := !material + (2 * (7 - passed_pawn board i))
         end;
         pieces_joueur := i :: !pieces_joueur
       end
@@ -1093,27 +1093,27 @@ let evaluation_double_finale board trait_aux_blancs position_roi roi_en_echec ma
     let rec eval_blancs liste_cases = match liste_cases with
       |[] -> ()
       |h::t -> let square = board.(h) in
-                let eval_piece = (tabfun2.(square - 1))board h trait_aux_blancs defendues attaque_blancs position_roi roi_en_echec piece_clouees in
-                materiel := !materiel + tabvalue.(square);
+                let eval_piece = (tabfun2.(square - 1))board h white_to_move defendues attaque_blancs king_position king_in_check piece_clouees in
+                material := !material + tabvalue.(square);
                 position:= !position + eval_piece;
                 eval_blancs t
     in eval_blancs !pieces_joueur;
-    materiel := !materiel + !attaque_blancs
+    material := !material + !attaque_blancs
   end
   else begin
     for i = 0 to 63 do
       let square = board.(i) in
       if square > 0 then begin
         if square = 1 then begin
-          materiel := !materiel + (2 * (7 - passed_pawn board i))
+          material := !material + (2 * (7 - passed_pawn board i))
         end;
-        let eval_piece = (tabfun2.(square - 1)) board i trait_aux_blancs defendues attaque_blancs position_roi roi_en_echec piece_clouees in
-        materiel := !materiel + tabvalue.(square);
+        let eval_piece = (tabfun2.(square - 1)) board i white_to_move defendues attaque_blancs king_position king_in_check piece_clouees in
+        material := !material + tabvalue.(square);
         position:= !position + eval_piece;
       end
       else if square < 0 then begin
         if square = (-1) then begin
-          materiel := !materiel - (2 * (7 - passed_pawn board i))
+          material := !material - (2 * (7 - passed_pawn board i))
         end;
         pieces_joueur := i :: !pieces_joueur
       end
@@ -1121,72 +1121,72 @@ let evaluation_double_finale board trait_aux_blancs position_roi roi_en_echec ma
     let rec eval_noirs liste_cases = match liste_cases with
       |[] -> ()
       |h::t -> let square = board.(h) in
-                let eval_piece = (tabfun2.(- square - 1)) board h trait_aux_blancs defendues attaque_noirs position_roi roi_en_echec piece_clouees in
-                materiel := !materiel - tabvalue.(- square);
+                let eval_piece = (tabfun2.(- square - 1)) board h white_to_move defendues attaque_noirs king_position king_in_check piece_clouees in
+                material := !material - tabvalue.(- square);
                 position:= !position - eval_piece;
                 eval_noirs t
     in eval_noirs !pieces_joueur;
-    materiel := !materiel - !attaque_noirs
+    material := !material - !attaque_noirs
   end
 
-let traitement trait_aux_blancs materiel position =
-  if trait_aux_blancs then begin
-    100 * materiel + position
+let treatment white_to_move material position =
+  if white_to_move then begin
+    100 * material + position
   end
   else begin
-    -(100 * materiel + position)
+    -(100 * material + position)
   end
 
 (*Fonction évaluant la position d'un player en utilisée en ouverture si aucun coup théorique n'existe*)
-let evalue_ouverture board trait_aux_blancs position_roi roi_en_echec (alpha : int) (beta : int) =
+let evalue_ouverture board white_to_move king_position king_in_check (alpha : int) (beta : int) =
   let _ = alpha, beta in
-  let materiel = ref (2 * (doublees board)) in
+  let material = ref (2 * (doubled board)) in
   let position = ref 0 in
-  placement_ouverture board materiel position;
-  evaluation_double board trait_aux_blancs position_roi roi_en_echec materiel position;
-  traitement trait_aux_blancs !materiel !position
+  placement_ouverture board material position;
+  evaluation_double board white_to_move king_position king_in_check material position;
+  treatment white_to_move !material !position
 
 (*Fonction évaluant la position d'un player utilisée en milieu de jeu*)
-let evalue_mdj board trait_aux_blancs position_roi roi_en_echec (alpha : int) (beta : int) =
+let evalue_mdj board white_to_move king_position king_in_check (alpha : int) (beta : int) =
   let _ = alpha, beta in
-  let materiel = ref (2 * (doublees board)) in
+  let material = ref (2 * (doubled board)) in
   let position = ref 0 in
   placement_mdj board position;
-  evaluation_double board trait_aux_blancs position_roi roi_en_echec materiel position;
-  traitement trait_aux_blancs !materiel !position
+  evaluation_double board white_to_move king_position king_in_check material position;
+  treatment white_to_move !material !position
 
 (*Fonction évaluant la position d'un player utilisée en finale*)
-let evalue_finale board trait_aux_blancs position_roi roi_en_echec (alpha : int) (beta : int) =
+let evalue_finale board white_to_move king_position king_in_check (alpha : int) (beta : int) =
   let _ = alpha, beta in
   if manque_de_materiel_approximatif board then begin
     0
   end
   else begin
-    let materiel = ref (2 * (doublees board)) in
+    let material = ref (2 * (doubled board)) in
     let position = ref 0 in
-    evaluation_double_finale board trait_aux_blancs position_roi roi_en_echec materiel position;
-    traitement trait_aux_blancs !materiel !position
+    evaluation_double_finale board white_to_move king_position king_in_check material position;
+    treatment white_to_move !material !position
   end
 
 (**)
 let eval_materiel board =
-  let materiel = ref 0 in
+  let material = ref 0 in
   for i = 0 to 63 do
     let square = board.(i) in
     if square > 0 then begin
-      materiel := !materiel + tabvalue.(square)
+      material := !material + tabvalue.(square)
     end
     else if square < 0 then begin
-      materiel := !materiel - tabvalue.(- square)
+      material := !material - tabvalue.(- square)
     end
   done;
-  !materiel
+  !material
 
 (*Fonction d'évaluation à n'appliquer que sur les positions stables*)
-let evalue_simple board trait_aux_blancs (position_roi : int) (roi_en_echec : bool) alpha beta = let _ = alpha, beta in
-  let _ = trait_aux_blancs, position_roi, roi_en_echec in
+let evalue_simple board white_to_move (king_position : int) (king_in_check : bool) alpha beta = let _ = alpha, beta in
+  let _ = white_to_move, king_position, king_in_check in
   let position = ref 0 in
-  let note_provisoire = traitement trait_aux_blancs (eval_materiel board) 0 in
+  let note_provisoire = treatment white_to_move (eval_materiel board) 0 in
   note_provisoire + !position
 
 let fp board position table =
@@ -1203,87 +1203,87 @@ let fp board position table =
   done;
   position := !position + (!note / 5)
 
-let eval1 board trait_aux_blancs position_roi roi_en_echec (alpha : int) (beta : int) =
+let eval1 board white_to_move king_position king_in_check (alpha : int) (beta : int) =
   let _ = alpha, beta in
-  let materiel = ref (2 * (doublees board)) in
+  let material = ref (2 * (doubled board)) in
   let position = ref 0 in
   fp board position tab_ouverture;
-  evaluation_double board trait_aux_blancs position_roi roi_en_echec materiel position;
-  traitement trait_aux_blancs !materiel !position
+  evaluation_double board white_to_move king_position king_in_check material position;
+  treatment white_to_move !material !position
 
-let eval2 board trait_aux_blancs position_roi roi_en_echec (alpha : int) (beta : int) =
+let eval2 board white_to_move king_position king_in_check (alpha : int) (beta : int) =
   let _ = alpha, beta in
-  let materiel = ref (2 * (doublees board)) in
+  let material = ref (2 * (doubled board)) in
   let position = ref 0 in
   fp board position tab_mdg;
-  evaluation_double board trait_aux_blancs position_roi roi_en_echec materiel position;
-  traitement trait_aux_blancs !materiel !position
+  evaluation_double board white_to_move king_position king_in_check material position;
+  treatment white_to_move !material !position
 
-let eval3 board trait_aux_blancs position_roi roi_en_echec (alpha : int) (beta : int) =
+let eval3 board white_to_move king_position king_in_check (alpha : int) (beta : int) =
   let _ = alpha, beta in
-  let materiel = ref (2 * (doublees board)) in
+  let material = ref (2 * (doubled board)) in
   let position = ref 0 in
   fp board position tab_finale;
-  evaluation_double board trait_aux_blancs position_roi roi_en_echec materiel position;
-  traitement trait_aux_blancs !materiel !position
+  evaluation_double board white_to_move king_position king_in_check material position;
+  treatment white_to_move !material !position
 
 let eval_materiel2 board (tb, tn) =
-  let materiel = ref 0 in
+  let material = ref 0 in
   let position = ref 0 in
   for i = 0 to 63 do
     let square = board.(i) in
     if square > 0 then begin
-      materiel := !materiel + tabvalue.(square);
+      material := !material + tabvalue.(square);
       position := !position + tb.(square - 1).(i)
     end
     else if square < 0 then begin
-      materiel := !materiel - tabvalue.(- square);
+      material := !material - tabvalue.(- square);
       position := !position - tn.(- square - 1).(i)
     end
   done;
-  !materiel, !position
+  !material, !position
 
-let eval1_q board trait_aux_blancs position_roi roi_en_echec (alpha : int) (beta : int) =
-  let _ = alpha, beta, position_roi, roi_en_echec in
-  let materiel, position = eval_materiel2 board tab_ouverture in
-  traitement trait_aux_blancs (materiel + 2 * (doublees board)) (position / 5)
+let eval1_q board white_to_move king_position king_in_check (alpha : int) (beta : int) =
+  let _ = alpha, beta, king_position, king_in_check in
+  let material, position = eval_materiel2 board tab_ouverture in
+  treatment white_to_move (material + 2 * (doubled board)) (position / 5)
 
-let eval2_q board trait_aux_blancs position_roi roi_en_echec (alpha : int) (beta : int) =
-  let _ = alpha, beta, position_roi, roi_en_echec in
-  let materiel, position = eval_materiel2 board tab_mdg in
-  traitement trait_aux_blancs (materiel + 2 * (doublees board)) (position / 5)
+let eval2_q board white_to_move king_position king_in_check (alpha : int) (beta : int) =
+  let _ = alpha, beta, king_position, king_in_check in
+  let material, position = eval_materiel2 board tab_mdg in
+  treatment white_to_move (material + 2 * (doubled board)) (position / 5)
 
-let eval3_q board trait_aux_blancs position_roi roi_en_echec (alpha : int) (beta : int) =
-  let _ = alpha, beta, position_roi, roi_en_echec in
-  let materiel, position = eval_materiel2 board tab_finale in
-  traitement trait_aux_blancs (materiel + 2 * (doublees board)) (position / 5)
+let eval3_q board white_to_move king_position king_in_check (alpha : int) (beta : int) =
+  let _ = alpha, beta, king_position, king_in_check in
+  let material, position = eval_materiel2 board tab_finale in
+  treatment white_to_move (material + 2 * (doubled board)) (position / 5)
 
-let traitement2 trait_aux_blancs materiel position =
-  if trait_aux_blancs then begin
-    100. *. materiel +. position
+let traitement2 white_to_move material position =
+  if white_to_move then begin
+    100. *. material +. position
   end
   else begin
-    -. (100. *. materiel +. position)
+    -. (100. *. material +. position)
   end
 
-let evolved board trait_aux_blancs position_roi roi_en_echec (alpha : int) (beta : int) =
-  let _ = alpha, beta, position_roi, roi_en_echec in
+let evolved board white_to_move king_position king_in_check (alpha : int) (beta : int) =
+  let _ = alpha, beta, king_position, king_in_check in
   let tab_pieces = [|ref 0; ref 0; ref 0; ref 0; ref 0; ref 0|] in
   let note_ouverture(*, note_mdj*), note_finale = ref 0(*, ref 0*), ref 0 in
   let tab_phase = [|1; 1; 2; 4|] in
-  let materiel = ref 0 in
+  let material = ref 0 in
   for i = 0 to 63 do
     let piece = board.(i) in
     if piece > 0 then begin
       incr tab_pieces.(piece - 1);
-      materiel := !materiel + tabvalue.(piece);
+      material := !material + tabvalue.(piece);
       note_ouverture := !note_ouverture + tab_pieces_blanches_ouverture.(piece - 1).(i);
       (*note_mdj := !note_mdj + tab_pieces_blanches_mdg.(piece - 1).(i);*)
       note_finale := !note_finale + tab_pieces_blanches_finale.(piece - 1).(i)
     end
     else if piece < 0 then begin
       incr tab_pieces.(- piece - 1);
-      materiel := !materiel - tabvalue.(- piece);
+      material := !material - tabvalue.(- piece);
       note_ouverture := !note_ouverture - tab_pieces_noires_ouverture.(abs piece - 1).(i);
       (*note_mdj := !note_mdj - tab_pieces_noires_mdg.(abs piece - 1).(i);*)
       note_finale := !note_finale - tab_pieces_noires_finale.(abs piece - 1).(i)
@@ -1298,7 +1298,7 @@ let evolved board trait_aux_blancs position_roi roi_en_echec (alpha : int) (beta
   end
   else begin
     let phase_2 = ((float_of_int !phase) *. 256. +. ((float_of_int !phase) /. 2.)) /. (float_of_int !phase) in
-    traitement trait_aux_blancs !materiel (int_of_float (((float_of_int !note_ouverture *. (256. -. phase_2)) +. ((float_of_int !note_finale *. phase_2) /. 256.)) /. 5.))
+    treatment white_to_move !material (int_of_float (((float_of_int !note_ouverture *. (256. -. phase_2)) +. ((float_of_int !note_finale *. phase_2) /. 256.)) /. 5.))
   end
 
 (*Fonction indiquant si les deux tours d'un player son connectées*)

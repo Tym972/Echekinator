@@ -101,3 +101,6 @@ let test_fisher20 = "n1bb1rkr/qpnppppp/2p5/p7/P1P5/5P2/1P1PPRPP/NQBBN1KR w Hhf -
 (*Tests tri*)
 let tri1 = "r1b1r1k1/p1p2ppp/2n5/1pbqp3/Q7/3P1NP1/PP2PPBP/R1B2RK1 w - - 0 11"
 let tri2 = "rnbqkb1r/1ppp1ppp/p4n2/3Pp3/5B2/8/PPP1PPPP/RN1QKBNR w KQkq e6 0 4"
+
+(*Tests SEE*)
+let see1 = "3r3k/1b2n3/2b5/3N4/2Q1B3/8/8/3R2K1 b - - 0 1"
