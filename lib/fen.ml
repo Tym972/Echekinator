@@ -279,7 +279,7 @@ let valid_castlings start_position castlings castling_right =
   end
 
 (*Fonction permettant de réinitialiser un board à l'état d'origine*)
-let reset board white_to_move last_move castling_right moves_record board_record start_position initial_white_to_move initial_last_move initial_castling_right initial_moves_record initial_board_record = 
+let reset board white_to_move last_move castling_right king_position in_check moves_record board_record start_position initial_white_to_move initial_last_move initial_castling_right initial_king_position initial_in_check initial_moves_record initial_board_record = 
   for i = 0 to 63 do
     board.(i) <- start_position.(i)
   done;
@@ -287,11 +287,13 @@ let reset board white_to_move last_move castling_right moves_record board_record
   white_to_move := initial_white_to_move;
   last_move := initial_last_move;
   castling_right := initial_castling_right;
+  king_position := initial_king_position;
+  in_check := initial_in_check;
   moves_record := initial_moves_record;
   board_record := initial_board_record
 
 (*Fonction traduisant une position FEN en l'int array correspondant. Par défaut si non rensigné, le trait est au blancs, il n'y a plus de castlings, pas de capture en passant, aucun coup joué*)
-let position_of_fen chain start_position white_to_move last_move castling_right moves_record board_record =
+let position_of_fen chain start_position initial_white_to_move initial_last_move initial_castling_right initial_king_position initial_in_check initial_moves_record initial_board_record =
   let split_fen = ref (word_detection chain) in
   let fen_length = List.length !split_fen in
   if fen_length > 0 then begin
@@ -320,38 +322,48 @@ let position_of_fen chain start_position white_to_move last_move castling_right 
               |_ -> acc
             in List.rev (aux [] longueur)
           in split_fen := !split_fen @ (complete fen_length);
-          white_to_move := not (List.nth !split_fen 1 = "b");
-          if (threatened start_position (index_array start_position (king (not !white_to_move))) (not !white_to_move) || legal_moves start_position !white_to_move !last_move !castling_right = []) then begin
-            white_to_move := not !white_to_move
+          if List.nth !split_fen 1 = "w" then begin
+            initial_king_position := index_array start_position (king !initial_white_to_move);
+            initial_in_check := threatened start_position !initial_king_position !initial_white_to_move
+          end
+          else begin
+            initial_white_to_move := false;
+            initial_king_position := index_array start_position (king !initial_white_to_move);
+            initial_in_check := threatened start_position !initial_king_position !initial_white_to_move
           end;
-          valid_castlings start_position (List.nth !split_fen 2) castling_right;
-          let poussee_pep = ep_deduction start_position (List.nth !split_fen 3) !white_to_move in
+          let poussee_pep = ep_deduction start_position (List.nth !split_fen 3) !initial_white_to_move in
           if poussee_pep <> Null then begin
-            last_move := poussee_pep
+            initial_last_move := poussee_pep
           end;
-          board_record := [];
+          if (threatened start_position (index_array start_position (king (not !initial_white_to_move))) (not !initial_white_to_move)|| legal_moves start_position !initial_white_to_move !initial_last_move !initial_castling_right !initial_king_position !initial_in_check = []) then begin
+            initial_white_to_move := not !initial_white_to_move;
+            initial_king_position := index_array start_position (king !initial_white_to_move);
+            initial_in_check := threatened start_position !initial_king_position !initial_white_to_move
+          end;
+          valid_castlings start_position (List.nth !split_fen 2) initial_castling_right;
+          initial_board_record := [];
           let rec ajoute liste_ref i =
             if i > 0 then begin
-              liste_ref := i :: !board_record;
+              liste_ref := i :: !initial_board_record;
               ajoute liste_ref (i - 1)
             end
-          in ajoute board_record (try int_of_string (List.nth !split_fen 4) with _ -> 0);
-          board_record := (zobrist start_position !white_to_move !last_move !castling_right) :: !board_record;
+          in ajoute initial_board_record (try int_of_string (List.nth !split_fen 4) with _ -> 0);
+          initial_board_record := (zobrist start_position !initial_white_to_move !initial_last_move !initial_castling_right) :: !initial_board_record;
           let nombre_coup white_to_move coups_complets =
             if white_to_move then begin
               for _ = 1 to try (2 * (int_of_string (List.nth !split_fen 5) - 1)) with _ -> 0 do 
-                moves_record := Null :: !moves_record
+                initial_moves_record := Null :: !initial_moves_record
               done
             end
             else begin
               for _ = 1 to try (2 * (int_of_string coups_complets - 1) + 1) with _ -> 0 do 
-                moves_record := Null :: !moves_record
+                initial_moves_record := Null :: !initial_moves_record
               done
             end
-          in nombre_coup !white_to_move (List.nth !split_fen 5)
+          in nombre_coup !initial_white_to_move (List.nth !split_fen 5)
         end;
-        if (not !valid_fen) || threatened start_position (index_array start_position (king (not !white_to_move))) (not !white_to_move) || legal_moves start_position !white_to_move !last_move !castling_right = [] then begin
-          reset start_position white_to_move last_move castling_right moves_record board_record chessboard true Null (true, true, true, true) [] [zobrist chessboard true Null (true, true, true, true)]
+        if (not !valid_fen) || threatened start_position (index_array start_position (king (not !initial_white_to_move))) (not !initial_white_to_move) || legal_moves start_position !initial_white_to_move !initial_last_move !initial_castling_right !initial_king_position !initial_in_check = [] then begin
+          reset start_position initial_white_to_move initial_last_move initial_castling_right initial_king_position initial_in_check initial_moves_record initial_board_record chessboard true Null (true, true, true, true) !from_white_king false [] [zobrist chessboard true Null (true, true, true, true)]
         end
       end
     end

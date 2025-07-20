@@ -1000,10 +1000,8 @@ let pinned_squares board king_square white_to_move =
   !list
 
 (*Fonction construisant une list des moves légaux du joueur*)
-let legal_moves board white_to_move last_move (white_short, white_long, black_short, black_long) =
+let legal_moves board white_to_move last_move (white_short, white_long, black_short, black_long) king_position in_check =
   let move_list = ref [] in
-  let player_king = king white_to_move in
-  let king_position = index_array board player_king in
   let aux move king_position =
     make board move;
     if not (threatened board king_position white_to_move) then begin
@@ -1011,7 +1009,7 @@ let legal_moves board white_to_move last_move (white_short, white_long, black_sh
     end;
     unmake board move
   in List.iter (fun prise_en_passant -> aux prise_en_passant king_position) (enpassant board white_to_move last_move);
-  if threatened board king_position white_to_move then begin
+  if in_check then begin
     let moves, king_moves = pseudo_legal_moves board white_to_move king_position in
     List.iter (fun king_move -> aux king_move (to_ king_move)) king_moves;
     List.iter (fun other_move -> aux other_move king_position) moves;
@@ -1450,7 +1448,8 @@ let make_list move_list board last_move moves_record board_record castling_right
   let rec func move_list board last_move moves_record board_record castling_rights white_to_move controle = match move_list with
     |[] -> ()
     |move :: t when !controle ->
-      if List.mem move (legal_moves board !white_to_move !last_move !castling_rights) then begin
+      let king_position = (index_array board (king !white_to_move)) in
+      if List.mem move (legal_moves board !white_to_move !last_move !castling_rights king_position (threatened board king_position !white_to_move)) then begin
         make_move_2 board move white_to_move last_move castling_rights moves_record board_record;
         func t board last_move moves_record board_record castling_rights white_to_move controle
       end
@@ -1498,10 +1497,10 @@ let is_legal_effective board move white_to_move king_position in_check pinned_pi
   !b
 
 (*Fonction renvoyant le statut de la partie (2 si elle est en cours, 0 si il y a pat, 1 si les blancs l'emportent, -1 si les noirs l'emportent)*)
-let win board white_to_move last_move =
+let win board white_to_move last_move king_position in_check =
   let winner = ref 2 in
   if white_to_move then begin
-    if (legal_moves board white_to_move last_move (false, false, false, false)) = [] then begin
+    if (legal_moves board white_to_move last_move (false, false, false, false) king_position in_check) = [] then begin
       if threatened board (index_array board 6) true then
         winner := -1
       else
@@ -1509,7 +1508,7 @@ let win board white_to_move last_move =
     end
   end
   else begin
-    if (legal_moves board white_to_move last_move (false, false, false, false)) = [] then begin
+    if (legal_moves board white_to_move last_move (false, false, false, false) king_position in_check) = [] then begin
       if threatened board (index_array board (-6)) false then
         winner := 1
       else

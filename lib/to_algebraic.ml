@@ -7,7 +7,7 @@ open Generator
 let english_pieces = [|""; "P"; "N"; "B"; "R"; "Q"; "K"|]
 
 (*Fonction renvoyant un string (string vide, column de départ, line de départ ou case de départ), levant une éventuelle ambiguïté de la notation algébrique*)
-let precise from antecedent precision =
+(*let precise from antecedent precision =
   if (List.length !antecedent) > 0 then begin
     let origin = coord.(from) in
     let column = origin.[0] in
@@ -129,7 +129,9 @@ let san_of_move_list list start_position initial_last_move initial_castling_righ
   let algebraic = ref "" in
   let counter = ref 1 in
   while !moves_list <> [] do
-    let player_legal_moves = legal_moves board !white_to_move !last_move !castling_right in
+    let king_position = index_array board (king !white_to_move) in
+    let in_check = threatened board king_position !white_to_move in
+    let player_legal_moves = legal_moves board !white_to_move !last_move !castling_right king_position in_check in
     let move = List.hd !moves_list in
     moves_list := List.tl !moves_list;
     if move <> Null then begin
@@ -157,7 +159,7 @@ let san_of_move_list list start_position initial_last_move initial_castling_righ
         end
       end
       else begin
-        if (win board !white_to_move move) = lose !white_to_move then begin
+        if (win board !white_to_move move king_position in_check) = lose !white_to_move then begin
           let result = if !white_to_move then "0-1" else "1-0" in
           word := String.sub !word 0 (String.length !word - 1) ^ "# " ^ result
         end
@@ -179,7 +181,7 @@ let san_of_move_list list start_position initial_last_move initial_castling_righ
       white_to_move := not !white_to_move
     end
   done;
-  !algebraic
+  !algebraic*)
 
 (*Fonction traduisant un move en sa notation UCI*)
 let uci_of_mouvement move = match move with

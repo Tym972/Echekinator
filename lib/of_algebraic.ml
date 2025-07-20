@@ -248,7 +248,8 @@ let move_list_of_algebric_list algebraic_list initial_white_to_move initial_last
   let verification = ref true in
   while !verification && !algebraic_list <> [] do
     let move = List.hd !algebraic_list in
-    let player_legal_moves = legal_moves board !white_to_move !last_move !right_to_castle in
+    let king_position = (index_array board (king !white_to_move)) in
+    let player_legal_moves = legal_moves board !white_to_move !last_move !right_to_castle king_position (threatened board king_position !white_to_move) in
     let translated_move = tolerance board move !white_to_move player_legal_moves in
     if translated_move <> Null then begin
       move_list := translated_move :: !move_list;
@@ -266,9 +267,9 @@ let move_list_of_san san initial_white_to_move initial_last_move initial_castlin
   move_list_of_algebric_list (algebric_list_of_san san) initial_white_to_move initial_last_move initial_castling_right start_position
 
 (*Fonction convertissant un répertoire d'ouvertures en une list de list de coups notés avec le type Mouvement*)
-let traduction algebraic =
+(*let traduction algebraic =
   let line_break_detection = Str.split (Str.regexp "\n") algebraic
   in let rec func list = match list with
     |[] -> []
     |h :: t -> move_list_of_san h true Null (true, true, true, true) chessboard :: func t
-  in func line_break_detection
+  in func line_break_detection*)

@@ -145,8 +145,8 @@ let history_moves = Array.make 8192 0
 let aux_history white_to_move =
   if white_to_move then 0 else 1
 
-let tri board white_to_move dernier_coup droit_au_roque ply =
-  let legal_moves = legal_moves board white_to_move dernier_coup droit_au_roque in
+let move_ordering board white_to_move last_move castling_right king_position in_check ply =
+  let legal_moves = legal_moves board white_to_move last_move castling_right king_position in_check in
   let score move =
     if isquiet move then begin
       if killer_moves.(2 * ply) = move then begin

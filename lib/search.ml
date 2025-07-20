@@ -53,13 +53,14 @@ let rec pvs board white_to_move last_move castling_right board_record half_moves
       hash_treatment hash_node_type hash_depth hash_value hash_move depth alpha0 beta0 best_score best_move no_tt_cut ply
     end;
     if !no_tt_cut then begin
+      let king_position = index_array board (king white_to_move) in
+      let in_check = threatened board king_position white_to_move in
       if depth = 0 then begin
-        best_score := quiescence_treatment_depth_0 initial_depth evaluation board white_to_move last_move !alpha0 !beta0
+        best_score := quiescence_treatment_depth_0 initial_depth evaluation board white_to_move last_move !alpha0 !beta0 king_position in_check
       end
       else begin
         let no_cut = ref true in
-        (*let in_check = threatened board (index_array board (king white_to_move)) white_to_move in
-        if not (in_check || depth < 3 || ispv) then begin
+        (*if not (in_check || depth < 3 || ispv) then begin
           let new_zobrist = new_zobrist Null last_move zobrist_position castling_right castling_right board in
           let new_record, new_half_moves = adapt_record new_zobrist Null depth board_record half_moves in
           let score = - pvs board (not white_to_move) Null castling_right new_record new_half_moves (depth - 3) initial_depth (- !beta0) (- !alpha0) evaluation new_zobrist false
@@ -106,9 +107,9 @@ let rec pvs board white_to_move last_move castling_right board_record half_moves
         if !no_cut then begin
           let moves =
             if hash_ordering then
-              ref (List.filter (fun c -> c <> hash_move) (tri board white_to_move last_move castling_right ply))
+              ref (List.filter (fun c -> c <> hash_move) (move_ordering board white_to_move last_move castling_right king_position in_check ply))
             else
-              ref (tri board white_to_move last_move castling_right ply)
+              ref (move_ordering board white_to_move last_move castling_right king_position in_check ply)
           in if !moves = [] && not hash_ordering then begin
             if ispv then begin
               pv_length.(ply) <- 0
