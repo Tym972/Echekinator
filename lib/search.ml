@@ -28,7 +28,7 @@ let pv_table = Array.make ((max_pv_length) * (max_pv_length + 1) / 2) Null
 let pv_length = Array.make max_pv_length 0
 
 let rec pvs board white_to_move last_move castling_right board_record half_moves depth initial_depth alpha beta evaluation zobrist_position ispv =
-  incr search_counter;
+  incr node_counter;
   let ply = initial_depth - depth in
   if !stop_calculation || repetition board_record 3 || half_moves = 100 then begin
     if ispv then begin
@@ -41,15 +41,9 @@ let rec pvs board white_to_move last_move castling_right board_record half_moves
     let beta0 = ref beta in
     let best_score = ref (-infinity) in
     let best_move = ref Null in
-    let presence = ref true in
-    let hash_node_type, hash_depth, hash_value, hash_move, _ =
-      try
-        ZobristHashtbl.find table zobrist_position
-      with _ ->
-        presence := false;
-        (All, (-1), 0, Null, 0)
-    in let no_tt_cut = ref true in
-    if !presence && not ispv then begin
+    let hash_node_type, hash_depth, hash_value, hash_move =  probe transposition_table zobrist_position in
+    let no_tt_cut = ref true in
+    if hash_depth <> (-1) && not ispv then begin
       hash_treatment hash_node_type hash_depth hash_value hash_move depth alpha0 beta0 best_score best_move no_tt_cut ply
     end;
     if !no_tt_cut then begin
@@ -60,7 +54,7 @@ let rec pvs board white_to_move last_move castling_right board_record half_moves
       end
       else begin
         let no_cut = ref true in
-        (*if not (in_check || depth < 3 || ispv) then begin
+        (*if not (in_check || depth < 3 || ispv || hash_move = 100) then begin
           let new_zobrist = new_zobrist Null last_move zobrist_position castling_right castling_right board in
           let new_record, new_half_moves = adapt_record new_zobrist Null depth board_record half_moves in
           let score = - pvs board (not white_to_move) Null castling_right new_record new_half_moves (depth - 3) initial_depth (- !beta0) (- !alpha0) evaluation new_zobrist false
@@ -114,13 +108,16 @@ let rec pvs board white_to_move last_move castling_right board_record half_moves
             if ispv then begin
               pv_length.(ply) <- 0
             end;
-            if (threatened board (index_array board (king white_to_move)) white_to_move) then begin
+            if (threatened board (index_array board (king white_to_move)) white_to_move) (*in_check*) then begin
               best_score := ply - 99999
             end 
             else begin
               best_score := 0
             end
           end
+          (*else if half_moves = 100 then begin 
+            best_score := 0
+          end*)
           else begin
             let first_move = ref (not hash_ordering) in
             while (!no_cut && !moves <> []) do
@@ -196,15 +193,7 @@ let rec pvs board white_to_move last_move castling_right board_record half_moves
             !best_score - ply
           end
         end
-      in if !presence then begin
-        if depth > hash_depth || ispv then begin
-          ZobristHashtbl.replace table zobrist_position (node_type, depth, stored_value, !best_move, 0)
-        end
-      end
-      else begin
-        incr transposition_counter;
-        ZobristHashtbl.add table zobrist_position (node_type, depth, stored_value, !best_move, 0)
-      end
+      in store transposition_table zobrist_position node_type depth stored_value !best_move !go_counter
     end;
     !best_score
   end

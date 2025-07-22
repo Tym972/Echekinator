@@ -13,27 +13,27 @@ open Libs.Zobrist
 
 (*Premier coup évité par le moteur s'il make les blancs*)
 let a_eviter =
-  let coups_valides_joueur = legal_moves chessboard true Null (false, false, false, false) in
+  let player_legal_moves = legal_moves chessboard true Null (false, false, false, false) in
   let ht = Hashtbl.create 5 in
   List.iter (fun (key, value) -> Hashtbl.add ht key value)
-    [ move_of_algebric chessboard "a3" true coups_valides_joueur, ();
-      move_of_algebric chessboard "a4" true coups_valides_joueur, ();
-      move_of_algebric chessboard "b3" true coups_valides_joueur, ();
-      move_of_algebric chessboard "b4" true coups_valides_joueur, ();
-      move_of_algebric chessboard "c3" true coups_valides_joueur, ();
-      move_of_algebric chessboard "c4" true coups_valides_joueur, ();
-      move_of_algebric chessboard "d3" true coups_valides_joueur, ();
-      move_of_algebric chessboard "e3" true coups_valides_joueur, ();
-      move_of_algebric chessboard "f3" true coups_valides_joueur, ();
-      move_of_algebric chessboard "f4" true coups_valides_joueur, ();
-      move_of_algebric chessboard "g3" true coups_valides_joueur, ();
-      move_of_algebric chessboard "g4" true coups_valides_joueur, ();
-      move_of_algebric chessboard "h3" true coups_valides_joueur, ();
-      move_of_algebric chessboard "h4" true coups_valides_joueur, ();
-      move_of_algebric chessboard "Na3" true coups_valides_joueur, ();
-      move_of_algebric chessboard "Nc3" true coups_valides_joueur, ();
-      move_of_algebric chessboard "Nf3" true coups_valides_joueur, ();
-      move_of_algebric chessboard "Nh3" true coups_valides_joueur, (); ];
+    [ move_of_algebric chessboard "a3" true player_legal_moves, ();
+      move_of_algebric chessboard "a4" true player_legal_moves, ();
+      move_of_algebric chessboard "b3" true player_legal_moves, ();
+      move_of_algebric chessboard "b4" true player_legal_moves, ();
+      move_of_algebric chessboard "c3" true player_legal_moves, ();
+      move_of_algebric chessboard "c4" true player_legal_moves, ();
+      move_of_algebric chessboard "d3" true player_legal_moves, ();
+      move_of_algebric chessboard "e3" true player_legal_moves, ();
+      move_of_algebric chessboard "f3" true player_legal_moves, ();
+      move_of_algebric chessboard "f4" true player_legal_moves, ();
+      move_of_algebric chessboard "g3" true player_legal_moves, ();
+      move_of_algebric chessboard "g4" true player_legal_moves, ();
+      move_of_algebric chessboard "h3" true player_legal_moves, ();
+      move_of_algebric chessboard "h4" true player_legal_moves, ();
+      move_of_algebric chessboard "Na3" true player_legal_moves, ();
+      move_of_algebric chessboard "Nc3" true player_legal_moves, ();
+      move_of_algebric chessboard "Nf3" true player_legal_moves, ();
+      move_of_algebric chessboard "Nh3" true player_legal_moves, (); ];
   ht
 
 (*Fonction établissant une liste des coups théoriques possibles*)

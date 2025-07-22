@@ -129,6 +129,13 @@ let tri_see liste board white_to_move =
     in List.map snd (merge_sort (association liste))
   end
 
+(*let see2 board square white_to_move =
+  let value = ref 0 in
+  let square_attakers = ref attakers board square in
+  while !square_attaker <> [] do
+    value := max 0 (tabvalue.(abs (capture (List.hd !square_attaquers))) - see2 board square (not white_to_move));
+  done*)
+
 (*Fonction triant une liste de coups selon la logique Most Valuable Victim - Least Valuable Agressor*)
 let mvvlva move = match move with
   |Normal {piece; from = _; to_ = _; capture} when capture <> 0 ->
@@ -145,7 +152,7 @@ let history_moves = Array.make 8192 0
 let aux_history white_to_move =
   if white_to_move then 0 else 1
 
-let move_ordering board white_to_move last_move castling_right king_position in_check ply =
+let move_ordering board white_to_move last_move castling_right king_position in_check (*hash_move*) ply =
   let legal_moves = legal_moves board white_to_move last_move castling_right king_position in_check in
   let score move =
     if isquiet move then begin
@@ -159,6 +166,9 @@ let move_ordering board white_to_move last_move castling_right king_position in_
         history_moves.(4096 * aux_history white_to_move + 64 * from move + to_ move)
       end
     end
+    (*else if move = hash_move then begin
+      200000000
+    end*)
     else begin
       100000000 + mvvlva move
     end

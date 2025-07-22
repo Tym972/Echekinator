@@ -7,19 +7,19 @@ open Ouvertures
 open Libs.Of_algebraic
 open Config
 
-let ouvertures = traduction chess_openings_exhaustif
+let ouvertures = translate chess_openings_exhaustif
 
 let verif =
   let b = ref true in
   let trait_aux_blancs = ref true in
-  let dernier_coup = ref Aucun in
+  let dernier_coup = ref Null in
   let droit_au_roque = ref (true, true, true, true) in
   let rec fonc1 liste plateau = match liste with
     |[] -> ()
     |h :: t when !b ->
-      if List.mem h (coups_valides plateau !trait_aux_blancs !dernier_coup !droit_au_roque) then begin
-        joue_coup_1 plateau h trait_aux_blancs dernier_coup droit_au_roque;
-        affiche plateau;
+      if List.mem h (legal_moves plateau !trait_aux_blancs !dernier_coup !droit_au_roque) then begin
+        make_move_1 plateau h trait_aux_blancs dernier_coup droit_au_roque;
+        print_board plateau;
         fonc1 t plateau
       end
       else begin
@@ -29,13 +29,13 @@ let verif =
   in let rec fonc2 liste = match liste with
     |[] -> ()
     |h::t when !b ->
-      let plateau = Array.copy echiquier in 
+      let plateau = Array.copy chessboard in 
       trait_aux_blancs := true; 
-      dernier_coup := Aucun;
+      dernier_coup := Null;
       droit_au_roque := (true, true, true, true);
       fonc1 h plateau;
       if not !b then begin
-        affiche_liste h echiquier [];
+        affiche_liste h chessboard [];
         print_endline "Erreur"
       end;
       fonc2 t

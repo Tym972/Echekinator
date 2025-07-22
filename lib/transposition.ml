@@ -1,49 +1,83 @@
 open Board
 
-let transposition_size = 10000000
-
-module ZobristHash =
-  struct
-    type t = int
-    let equal i j = i = j
-    let hash i = i mod transposition_size
-  end
-
-module ZobristHashtbl = Hashtbl.Make(ZobristHash)
-
 type node =
   |Pv
   |Cut
   |All
 
-let (table : (node * int * int * move * int) ZobristHashtbl.t) =  ZobristHashtbl.create transposition_size
+type entry = int * node * int * int * move * int
+
+let transposition_size = 10000000
+
+let transposition_table = Array.make transposition_size (0, All, (-1), 0, Null, 0)
 
 (*PV node : Exact value, Cut Node : Lower Bound, All Node : Upper Bound*)
 let hash_treatment (hash_node_type : node) (hash_depth : int) (hash_value : int) (hash_move : move) depth alpha beta best_score best_move no_tt_cut ply =
   if depth <= hash_depth then begin
-    let score = ref hash_value in
-    if abs hash_value > 99000 then begin
-      if !score >= 0 then score := !score - ply else score := !score + ply
-    end;
-    match hash_node_type with
+    let adjusted_value =
+      if abs hash_value > 99000 then begin
+        if hash_value >= 0 then
+          hash_value - ply
+        else
+          hash_value + ply
+      end
+      else begin
+        hash_value
+      end
+    in match hash_node_type with
       |Pv ->
-        best_score := !score;
+        best_score := adjusted_value;
         best_move := hash_move;
         no_tt_cut := false
       |Cut ->
-        alpha := max !alpha !score;
-        if !score >= !beta then begin
-          best_score := !score;
+        alpha := max !alpha adjusted_value;
+        if adjusted_value >= !beta then begin
+          best_score := adjusted_value;
           no_tt_cut := false
         end
       |All ->
-        beta := min !beta !score;
-        if !alpha >= !score then begin
-          best_score := !score;
+        beta := min !beta adjusted_value;
+        if !alpha >= adjusted_value then begin
+          best_score := adjusted_value;
           no_tt_cut := false
         end 
   end
 
-(*Fonction retirant les entrées de la hash table datant d'avant le n-ième coup.*)
-let update table n =
-  ZobristHashtbl.iter (fun key value -> let _, _, _, _, coup = value in if coup < n then begin ZobristHashtbl.remove table key; transposition_counter:= !transposition_counter - 1 end) table;
+(*Fonction vidant la TT*)
+let clear table =
+  for i = 0 to transposition_size - 1 do
+    table.(i) <- (0, All, (-1), 0, Null, 0)
+  done;
+  transposition_counter := 0
+
+let score_node node_type = match node_type with
+  |Pv -> 10
+  |Cut -> 5
+  |All -> 0
+
+let score_entry depth node_type generation =
+  let age = !go_counter - generation in
+  if age > 5 then
+    0
+  else
+    10 * depth + score_node node_type - age
+
+let store tt key node_type depth value move generation =
+  let index = key mod transposition_size in
+  let _, old_node_type, old_depth, _, _, old_generation = tt.(index) in
+  if old_depth = (-1) then begin
+    tt.(index) <- (key, node_type, depth, value, move, generation);
+    incr transposition_counter
+  end
+  else if !go_counter - old_generation > 5 || depth > old_depth || depth = old_depth && score_node node_type > score_node old_node_type
+    (*score_entry depth node_type generation > score_entry old_depth old_node_type old_generation*) then begin
+    tt.(index) <- (key, node_type, depth, value, move, generation)
+  end
+
+let probe tt key =
+  let index = key mod transposition_size in
+  let old_key, old_node_type, old_depth, old_value, old_best_move, _ = tt.(index) in
+  if key = old_key then
+    old_node_type, old_depth, old_value, old_best_move
+  else
+    (All, (-1), 0, Null)

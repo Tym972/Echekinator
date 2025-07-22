@@ -36,7 +36,8 @@
  positions
  trad
  ouvertures
- strategie2)
+ strategie2
+ to_algebraic)
  (libraries 
  unix
  threads

@@ -90,7 +90,7 @@ let chessboard = [|
   |]
 
 (*Array used in print_board*)
-let tab_print = [|"   |"; " P |"; " C |"; " F |"; " T |"; " D |"; " R |"; " p |"; " c |"; " f |"; " t |"; " d |"; " r |"; " X |"|]
+let tab_print = [|"   |"; " P |"; " N |"; " B |"; " R |"; " Q |"; " K |"; " p |"; " n |"; " b |"; " r |"; " q |"; " k |"|]
 
 (*Print the board in ASCII*)
 let print_board board =
@@ -167,13 +167,20 @@ let merge_sort l =
     |_ -> let lg, ld = split l in merge (tri_f lg) (tri_f ld)
   in tri_f l
 
+(*Bigest integer*)
+let infinity = (Int64.to_int (Random.int64 4611686018427387903L))
+
 (*Max depth reached by the search*)
 let max_depth = 255
 
 (*Variable used to forcefully stop the search*)
 let stop_calculation = ref false
 
-(*Bigest integer*)
-let infinity = (Int64.to_int (Random.int64 4611686018427387903L))
-let search_counter = ref 0
+(*Node counter*)
+let node_counter = ref 0
+
+(*Hashtable size tracker*)
 let transposition_counter = ref 0
+
+(*Go counter*)
+let go_counter = ref 0

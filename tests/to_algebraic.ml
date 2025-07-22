@@ -1,13 +1,13 @@
 (*Module implémentant les fonctions qui permettent de traduire un move de la notation avec le type Mouvement vers la notation algébrique*)
 
-open Board
-open Generator
+open Libs.Board
+open Libs.Generator
 
 (*Tableau assoicant la valeur des pièces pour le moteur (indice) à leur notation algébrique anglaise*)
 let english_pieces = [|""; "P"; "N"; "B"; "R"; "Q"; "K"|]
 
 (*Fonction renvoyant un string (string vide, column de départ, line de départ ou case de départ), levant une éventuelle ambiguïté de la notation algébrique*)
-(*let precise from antecedent precision =
+let precise from antecedent precision =
   if (List.length !antecedent) > 0 then begin
     let origin = coord.(from) in
     let column = origin.[0] in
@@ -181,14 +181,4 @@ let san_of_move_list list start_position initial_last_move initial_castling_righ
       white_to_move := not !white_to_move
     end
   done;
-  !algebraic*)
-
-(*Fonction traduisant un move en sa notation UCI*)
-let uci_of_mouvement move = match move with
-  |Castling {sort} ->
-    let from_king, to_short, to_long, from_short_rook, from_long_rook = if sort < 3 then !from_white_king, 62, 58, !from_short_white_rook, !from_long_white_rook else !from_black_king, 6, 2, !from_short_black_rook, !from_long_black_rook in
-    let arrivee_roque, depart_tour = if sort mod 2 = 1 then to_short, from_short_rook else to_long, from_long_rook in
-    coord.(from_king) ^ coord.(if not !chess_960 then arrivee_roque else depart_tour)
-  |Promotion {from = _; to_ = _; capture = _; promotion} -> coord.(from move) ^ coord.(to_ move) ^ (String.lowercase_ascii english_pieces.(abs promotion))
-  |Null -> "0000"
-  |_ -> coord.(from move) ^ coord.(to_ move)
+  !algebraic

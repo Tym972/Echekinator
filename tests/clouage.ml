@@ -7,19 +7,19 @@ let print_list liste =
 
 let main b1 b11 =
   print_newline ();
-  print_board plateau;
+  print_board board;
   if b1 then begin
-    let c = clouees plateau (index_array plateau (king !trait_aux_blancs)) !trait_aux_blancs in
+    let c = pinned_squares board (index_array board (king !white_to_move)) !white_to_move in
     print_string "Clouées : ";
     print_list c;
     print_newline ();
-    let cv = legal_moves plateau !trait_aux_blancs !dernier_coup !droit_au_roque in
+    let cv = legal_moves board !white_to_move !last_move !castling_right in
     print_string "Coups valides : ";
-    affiche_liste cv plateau cv;
+    affiche_liste cv board cv;
     print_newline ();
     if b11 then begin
-      List.iter (fun coup -> print_endline (string_of_bool (is_legal plateau coup !trait_aux_blancs)); print_board plateau) cv;
-      print_board plateau
+      List.iter (fun coup -> print_endline (string_of_bool (is_legal board coup !white_to_move)); print_board board) cv;
+      print_board board
     end
   end
 

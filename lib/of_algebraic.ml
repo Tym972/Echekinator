@@ -265,11 +265,3 @@ let move_list_of_algebric_list algebraic_list initial_white_to_move initial_last
 (*Fonction convertissant la notation d'un string de coups notés algébriquement en une list de coups notés avec le type Mouvement*)
 let move_list_of_san san initial_white_to_move initial_last_move initial_castling_right start_position =
   move_list_of_algebric_list (algebric_list_of_san san) initial_white_to_move initial_last_move initial_castling_right start_position
-
-(*Fonction convertissant un répertoire d'ouvertures en une list de list de coups notés avec le type Mouvement*)
-(*let traduction algebraic =
-  let line_break_detection = Str.split (Str.regexp "\n") algebraic
-  in let rec func list = match list with
-    |[] -> []
-    |h :: t -> move_list_of_san h true Null (true, true, true, true) chessboard :: func t
-  in func line_break_detection*)

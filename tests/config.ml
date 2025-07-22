@@ -3,47 +3,53 @@ open Libs.Generator
 open Libs.Zobrist
 open Libs.Evaluation
 open Libs.Of_algebraic
-open Libs.To_algebraic
+open To_algebraic
 open Libs.Fen
 open Positions
+open Libs.Uci
 
-let plateau = Array.copy chessboard
-let trait_aux_blancs = ref true
-let dernier_coup = ref Null
-let droit_au_roque = ref (true, true, true, true)
-let releve_coups = ref []
-let releve_plateau = ref [zobrist plateau true !dernier_coup !droit_au_roque]
-let position_de_depart = Array.copy chessboard
-let trait_aux_blancs_initial = ref true
-let dernier_coup_initial = ref Null
-let droit_au_roque_initial = ref (true, true, true, true)
-let releve_coups_initial = ref []
-let releve_plateau_initial = ref [zobrist plateau true !dernier_coup !droit_au_roque]
-let chaine_fen = see1
-let liste_coup = ""
+let board = Array.copy chessboard
+let white_to_move = ref true
+let last_move = ref Null
+let castling_right = ref (true, true, true, true)
+let king_position = ref 60
+let in_check = ref false
+let move_record = ref []
+let board_record = ref [zobrist board true !last_move !castling_right]
+let start_position = Array.copy chessboard
+let initial_white_to_move = ref true
+let initial_last_move = ref Null
+let initial_castling_right = ref (true, true, true, true)
+let initial_king_position = ref 60
+let initial_in_check = ref false
+let initial_move_record = ref []
+let initial_board_record = ref [zobrist board true !last_move !castling_right]
+
+let fen_chain = see1
+let move_list = ""
 
 let () = 
-  position_of_fen chaine_fen position_de_depart trait_aux_blancs_initial dernier_coup_initial droit_au_roque_initial releve_coups_initial releve_plateau_initial;
-  reset plateau trait_aux_blancs dernier_coup droit_au_roque releve_coups releve_plateau position_de_depart !trait_aux_blancs_initial !dernier_coup_initial !droit_au_roque_initial !releve_coups_initial !releve_plateau_initial;
-  make_list (move_list_of_san liste_coup !trait_aux_blancs !dernier_coup !droit_au_roque plateau) plateau dernier_coup releve_coups releve_plateau droit_au_roque trait_aux_blancs
+  position_of_fen fen_chain start_position initial_white_to_move initial_last_move initial_castling_right initial_king_position initial_in_check initial_move_record initial_board_record;
+  reset board white_to_move last_move castling_right king_position in_check move_record board_record start_position !initial_white_to_move !initial_last_move !initial_castling_right !initial_king_position !initial_in_check !initial_move_record !initial_board_record;
+  make_list (move_list_of_san move_list !white_to_move !last_move !castling_right board) board last_move move_record board_record castling_right white_to_move
 
 let evaluation = eval1_q
-let profondeur = 8
-let profondeur_perft = 6
-let nombre_de_coups = 1
+let depth = 8
+let perft_depth = 6
+(*let nombre_de_coups = 1*)
 
-let coups_valides_joueur = legal_moves plateau !trait_aux_blancs !dernier_coup !droit_au_roque
+let player_legal_moves = legal_moves board !white_to_move !last_move !castling_right
 
-let rec affiche_liste liste plateau coups_valides_joueur = match liste with
+let rec affiche_liste liste board player_legal_moves = match liste with
   |h :: t ->
-    let coup = algebraic_of_move h plateau coups_valides_joueur in
+    let coup = algebraic_of_move h board player_legal_moves in
     if coup <> "" then begin
       print_string (coup ^ " ")
     end
     else begin
       print_string ("erreur ")
     end;
-    affiche_liste t plateau coups_valides_joueur
+    affiche_liste t board player_legal_moves
   |_ -> ()
 
 let uci_of_list liste_coups =
@@ -52,8 +58,8 @@ let uci_of_list liste_coups =
     |h::t -> uci_of_mouvement h ^ " " ^ aux t
   in aux liste_coups
 
-let uci_of_san algebric trait_aux_blancs_initial dernier_coup_initial droit_au_roque_initial position_de_depart =
-  uci_of_list (move_list_of_san algebric trait_aux_blancs_initial dernier_coup_initial droit_au_roque_initial position_de_depart)
+let uci_of_san algebric initial_white_to_move initial_last_move initial_castling_right start_position =
+  uci_of_list (move_list_of_san algebric initial_white_to_move initial_last_move initial_castling_right start_position)
 
-let san_of_uci uci trait_aux_blancs_initial dernier_coup_initial droit_au_roque_initial position_de_depart =
-  san_of_move_list (List.rev (move_list_of_san uci trait_aux_blancs_initial dernier_coup_initial droit_au_roque_initial position_de_depart) @ (if trait_aux_blancs_initial then [] else [Null])) position_de_depart dernier_coup_initial droit_au_roque_initial
+let san_of_uci uci initial_white_to_move initial_last_move initial_castling_right start_position =
+  san_of_move_list (List.rev (move_list_of_san uci initial_white_to_move initial_last_move initial_castling_right start_position) @ (if initial_white_to_move then [] else [Null])) start_position initial_last_move initial_castling_right

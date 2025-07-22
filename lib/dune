@@ -4,7 +4,6 @@
   board
   generator
   of_algebraic
-  to_algebraic
   fen
   zobrist
   move_ordering

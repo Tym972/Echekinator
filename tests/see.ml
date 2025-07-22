@@ -6,10 +6,10 @@ open Libs.Move_ordering
 
 let arrivee = Hashtbl.find hash_coord "d5"
 
-(*let coup = Classique {piece = plateau.(depart); depart; arrivee; prise = plateau.(arrivee)}*)
+(*let coup = Classique {piece = board.(depart); depart; arrivee; prise = board.(arrivee)}*)
 
 let main =
-  print_board plateau;
-  print_endline ("SEE : " ^ string_of_int (see plateau arrivee !trait_aux_blancs))
+  print_board board;
+  print_endline ("SEE : " ^ string_of_int (see board arrivee !white_to_move))
 
 let () = main

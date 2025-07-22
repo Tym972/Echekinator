@@ -1,6 +1,7 @@
 (*Module contenant des répertoires d'ouvertures*)
 
 open Libs.Of_algebraic
+open Libs.Board
 
 let chess_openings_exhaustif =
   "1 a3 a5 2 b4
@@ -2992,13 +2993,19 @@ let chess_openings_efficace =
 let piege_blanc = 
   "1 e4 e5 2 Nf3 Nc6 3 d4 exd4 4 c3 dxc3 5 Nxc3 d6 6 Bc4 Bg4 7 0-0 Ne5 8 Nxe5 Bxd1 9 Bxf7+ Ke7 10 Nd5#"
 
+(*Fonction convertissant un répertoire d'ouvertures en une list de list de coups notés avec le type Mouvement*)
+let translation algebraic =
+  let line_break_detection = Str.split (Str.regexp "\n") algebraic
+  in let rec func list = match list with
+    |[] -> []
+    |h :: t -> move_list_of_san h true Null (true, true, true, true) chessboard :: func t
+  in func line_break_detection
+
 (*Toutes les ouvertures*)
-let ouvertures_exhaustif = traduction chess_openings_exhaustif
+let ouvertures_exhaustif = translation chess_openings_exhaustif
 
 (*Ouvertures suffisament longues*)
-let ouvertures_efficaces = traduction chess_openings_efficace
-
-
+let ouvertures_efficaces = translation chess_openings_efficace
 
 let rec select liste n = match liste with
   |[] -> []
