@@ -184,3 +184,5 @@ let transposition_counter = ref 0
 
 (*Go counter*)
 let go_counter = ref 0
+
+let zugzwang = ref true

@@ -5,6 +5,158 @@ open Config*)
 
 let () = ()
 
+open Libs.Board
+open Libs.Evaluation
+
+let f tb tn board =
+  let material = ref 0 in
+  let position = ref 0 in
+  let white_pieces = [|0; 0; 0; 0; 0; 0; 0|] in
+  let black_pieces = [|0; 0; 0; 0; 0; 0; 0|] in
+  for i = 0 to 63 do
+    let square = board.(i) in
+    if square > 0 then begin
+      material := !material + tabvalue.(square);
+      position := !position + tb.(square - 1).(i);
+      white_pieces.(square) <- white_pieces.(square) + 1
+    end
+    else if square < 0 then begin
+      material := !material - tabvalue.(- square);
+      position := !position - tn.(- square - 1).(i);
+      black_pieces.(- square) <- black_pieces.(- square) + 1
+    end
+  done;
+  let only_white_king = white_pieces.(2) = 0 && white_pieces.(3) = 0 && white_pieces.(4) = 0 && white_pieces.(5) = 0
+  in let only_black_king = black_pieces.(2) = 0 && black_pieces.(3) = 0 && black_pieces.(4) = 0 && black_pieces.(5) = 0
+  in let score_draw =
+    let func () =
+      let white_minor = white_pieces.(2) + white_pieces.(3) in
+      let black_minor = black_pieces.(2) + black_pieces.(3) in
+      white_minor < 3 && black_minor < 3 && begin
+        (white_minor < 2 && black_minor < 2) || (*K vs K, K + Minor vs K + Minor*)
+        ((white_pieces.(3) = 1 && (white_minor = 1 || black_minor > 0)) || (black_pieces.(3) = 1 && (black_minor = 1 || white_minor > 0))) || (*K + B + B vs K + B, K + B vs K + Minor, K + B vs K*)
+        ((white_pieces.(2) = 2 && black_minor < 2) || black_pieces.(2) = 2 && white_minor < 2) (*K + N + N vs K + Minor, K + N + N vs K*)
+      end
+    in white_pieces.(1) = 0 && black_pieces.(1) = 0
+      &&
+      (only_white_king && only_black_king ||
+      (white_pieces.(4) = 0 && black_pieces.(4) = 0 && white_pieces.(5) = 0 && black_pieces.(5) = 0 && func ()))
+  in if score_draw then
+    0, 0
+  else
+    !material, !position
+
+let eval_materiel3 board (tb, tn) white_to_move =
+  let material = ref 0 in
+  let position = ref 0 in
+  let white_pieces = [|0; 0; 0; 0; 0; 0; 0|] in
+  let black_pieces = [|0; 0; 0; 0; 0; 0; 0|] in
+  for i = 0 to 63 do
+    let square = board.(i) in
+    if square > 0 then begin
+      material := !material + tabvalue.(square);
+      position := !position + tb.(square - 1).(i);
+      white_pieces.(square) <- white_pieces.(square) + 1
+    end
+    else if square < 0 then begin
+      material := !material - tabvalue.(- square);
+      position := !position - tn.(- square - 1).(i);
+      black_pieces.(- square) <- black_pieces.(- square) + 1
+    end
+  done;
+  (*let only_white_king () = white_pieces.(2) = 0 && white_pieces.(3) = 0 && white_pieces.(4) = 0 && white_pieces.(5) = 0
+  in let only_black_king () = black_pieces.(2) = 0 && black_pieces.(3) = 0 && black_pieces.(4) = 0 && black_pieces.(5) = 0
+  in let score_draw =
+    let func () =
+      let white_minor = white_pieces.(2) + white_pieces.(3) in
+      let black_minor = black_pieces.(2) + black_pieces.(3) in
+      white_minor < 3 && black_minor < 3 && begin
+        (white_minor < 2 && black_minor < 2) || (*K vs K, K + Minor vs K + Minor*)
+        ((white_pieces.(3) = 1 && (white_minor = 1 || black_minor > 0)) || (black_pieces.(3) = 1 && (black_minor = 1 || white_minor > 0))) || (*K + B + B vs K + B*)
+        ((white_pieces.(2) = 2 && black_minor < 2) || black_pieces.(2) = 2 && white_minor < 2) (*K + N + N vs K + Minor, K + N + N vs K*)
+      end
+    in white_pieces.(1) = 0 && black_pieces.(1) = 0
+      &&
+      (only_white_king && only_black_king ||
+      (white_pieces.(4) = 0 && black_pieces.(4) = 0 && white_pieces.(5) = 0 && black_pieces.(5) = 0 && func ()))*)
+  zugzwang :=
+    if white_to_move then
+      white_pieces.(2) = 0 && white_pieces.(3) = 0 && white_pieces.(4) = 0 && white_pieces.(5) = 0
+    else
+      black_pieces.(2) = 0 && black_pieces.(3) = 0 && black_pieces.(4) = 0 && black_pieces.(5) = 0;
+  (*in let draw =
+    if interior then
+
+    else
+      false*)
+  (*if score_draw then
+    0, 0
+  else*)
+    !material, !position
+(*Draw Fide
+- K vs K
+- K + Minor vs K
+- K + B vs K + B (de même couleur)
+
+Draw (si les joueurs sont pas d'énormes abrutis)
+- K + Minor vs K + Minor
+- K + Minor vs K + N + N
+- K + Minor vs K + B + N
+- K vs K + N + N
+- K + B vs K + B + B
+
+Pas Nulle
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+if nb_pions > 0 || nb_tours > 0 || nb_dames > 0 then
+  false  (* mat possible *)
+else if nb_cavaliers > 1 || nb_fous > 1 then
+  false  (* mat possible *)
+else if nb_fous = 1 && nb_cavaliers = 1 then
+  false  (* mat possible *)
+else if nb_cavaliers = 1 then
+  (* Roi + cavalier contre roi seul *)
+  nb_fous = 0
+else if nb_fous = 1 then
+  (* Roi + fou contre roi seul *)
+  nb_cavaliers = 0
+else if nb_fous = 2 then
+  (* Roi + fou contre roi + fou : vérifier couleur *)
+  (* ex: fou_case_white, fou_case_black *)
+  couleur_case fou_case_white = couleur_case fou_case_black
+else
+  true  (* roi contre roi *)*)
+
+
 (*let coup = tolerance plateau "0-0-0" !trait_aux_blancs (coups_valides plateau !trait_aux_blancs !dernier_coup !droit_au_roque)
 let bitboard = [|0L; 0L; 0L; 0L; 0L; 0L; 0L; 0L; 0L; 0L; 0L; 0L|]
 let main bitboard =

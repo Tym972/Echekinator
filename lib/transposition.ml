@@ -55,13 +55,6 @@ let score_node node_type = match node_type with
   |Cut -> 5
   |All -> 0
 
-let score_entry depth node_type generation =
-  let age = !go_counter - generation in
-  if age > 5 then
-    0
-  else
-    10 * depth + score_node node_type - age
-
 let store tt key node_type depth value move generation =
   let index = key mod transposition_size in
   let _, old_node_type, old_depth, _, _, old_generation = tt.(index) in
@@ -69,8 +62,7 @@ let store tt key node_type depth value move generation =
     tt.(index) <- (key, node_type, depth, value, move, generation);
     incr transposition_counter
   end
-  else if !go_counter - old_generation > 5 || depth > old_depth || depth = old_depth && score_node node_type > score_node old_node_type
-    (*score_entry depth node_type generation > score_entry old_depth old_node_type old_generation*) then begin
+  else if !go_counter - old_generation > 5 || depth > old_depth || depth = old_depth && score_node node_type > score_node old_node_type then begin
     tt.(index) <- (key, node_type, depth, value, move, generation)
   end
 

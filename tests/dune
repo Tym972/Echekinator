@@ -37,7 +37,8 @@
  trad
  ouvertures
  strategie2
- to_algebraic)
+ to_algebraic
+ oldevaluations)
  (libraries 
  unix
  threads
