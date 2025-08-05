@@ -167,8 +167,8 @@ let merge_sort l =
     |_ -> let lg, ld = split l in merge (tri_f lg) (tri_f ld)
   in tri_f l
 
-(*Bigest integer*)
-let infinity = (Int64.to_int (Random.int64 4611686018427387903L))
+(*Big integer*)
+let infinity = 999999999
 
 (*Max depth reached by the search*)
 let max_depth = 255
@@ -179,10 +179,10 @@ let stop_calculation = ref false
 (*Node counter*)
 let node_counter = ref 0
 
-(*Hashtable size tracker*)
+(*TT entries tracker*)
 let transposition_counter = ref 0
 
-(*Go counter*)
+(*"Go" counter*)
 let go_counter = ref 0
 
 let zugzwang = ref true

@@ -8,15 +8,34 @@ let threatened board square white_to_move =
   let threat = ref false in
   let tab64_square = tab64.(square) in
   let player_sign = if white_to_move then 1 else (-1) in
-  let pawn_vect = [|(-9) * player_sign; (-11) * player_sign|] in
   let i = ref 0 in
-  while (not !threat && !i < 2) do
-    let direction = pawn_vect.(!i) in
-    if tab120.(tab64_square + direction) <> (-1) then begin
-      let candidate = tab120.(tab64_square + direction) in
-      if board.(candidate) = (- player_sign) then begin
-        threat := true
-      end
+  while (not !threat && !i < 4) do
+    let direction = bishop_vect.(!i) in
+    let iterate = ref (tab120.(tab64_square + direction) <> (-1)) in
+    if !iterate then begin
+      let dest = board.(tab120.(tab64_square + direction)) * player_sign in
+      if dest <> 0 then begin
+        iterate :=  false;
+        if ((dest <= (-3) && dest <> (-4)) || (dest = (-1) && direction * player_sign < 0)) then begin
+          threat := true
+        end
+      end;
+      let distance = ref 2 in
+      while (!iterate && tab120.(tab64_square + (!distance * direction)) <> (-1)) do
+        let dest = board.(tab120.(tab64_square + (!distance * direction))) * player_sign in
+        if dest = 0 then begin
+          incr distance
+        end
+        else if dest > 0 then begin
+          iterate :=  false
+        end
+        else begin
+          if dest = (-3) || dest = (-5) then begin
+            threat := true
+          end;
+          iterate :=  false
+        end
+      done;
     end;
     incr i
   done;
@@ -25,8 +44,7 @@ let threatened board square white_to_move =
     while (not !threat && !i < 8) do
       let direction = knight_vect.(!i) in
       if tab120.(tab64_square + direction) <> (-1) then begin
-        let candidate = tab120.(tab64_square + direction) in
-        if board.(candidate) = (-2) * player_sign then begin
+        if board.(tab120.(tab64_square + direction)) = (-2) * player_sign then begin
           threat := true
         end
       end;
@@ -36,50 +54,33 @@ let threatened board square white_to_move =
   if not !threat then begin
     let i = ref 0 in
     while (not !threat && !i < 4) do
-      let direction = bishop_vect.(!i) in
-      let k = ref 1 in
-      let iterate = ref true in
-      while (tab120.(tab64_square + (!k * direction)) <> (-1) && !iterate) do
-        let candidate = tab120.(tab64_square + (!k * direction)) in
-        let dest = board.(candidate) * player_sign in
-        if dest = 0 then begin
-          incr k
-        end
-        else if dest > 0 then begin
-          iterate :=  false
-        end
-        else begin
-          if dest = (-3) || dest = (-5) || (dest = (-6) && !k = 1) then begin
-            threat := true
-          end;
-          iterate :=  false
-        end
-      done;
-      incr i
-    done
-  end;
-  if not !threat then begin
-    let i = ref 0 in
-    while (not !threat && !i < 4) do
       let direction = rook_vect.(!i) in
-      let k = ref 1 in
-      let iterate = ref true in
-      while (tab120.(tab64_square + (!k * direction)) <> (-1) && !iterate) do
-        let candidate = tab120.(tab64_square + (!k * direction)) in
-        let dest = board.(candidate) * player_sign in
-        if dest = 0 then begin
-          incr k
-        end
-        else if dest > 0 then begin
-          iterate :=  false
-        end
-        else begin
-          if dest = (-4) || dest = (-5) || (dest = (-6) && !k = 1) then begin
+      let iterate = ref (tab120.(tab64_square + direction) <> (-1)) in
+      if !iterate then begin
+        let dest = board.(tab120.(tab64_square + direction)) * player_sign in
+        if dest <> 0 then begin
+          iterate :=  false;
+          if dest <= (-4) then begin
             threat := true
-          end;
-          iterate :=  false
-        end
-      done;
+          end
+        end;
+        let distance = ref 2 in
+        while (!iterate && tab120.(tab64_square + (!distance * direction)) <> (-1)) do
+          let dest = board.(tab120.(tab64_square + (!distance * direction))) * player_sign in
+          if dest = 0 then begin
+            incr distance
+          end
+          else if dest > 0 then begin
+            iterate :=  false
+          end
+          else begin
+            if dest = (-4) || dest = (-5) then begin
+              threat := true
+            end;
+            iterate :=  false
+          end
+        done
+      end;
       incr i
     done
   end;
@@ -91,14 +92,14 @@ let rook_moves board square list =
   let tab64_square = tab64.(square) in
   for i = 0 to 3 do
     let direction = rook_vect.(i) in
-    let k = ref 1 in
+    let distance = ref 1 in
     let iterate = ref true in
-    while (!iterate && tab120.(tab64_square + (!k * direction)) <> (-1)) do
-      let candidate = tab120.(tab64_square + (!k * direction)) in
+    while (!iterate && tab120.(tab64_square + (!distance * direction)) <> (-1)) do
+      let candidate = tab120.(tab64_square + (!distance * direction)) in
       let dest = board.(candidate) in
       if dest = 0 then begin
         list := Normal {piece = piece; from = square; to_ = candidate; capture = 0} :: !list;
-        incr k
+        incr distance
       end
       else if piece * dest > 0 then begin
         iterate :=  false
@@ -116,14 +117,14 @@ let bishop_moves board square list =
   let tab64_square = tab64.(square) in
   for i = 0 to 3 do
     let direction = bishop_vect.(i) in
-    let k = ref 1 in
+    let distance = ref 1 in
     let iterate = ref true in
-    while (!iterate && tab120.(tab64_square + (!k * direction)) <> (-1)) do
-      let candidate = tab120.(tab64_square + (!k * direction)) in
+    while (!iterate && tab120.(tab64_square + (!distance * direction)) <> (-1)) do
+      let candidate = tab120.(tab64_square + (!distance * direction)) in
       let dest = board.(candidate) in
       if dest = 0 then begin
         list := Normal {piece = piece; from = square; to_ = candidate; capture = 0} :: !list;
-        incr k
+        incr distance
       end
       else if piece * dest > 0 then begin
         iterate :=  false
@@ -156,14 +157,14 @@ let queen_moves board square list =
   let tab64_square = tab64.(square) in
   for i = 0 to 7 do
     let direction = king_vect.(i) in
-    let k = ref 1 in
+    let distance = ref 1 in
     let iterate = ref true in
-    while (!iterate && tab120.(tab64_square + (!k * direction)) <> (-1)) do
-      let candidate = tab120.(tab64_square + (!k * direction)) in
+    while (!iterate && tab120.(tab64_square + (!distance * direction)) <> (-1)) do
+      let candidate = tab120.(tab64_square + (!distance * direction)) in
       let dest = board.(candidate) in
       if dest = 0 then begin
         list := Normal {piece = piece; from = square; to_ = candidate; capture = 0} :: !list;
-        incr k
+        incr distance
       end
       else if piece * dest > 0 then begin
         iterate :=  false
@@ -344,14 +345,14 @@ let pin_generator piece square board pinned_list =
   let tab64_square = tab64.(square) in
   let direction = pin_table.(square) in
   let func direction =
-    let k = ref 1 in
+    let distance = ref 1 in
     let iterate = ref true in
-    while (!iterate && tab120.(tab64_square + (!k * direction)) <> (-1)) do
-      let candidate = tab120.(tab64_square + (!k * direction)) in
+    while (!iterate && tab120.(tab64_square + (!distance * direction)) <> (-1)) do
+      let candidate = tab120.(tab64_square + (!distance * direction)) in
       let dest = board.(candidate) in
       if dest = 0 then begin
         pinned_list := Normal {piece = piece; from = square; to_ = candidate; capture = 0} :: !pinned_list;
-        incr k
+        incr distance
       end
       else if piece * dest > 0 then begin
         iterate :=  false
@@ -683,19 +684,19 @@ let castling_threats board player_sign clouage_roi pseudo_e2 path path_lenght ve
       let j = ref 0 in
       while (not !b && !j < !bishop_dir) do
         let direction = vect_bishop.(!j) in
-        let k = ref 1 in
+        let distance = ref 1 in
         let iterate = ref true in
-        while (tab120.(m + (!k * direction)) <> (-1) && !iterate) do
-          let candidate = tab120.(m + (!k * direction)) in
+        while (tab120.(m + (!distance * direction)) <> (-1) && !iterate) do
+          let candidate = tab120.(m + (!distance * direction)) in
           let dest = player_sign * board.(candidate) in
           if dest = 0 then begin
-            incr k
+            incr distance
           end
           else if dest > 0 then begin
             iterate :=  false
           end
           else begin
-            if dest = (-3) || dest = (-5) || ((dest = (-6) || dest = (-1)) && !k = 1)  then begin
+            if dest = (-3) || dest = (-5) || ((dest = (-6) || dest = (-1)) && !distance = 1)  then begin
               b := true
             end;
             iterate :=  false
@@ -704,16 +705,16 @@ let castling_threats board player_sign clouage_roi pseudo_e2 path path_lenght ve
         incr j
       done;
       if not !b then begin
-        let k = ref 0 in
-        while (not !b && !k < 4) do
-          let direction = vect_knight.(!k) in
+        let i = ref 0 in
+        while (not !b && !i < 4) do
+          let direction = vect_knight.(!i) in
           if tab120.(m + direction) <> (-1) then begin
             let candidate = tab120.(m + direction) in
             if player_sign * board.(candidate) = (-2) then begin
               b := true
             end
           end;
-          incr k
+          incr i
         done
       end;
       if not !b then begin
@@ -725,13 +726,13 @@ let castling_threats board player_sign clouage_roi pseudo_e2 path path_lenght ve
         end
         else if !diagonale = 0 then begin
           let direction = player_sign * (-10) in
-          let k = ref 2 in
+          let distance = ref 2 in
           let iterate = ref true in
-          while (tab120.(m + (!k * direction)) <> (-1) && !iterate) do
-            let candidate = tab120.(m + (!k * direction)) in
+          while (tab120.(m + (!distance * direction)) <> (-1) && !iterate) do
+            let candidate = tab120.(m + (!distance * direction)) in
             let dest = player_sign * board.(candidate) in
             if dest = 0 then begin
-              incr k
+              incr distance
             end
             else if dest > 0 then begin
               iterate :=  false
@@ -951,11 +952,11 @@ let piece move = match move with
 (*Fonction indiquant si une pièce pin une pièce clouable*)
 let pin board chessman white_to_move tab64_square direction distance =
   let pinned = ref false in
-  let k = ref distance in
+  let distance = ref distance in
   let iterate = ref true in
   let opponent_queen = queen (not white_to_move) in
-  while (!iterate && tab120.(tab64_square + (!k * direction)) <> (-1)) do
-    let candidate = tab120.(tab64_square + (!k * direction)) in
+  while (!iterate && tab120.(tab64_square + (!distance * direction)) <> (-1)) do
+    let candidate = tab120.(tab64_square + (!distance * direction)) in
     let dest = board.(candidate) in
     if opponent_queen * dest < 0 then begin
       iterate :=  false
@@ -966,7 +967,7 @@ let pin board chessman white_to_move tab64_square direction distance =
       end;
       iterate :=  false
     end;
-    incr k
+    incr distance
   done;
   !pinned
 
@@ -978,13 +979,13 @@ let pinned_squares board king_square white_to_move =
   let aux vect piece =
     for i = 0 to 3 do
       let direction = vect.(i) in
-      let k = ref 1 in
+      let distance = ref 1 in
       let iterate = ref true in
-      while (!iterate && tab120.(tab64_square + (!k * direction)) <> (-1)) do
-        let candidate = tab120.(tab64_square + (!k * direction)) in
+      while (!iterate && tab120.(tab64_square + (!distance * direction)) <> (-1)) do
+        let candidate = tab120.(tab64_square + (!distance * direction)) in
         let dest = player_sign * board.(candidate) in
         if dest > 0 then begin
-          if pin board (- piece * player_sign) white_to_move tab64_square direction (!k + 1) then begin
+          if pin board (- piece * player_sign) white_to_move tab64_square direction (!distance + 1) then begin
             list := candidate :: !list;
             pin_table.(candidate) <- direction
           end;
@@ -993,7 +994,7 @@ let pinned_squares board king_square white_to_move =
         else if dest < 0 then begin 
           iterate :=  false
         end;
-        incr k
+        incr distance
       done
     done;
   in List.iter (fun (vect, piece) -> aux vect piece ) [(rook_vect, 4); (bishop_vect, 3)];
@@ -1036,13 +1037,13 @@ let rook_captures board square list =
   let tab64_square = tab64.(square) in
   for i = 0 to 3 do
     let direction = rook_vect.(i) in
-    let k = ref 1 in
+    let distance = ref 1 in
     let iterate = ref true in
-    while (!iterate && tab120.(tab64_square + (!k * direction)) <> (-1)) do
-      let candidate = tab120.(tab64_square + (!k * direction)) in
+    while (!iterate && tab120.(tab64_square + (!distance * direction)) <> (-1)) do
+      let candidate = tab120.(tab64_square + (!distance * direction)) in
       let dest = board.(candidate) in
       if dest = 0 then begin
-        incr k
+        incr distance
       end
       else if piece * dest > 0 then begin
         iterate :=  false
@@ -1060,13 +1061,13 @@ let bishop_captures board square list =
   let tab64_square = tab64.(square) in
   for i = 0 to 3 do
     let direction = bishop_vect.(i) in
-    let k = ref 1 in
+    let distance = ref 1 in
     let iterate = ref true in
-    while (!iterate && tab120.(tab64_square + (!k * direction)) <> (-1)) do
-      let candidate = tab120.(tab64_square + (!k * direction)) in
+    while (!iterate && tab120.(tab64_square + (!distance * direction)) <> (-1)) do
+      let candidate = tab120.(tab64_square + (!distance * direction)) in
       let dest = board.(candidate) in
       if dest = 0 then begin
-        incr k
+        incr distance
       end
       else if piece * dest > 0 then begin
         iterate :=  false
@@ -1099,13 +1100,13 @@ let queen_captures board square list =
   let tab64_square = tab64.(square) in
   for i = 0 to 7 do
     let direction = king_vect.(i) in
-    let k = ref 1 in
+    let distance = ref 1 in
     let iterate = ref true in
-    while (!iterate && tab120.(tab64_square + (!k * direction)) <> (-1)) do
-      let candidate = tab120.(tab64_square + (!k * direction)) in
+    while (!iterate && tab120.(tab64_square + (!distance * direction)) <> (-1)) do
+      let candidate = tab120.(tab64_square + (!distance * direction)) in
       let dest = board.(candidate) in
       if dest = 0 then begin
-        incr k
+        incr distance
       end
       else if piece * dest > 0 then begin
         iterate :=  false
@@ -1259,13 +1260,13 @@ let pin_captures_generator piece square board pinned_list =
   let tab64_square = tab64.(square) in
   let direction = pin_table.(square) in
   let func direction =
-    let k = ref 1 in
+    let distance = ref 1 in
     let iterate = ref true in
-    while (!iterate && tab120.(tab64_square + (!k * direction)) <> (-1)) do
-      let candidate = tab120.(tab64_square + (!k * direction)) in
+    while (!iterate && tab120.(tab64_square + (!distance * direction)) <> (-1)) do
+      let candidate = tab120.(tab64_square + (!distance * direction)) in
       let dest = board.(candidate) in
       if dest = 0 then begin
-        incr k
+        incr distance
       end
       else if piece * dest > 0 then begin
         iterate :=  false

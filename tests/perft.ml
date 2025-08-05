@@ -2,13 +2,17 @@ open Libs.Board
 open Libs.Generator
 open Libs.Fen
 open Config
+open Libs.Of_algebraic
+open Positions
 
 let rec algoperft board white_to_move last_move castling_right depth =
   if depth = 0 then begin
     1
   end
   else begin
-    let cp = ref (legal_moves board white_to_move last_move castling_right) in
+    let king_position = index_array board (king white_to_move) in
+    let in_check = threatened board king_position white_to_move in
+    let cp = ref (legal_moves board white_to_move last_move castling_right king_position in_check) in
     let nodes = ref 0 in
     while !cp <> [] do
       let coup = List.hd !cp in
@@ -34,6 +38,20 @@ let perft depth board =
   print_endline ("Total time (s) : " ^ (string_of_float time));
   print_endline ("Nodes searched : " ^ (string_of_int nodes));
   print_endline ("Nodes/seconde : " ^ (string_of_float ((float_of_int nodes)/. time)))
- 
 
-let () = perft perft_depth board
+let perft_list list =
+  let t = Sys.time () in
+  let rec aux list = match list with
+    |[] -> ()
+    |fen_chain :: t ->
+      position_of_fen fen_chain start_position initial_white_to_move initial_last_move initial_castling_right initial_king_position initial_in_check initial_move_record initial_board_record;
+      reset board white_to_move last_move castling_right king_position in_check move_record board_record start_position !initial_white_to_move !initial_last_move !initial_castling_right !initial_king_position !initial_in_check !initial_move_record !initial_board_record;
+      make_list (move_list_of_san move_list !white_to_move !last_move !castling_right board) board last_move move_record board_record castling_right white_to_move;
+      perft perft_depth board;
+      print_newline ();
+      aux t
+  in aux list;
+  print_endline ("Total time (s) : " ^ (string_of_float (Sys.time () -. t)))
+
+
+let () = if true then perft perft_depth board else perft_list perft_test

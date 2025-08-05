@@ -8,6 +8,171 @@ let () = ()
 open Libs.Board
 open Libs.Evaluation
 
+let get_attackers board tab64_square =
+  let attackers = Array.make 20 (0, 0, 0) in
+  let attacker_number = ref 0 in
+  for i = 0 to 7  do
+    let direction = knight_vect.(i) in
+    if tab120.(tab64_square + direction) <> (-1) then begin
+      let attacker_square = tab120.(tab64_square + direction) in
+      let attacker = board.(attacker_square) in
+      if abs attacker = 2 then begin
+        attackers.(!attacker_number) <- (attacker, 0, 0);
+        incr attacker_number
+      end
+    end;
+  done;
+  for i = 0 to 3 do
+    let direction = bishop_vect.(i) in
+    let iterate = ref (tab120.(tab64_square + direction) <> (-1)) in
+    if !iterate then begin
+      let attacker_square = tab120.(tab64_square + direction) in
+      let attacker = board.(attacker_square) in
+      if attacker <> 0 then begin
+        iterate :=  false;
+        if ((abs attacker >= 3 && abs attacker <> 4) || (abs attacker = 1 && direction * attacker < 0)) then begin
+          attackers.(!attacker_number) <- (attacker, direction, 1);
+          incr attacker_number
+        end
+      end;
+      let distance = ref 2 in
+      while (!iterate && tab120.(tab64_square + (!distance * direction)) <> (-1)) do
+        let attacker_square = tab120.(tab64_square + (!distance * direction)) in
+        let attacker = board.(attacker_square) in
+        if attacker = 0 then begin
+          incr distance
+        end
+        else if not (List.mem (abs attacker) [3; 5]) then begin
+          iterate :=  false
+          end
+        else begin
+          attackers.(!attacker_number) <- (attacker, direction, !distance);
+          incr attacker_number;
+          iterate :=  false
+        end
+      done
+    end
+  done;
+  for i = 0 to 3 do
+    let direction = rook_vect.(i) in
+    let iterate = ref (tab120.(tab64_square + direction) <> (-1)) in
+    if !iterate then begin
+      let attacker_square = tab120.(tab64_square + direction) in
+      let attacker = board.(attacker_square)in
+      if attacker <> 0 then begin
+        iterate :=  false;
+        if abs attacker >= 4 then begin
+          attackers.(!attacker_number) <- (attacker, direction, 1);
+          incr attacker_number
+        end
+      end;
+      let distance = ref 2 in
+      while (!iterate && tab120.(tab64_square + (!distance * direction)) <> (-1)) do
+        let attacker_square = tab120.(tab64_square + (!distance * direction)) in
+        let attacker = board.(attacker_square) in
+        if attacker = 0 then begin
+          incr distance
+        end
+        else if not (List.mem (abs attacker) [4; 5])  then begin
+          iterate :=  false
+        end
+        else begin
+          attackers.(!attacker_number) <- (attacker, direction, !distance);
+          incr attacker_number;
+          iterate :=  false
+        end
+      done
+    end
+  done;
+  attackers, attacker_number
+
+let xray_attackers board tab64_square direction distance =
+  let xray_attacker = ref (0, 0, 0) in
+  let iterate = ref true in
+  let distance = ref distance in
+  while (!iterate && tab120.(tab64_square + (!distance * direction)) <> (-1)) do
+    let attacker_square = tab120.(tab64_square + (!distance * direction)) in
+    let attacker = board.(attacker_square) in
+    if attacker = 0 then begin
+      incr distance
+    end
+    else if not (List.mem (abs attacker) [4; 5])  then begin
+      iterate :=  false
+    end
+    else begin
+      xray_attacker := (attacker, direction, !distance);
+      iterate :=  false
+    end
+  done;
+  !xray_attacker
+
+let smaller attackers player_sign attacker_number  =
+  let smaller_attacker = ref (20 * !player_sign) in
+  let attacker_index = ref 0 in
+  for i = 0 to !attacker_number - 1 do
+    let attacker, _,_ = attackers.(i) in
+    if attacker * !player_sign > 0 && abs attacker < abs !smaller_attacker then begin
+      smaller_attacker := attacker;
+      attacker_index := i
+    end
+  done;
+  let _, direction, distance = attackers.(!attacker_index) in
+  attackers.(!attacker_index) <- (0, 0, 0);
+  decr attacker_number;
+  player_sign := !player_sign * (-1);
+  !smaller_attacker, direction, distance, !attacker_index
+
+let new_see board square =
+  let tab64_square = tab64.(square) in
+  let attackers, attacker_number = get_attackers board tab64_square in
+  let player_sign = ref (if board.(square) > 0 then (-1) else 1) in
+  let gain = Array.make 20 0 in
+  gain.(0) <- tabvalue.(abs board.(square));
+  let index = ref 1 in
+  while !attacker_number <> 0 do
+    let smaller_attacker, direction, distance, attacker_index = (smaller attackers player_sign attacker_number) in
+    if abs smaller_attacker < 10 then begin
+      gain.(!index) <- tabvalue.(abs smaller_attacker) - gain.(!index - 1);
+      incr index;
+      if abs smaller_attacker <> 2 && abs smaller_attacker <> 6 then begin
+        attackers.(attacker_index) <- xray_attackers board tab64_square direction distance
+      end
+    end
+    else begin
+      attacker_number := 0
+    end
+  done;
+  for i = !index downto 1 do
+    gain.(i - 1) <- - (max (-gain.(i - 1)) gain.(i))
+  done;
+  gain.(0)
+
+(*let score =
+                if !first_move then begin
+                  first_move := false;
+                  - pvs board (not white_to_move) move new_castling_right new_record new_half_moves (depth - 1) initial_depth (- !beta0) (- !alpha0) evaluation new_zobrist ispv
+                end
+                else begin
+                  let score_lmr =
+                    if not (in_check || depth < 3 || ispv || !zugzwang || !counter < 4) && isquiet move then begin
+                      - pvs board (not white_to_move) move new_castling_right new_record new_half_moves (depth - 2) initial_depth (- !alpha0 - 1) (- !alpha0) evaluation new_zobrist true
+                    end
+                    else
+                      !alpha0 + 1
+                  in if score_lmr > !alpha0 then begin
+                    let score_0 = - pvs board (not white_to_move) move new_castling_right new_record new_half_moves (depth - 1) initial_depth (- !alpha0 - 1) (- !alpha0) evaluation new_zobrist false
+                    in if (score_0 > !alpha0 && ispv) then begin 
+                      - pvs board (not white_to_move) move new_castling_right new_record new_half_moves (depth - 1) initial_depth (- !beta0) (- !alpha0) evaluation new_zobrist true
+                    end
+                    else begin
+                      score_0
+                    end
+                  end
+                  else begin
+                    score_lmr
+                  end
+                end *)
+
 let f tb tn board =
   let material = ref 0 in
   let position = ref 0 in
@@ -293,10 +458,10 @@ let deplacements_all2 plateau trait_aux_blancs position_roi piece_clouees =
   let vect_pion = [|(-9) * signe_joueur; (-11) * signe_joueur|] in
   let i = ref 0 in
   while (not !b && !i < 2) do
-    let dir = vect_pion.(!i) in
-    if tab120.(m + dir) <> (-1) then begin
-      let candidat = tab120.(m + dir) in
-      if plateau.(candidat) = (- signe_joueur) then begin
+    let direction = vect_pion.(!i) in
+    if tab120.(m + direction) <> (-1) then begin
+      let attacker_square = tab120.(m + direction) in
+      if plateau.(attacker_square) = (- signe_joueur) then begin
         b := true
       end
     end;
@@ -305,10 +470,10 @@ let deplacements_all2 plateau trait_aux_blancs position_roi piece_clouees =
   if not !b then begin
     let i = ref 0 in
     while (not !b && !i < 8) do
-      let dir = vect_cavalier.(!i) in
-      if tab120.(m + dir) <> (-1) then begin
-        let candidat = tab120.(m + dir) in
-        if plateau.(candidat) = (-2) * signe_joueur then begin
+      let direction = vect_cavalier.(!i) in
+      if tab120.(m + direction) <> (-1) then begin
+        let attacker_square = tab120.(m + direction) in
+        if plateau.(attacker_square) = (-2) * signe_joueur then begin
           b := true
         end
       end;
@@ -318,12 +483,12 @@ let deplacements_all2 plateau trait_aux_blancs position_roi piece_clouees =
   if not !b then begin
     let i = ref 0 in
     while (not !b && !i < 4) do
-      let dir = vect_fou.(!i) in
+      let direction = vect_fou.(!i) in
       let k = ref 1 in
       let s = ref true in
-      while (tab120.(m + (!k * dir)) <> (-1) && !s) do
-        let candidat = tab120.(m + (!k * dir)) in
-        let dest = plateau.(candidat) * signe_joueur in
+      while (tab120.(m + (!k * direction)) <> (-1) && !s) do
+        let attacker_square = tab120.(m + (!k * direction)) in
+        let dest = plateau.(attacker_square) * signe_joueur in
         if dest = 0 then begin
           incr k
         end
@@ -343,12 +508,12 @@ let deplacements_all2 plateau trait_aux_blancs position_roi piece_clouees =
   if not !b then begin
     let i = ref 0 in
     while (not !b && !i < 4) do
-      let dir = vect_tour.(!i) in
+      let direction = vect_tour.(!i) in
       let k = ref 1 in
       let s = ref true in
-      while (tab120.(m + (!k * dir)) <> (-1) && !s) do
-        let candidat = tab120.(m + (!k * dir)) in
-        let dest = plateau.(candidat) * signe_joueur in
+      while (tab120.(m + (!k * direction)) <> (-1) && !s) do
+        let attacker_square = tab120.(m + (!k * direction)) in
+        let dest = plateau.(attacker_square) * signe_joueur in
         if dest = 0 then begin
           incr k
         end
@@ -580,11 +745,11 @@ let rec filtre elt liste = match liste with
     let vect_pion = [|(-9); (-11)|] in
     let i = ref 0 in
     while (not !b && !i < 2) do
-      let dir = vect_pion.(!i) in
-      if tab120.(m + dir) <> (-1) then begin
-        let candidat = tab120.(m + dir) in
-        if plateau.(candidat) = (-1) then begin
-          let coup_potentiel = Classique {piece = -1; depart = candidat; arrivee = case; prise = piece} in
+      let direction = vect_pion.(!i) in
+      if tab120.(m + direction) <> (-1) then begin
+        let attacker_square = tab120.(m + direction) in
+        if plateau.(attacker_square) = (-1) then begin
+          let coup_potentiel = Classique {piece = -1; depart = attacker_square; arrivee = case; prise = piece} in
           if est_valide plateau coup_potentiel false then begin
             b := true;
             coup := coup_potentiel
@@ -596,11 +761,11 @@ let rec filtre elt liste = match liste with
     if not !b then begin
       let i = ref 0 in
       while (not !b && !i < 8) do
-        let dir = vect_cavalier.(!i) in
-        if tab120.(m + dir) <> (-1) then begin
-          let candidat = tab120.(m + dir) in
-          if plateau.(candidat) = (-2) then begin
-            let coup_potentiel = Classique {piece = -2; depart = candidat; arrivee = case; prise = piece} in
+        let direction = vect_cavalier.(!i) in
+        if tab120.(m + direction) <> (-1) then begin
+          let attacker_square = tab120.(m + direction) in
+          if plateau.(attacker_square) = (-2) then begin
+            let coup_potentiel = Classique {piece = -2; depart = attacker_square; arrivee = case; prise = piece} in
             if est_valide plateau coup_potentiel false then begin
               b := true;
               coup := coup_potentiel
@@ -613,12 +778,12 @@ let rec filtre elt liste = match liste with
     if not !b then begin
       let i = ref 0 in
       while (not !b && !i < 4) do
-        let dir = vect_fou.(!i) in
+        let direction = vect_fou.(!i) in
         let k = ref 1 in
         let s = ref true in
-        while (tab120.(m + (!k * dir)) <> (-1) && !s) do
-          let candidat = tab120.(m + (!k * dir)) in
-          let dest = plateau.(candidat) in
+        while (tab120.(m + (!k * direction)) <> (-1) && !s) do
+          let attacker_square = tab120.(m + (!k * direction)) in
+          let dest = plateau.(attacker_square) in
           if dest = 0 then begin
             incr k
           end
@@ -627,7 +792,7 @@ let rec filtre elt liste = match liste with
           end
           else begin
             if dest = (-3) || dest = (-5) || (dest = (-6) && !k = 1) then begin
-              let coup_potentiel = Classique {piece = dest; depart = candidat; arrivee = case; prise = piece} in
+              let coup_potentiel = Classique {piece = dest; depart = attacker_square; arrivee = case; prise = piece} in
               if est_valide plateau coup_potentiel false then begin
                 if dest = -3 then begin
                   b := true
@@ -644,12 +809,12 @@ let rec filtre elt liste = match liste with
     if not !b then begin
       let i = ref 0 in
       while (not !b && !i < 4) do
-        let dir = vect_tour.(!i) in
+        let direction = vect_tour.(!i) in
         let k = ref 1 in
         let s = ref true in
-        while (tab120.(m + (!k * dir)) <> (-1) && !s) do
-          let candidat = tab120.(m + (!k * dir)) in
-          let dest = plateau.(candidat) in
+        while (tab120.(m + (!k * direction)) <> (-1) && !s) do
+          let attacker_square = tab120.(m + (!k * direction)) in
+          let dest = plateau.(attacker_square) in
           if dest = 0 then begin
             incr k
           end
@@ -658,7 +823,7 @@ let rec filtre elt liste = match liste with
           end
           else begin
             if dest = (-4) || dest = (-5) || (dest = (-6) && !k = 1) then begin
-              let coup_potentiel = Classique {piece = dest; depart = candidat; arrivee = case; prise = piece} in
+              let coup_potentiel = Classique {piece = dest; depart = attacker_square; arrivee = case; prise = piece} in
               if est_valide plateau coup_potentiel false then begin
                 b := true;
                 coup := coup_potentiel
@@ -675,11 +840,11 @@ let rec filtre elt liste = match liste with
     let vect_pion = [|9; 11|] in
     let i = ref 0 in
     while (not !b && !i < 2) do
-      let dir = vect_pion.(!i) in
-      if tab120.(m + dir) <> (-1) then begin
-        let candidat = tab120.(m + dir) in
-        if plateau.(candidat) = 1 then begin
-          let coup_potentiel = Classique {piece = 1; depart = candidat; arrivee = case; prise = piece} in
+      let direction = vect_pion.(!i) in
+      if tab120.(m + direction) <> (-1) then begin
+        let attacker_square = tab120.(m + direction) in
+        if plateau.(attacker_square) = 1 then begin
+          let coup_potentiel = Classique {piece = 1; depart = attacker_square; arrivee = case; prise = piece} in
           if est_valide plateau coup_potentiel true then begin
             b := true;
             coup := coup_potentiel
@@ -691,11 +856,11 @@ let rec filtre elt liste = match liste with
     if not !b then begin
       let i = ref 0 in
       while (not !b && !i < 8) do
-        let dir = vect_cavalier.(!i) in
-        if tab120.(m + dir) <> (-1) then begin
-          let candidat = tab120.(m + dir) in
-          if plateau.(candidat) = 2 then begin
-            let coup_potentiel = Classique {piece = 2; depart = candidat; arrivee = case; prise = piece} in
+        let direction = vect_cavalier.(!i) in
+        if tab120.(m + direction) <> (-1) then begin
+          let attacker_square = tab120.(m + direction) in
+          if plateau.(attacker_square) = 2 then begin
+            let coup_potentiel = Classique {piece = 2; depart = attacker_square; arrivee = case; prise = piece} in
             if est_valide plateau coup_potentiel true then begin
               b := true;
               coup := coup_potentiel
@@ -708,12 +873,12 @@ let rec filtre elt liste = match liste with
     if not !b then begin
       let i = ref 0 in
       while (not !b && !i < 4) do
-        let dir = vect_fou.(!i) in
+        let direction = vect_fou.(!i) in
         let k = ref 1 in
         let s = ref true in
-        while (tab120.(m + (!k * dir)) <> (-1) && !s) do
-          let candidat = tab120.(m + (!k * dir)) in
-          let dest = plateau.(candidat) in
+        while (tab120.(m + (!k * direction)) <> (-1) && !s) do
+          let attacker_square = tab120.(m + (!k * direction)) in
+          let dest = plateau.(attacker_square) in
           if dest = 0 then begin
             incr k
           end
@@ -722,7 +887,7 @@ let rec filtre elt liste = match liste with
           end
           else begin
             if dest = 3 || dest = 5 || (dest = 6 && !k = 1) then begin
-              let coup_potentiel = Classique {piece = dest; depart = candidat; arrivee = case; prise = piece} in
+              let coup_potentiel = Classique {piece = dest; depart = attacker_square; arrivee = case; prise = piece} in
               if est_valide plateau coup_potentiel true then begin
                 if dest = 3 then begin
                   b := true
@@ -739,12 +904,12 @@ let rec filtre elt liste = match liste with
     if not !b then begin
       let i = ref 0 in
       while (not !b && !i < 4) do
-        let dir = vect_tour.(!i) in
+        let direction = vect_tour.(!i) in
         let k = ref 1 in
         let s = ref true in
-        while (tab120.(m + (!k * dir)) <> (-1) && !s) do
-          let candidat = tab120.(m + (!k * dir)) in
-          let dest = plateau.(candidat) in
+        while (tab120.(m + (!k * direction)) <> (-1) && !s) do
+          let attacker_square = tab120.(m + (!k * direction)) in
+          let dest = plateau.(attacker_square) in
           if dest = 0 then begin
             incr k
           end
@@ -753,7 +918,7 @@ let rec filtre elt liste = match liste with
           end
           else begin
             if dest = 4 || dest = 5 || (dest = 6 && !k = 1) then begin
-              let coup_potentiel = Classique {piece = dest; depart = candidat; arrivee = case; prise = piece} in
+              let coup_potentiel = Classique {piece = dest; depart = attacker_square; arrivee = case; prise = piece} in
               if est_valide plateau coup_potentiel true then begin
                 b := true;
                 coup := coup_potentiel
@@ -767,4 +932,166 @@ let rec filtre elt liste = match liste with
     end
   end;
   !coup
-  *)
+ let threatened board square white_to_move =
+  let threat = ref false in
+  let tab64_square = tab64.(square) in
+  let player_sign = if white_to_move then 1 else (-1) in
+  let i = ref 0 in
+  while (not !threat && !i < 4) do
+    let direction = bishop_vect.(!i) in
+    let iterate = ref (tab120.(tab64_square + direction) <> (-1)) in
+    if !iterate then begin
+      let dest = board.(tab120.(tab64_square + direction)) * player_sign in
+      if dest <> 0 then begin
+        iterate :=  false;
+        if ((dest <= (-3) && dest <> (-4)) || (dest = (-1) && direction * player_sign < 0)) then begin
+          threat := true
+        end
+      end;
+      let distance = ref 2 in
+      while (!iterate && tab120.(tab64_square + (!distance * direction)) <> (-1)) do
+        let dest = board.(tab120.(tab64_square + (!distance * direction))) * player_sign in
+        if dest = 0 then begin
+          incr distance
+        end
+        else if dest > 0 then begin
+          iterate :=  false
+        end
+        else begin
+          if dest = (-3) || dest = (-5) then begin
+            threat := true
+          end;
+          iterate :=  false
+        end
+      done;
+    end;
+    incr i
+  done;
+  if not !threat then begin
+    let i = ref 0 in
+    while (not !threat && !i < 8) do
+      let direction = knight_vect.(!i) in
+      if tab120.(tab64_square + direction) <> (-1) then begin
+        if board.(tab120.(tab64_square + direction)) = (-2) * player_sign then begin
+          threat := true
+        end
+      end;
+      incr i
+    done
+  end;
+  if not !threat then begin
+    let i = ref 0 in
+    while (not !threat && !i < 4) do
+      let direction = rook_vect.(!i) in
+      let iterate = ref (tab120.(tab64_square + direction) <> (-1)) in
+      if !iterate then begin
+        let dest = board.(tab120.(tab64_square + direction)) * player_sign in
+        if dest <> 0 then begin
+          iterate :=  false;
+          if dest <= (-4) then begin
+            threat := true
+          end
+        end;
+        let distance = ref 2 in
+        while (!iterate && tab120.(tab64_square + (!distance * direction)) <> (-1)) do
+          let dest = board.(tab120.(tab64_square + (!distance * direction))) * player_sign in
+          if dest = 0 then begin
+            incr distance
+          end
+          else if dest > 0 then begin
+            iterate :=  false
+          end
+          else begin
+            if dest = (-4) || dest = (-5) then begin
+              threat := true
+            end;
+            iterate :=  false
+          end
+        done
+      end;
+      incr i
+    done
+  end;
+  !threat
+
+let threatened_nul board square white_to_move =
+  let threat = ref false in
+  let tab64_square = tab64.(square) in
+  let player_sign = if white_to_move then 1 else (-1) in
+  let i = ref 0 in
+  while (not !threat && !i < 4) do
+    let direction = bishop_vect.(!i) in
+    let iterate = ref (tab120.(tab64_square + direction) <> (-1)) in
+    if !iterate then begin
+      let dest = board.(tab120.(tab64_square + direction)) * player_sign in
+      if dest <> 0 then begin
+        iterate :=  false;
+        if ((dest <= (-3) && dest <> (-4)) || (dest = (-1) && direction * player_sign < 0)) then begin
+          threat := true
+        end
+      end
+    end;
+    let distance = ref 2 in
+    while (!iterate && tab120.(tab64_square + (!distance * direction)) <> (-1)) do
+      let dest = board.(tab120.(tab64_square + (!distance * direction))) * player_sign in
+      if dest = 0 then begin
+        incr distance
+      end
+      else if dest > 0 then begin
+        iterate :=  false
+      end
+      else begin
+        if dest = (-3) || dest = (-5) then begin
+          threat := true
+        end;
+        iterate :=  false
+      end
+    done;
+    incr i
+  done;
+  if not !threat then begin
+    let i = ref 0 in
+    while (not !threat && !i < 8) do
+      let direction = knight_vect.(!i) in
+      if tab120.(tab64_square + direction) <> (-1) then begin
+        if board.(tab120.(tab64_square + direction)) = (-2) * player_sign then begin
+          threat := true
+        end
+      end;
+      incr i
+    done
+  end;
+  if not !threat then begin
+    let i = ref 0 in
+    while (not !threat && !i < 4) do
+      let direction = rook_vect.(!i) in
+      let iterate = ref (tab120.(tab64_square + direction) <> (-1)) in
+      if !iterate then begin
+        let dest = board.(tab120.(tab64_square + direction)) * player_sign in
+        if dest <> 0 then begin
+          iterate :=  false;
+          if dest <= (-4) then begin
+            threat := true
+          end
+        end
+      end;
+      let distance = ref 2 in
+      while (!iterate && tab120.(tab64_square + (!distance * direction)) <> (-1)) do
+        let dest = board.(tab120.(tab64_square + (!distance * direction))) * player_sign in
+        if dest = 0 then begin
+          incr distance
+        end
+        else if dest > 0 then begin
+          iterate :=  false
+        end
+        else begin
+          if dest = (-4) || dest = (-5) then begin
+            threat := true
+          end;
+          iterate :=  false
+        end
+      done;
+      incr i
+    done
+  end;
+  !threat *)
