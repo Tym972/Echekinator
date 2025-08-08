@@ -103,7 +103,31 @@ let tri1 = "r1b1r1k1/p1p2ppp/2n5/1pbqp3/Q7/3P1NP1/PP2PPBP/R1B2RK1 w - - 0 11"
 let tri2 = "rnbqkb1r/1ppp1ppp/p4n2/3Pp3/5B2/8/PPP1PPPP/RN1QKBNR w KQkq e6 0 4"
 
 (*Tests SEE*)
-let see1 = "3r3k/1b2n3/2b5/3N4/2Q1B3/8/8/3R2K1 b - - 0 1"
+let see1 = "3r3k/1b2n3/2b5/3N4/2Q1B3/8/8/3R2K1 b - - 0 1" (* *)
+let see2 = "1k1r4/1pp4p/p7/4p3/8/P5P1/1PP4P/2K1R3 w - - 0 1" (*e5*)
+let see3 = "1k1r3q/1ppn3p/p4b2/4p3/8/P2N2P1/1PP1R1BP/2K1Q3 w - - 0 1" (*e5*)
+let see4 = "6k1/1pp4p/p1pb4/6q1/3P1pRr/2P4P/PP1Br1P1/5RKN w - - 0 1" (*f4*)
+let see5 = "5rk1/1pp2q1p/p1pb4/8/3P1NP1/2P5/1P1BQ1P1/5RK1 b - - 0 1" (*f4*)
+let see6 = "4R3/2r3p1/5bk1/1p1r3p/p2PR1P1/P1BK1P2/1P6/8 b - - 0 1" (*g4*)
+let see7 = "4R3/2r3p1/5bk1/1p1r1p1p/p2PR1P1/P1BK1P2/1P6/8 b - - 0 1"
+let see8 = "4r1k1/5pp1/nbp4p/1p2p2q/1P2P1b1/1BP2N1P/1B2QPPK/3R4 b - - 0 1"
+let see9 = "2r1r1k1/pp1bppbp/3p1np1/q3P3/2P2P2/1P2B3/P1N1B1PP/2RQ1RK1 b - - 0 1"
+let see10 = "7r/5qpk/p1Qp1b1p/3r3n/BB3p2/5p2/P1P2P2/4RK1R w - - 0 1"
+let see11 = "6rr/6pk/p1Qp1b1p/2n5/1B3p2/5p2/P1P2P2/4RK1R w - - 0 1"
+let see12 = "7r/5qpk/2Qp1b1p/1N1r3n/BB3p2/5p2/P1P2P2/4RK1R w - - 0 1"
+let see13 = "6RR/4bP2/8/8/5r2/3K4/5p2/4k3 w - - 0 1"
+let see14 = "6RR/4bP2/8/8/5r2/3K4/5p2/4k3 w - - 0 1"
+let see15 = "7R/5P2/8/8/6r1/3K4/5p2/4k3 w - - 0 1"
+let see16 = "7R/5P2/8/8/6r1/3K4/5p2/4k3 w - - 0 1"
+let see17 = "7R/4bP2/8/8/1q6/3K4/5p2/4k3 w - - 0 1"
+let see18 = "8/4kp2/2npp3/1Nn5/1p2PQP1/7q/1PP1B3/4KR1r b - - 0 1"
+let see19 = "8/4kp2/2npp3/1Nn5/1p2P1P1/7q/1PP1B3/4KR1r b - - 0 1"
+let see20 = "rnbq1b1r/pppppkPp/8/3n4/3P4/8/PPP2PPP/RNBQKBNR w KQ - 0 1"
+let see21 = "rnbqkbnr/pppppppp/8/8/8/2N5/PPPPPPPP/R1BQKBNR w KQkq - 0 1"
+let see22 = "rnbqkb1r/pppp1ppp/4pn2/7P/8/8/PPPPPPP1/RNBQKBNR w KQkq - 0 1"
+let see23 = "rnb1kbnr/ppppqppp/4p3/8/3P4/2N2N2/PPP1PPP1/R1BQKB1R w KQkq - 0 1"
+let see24 = "rn1qkbnr/Qpp1pppp/3pb3/8/4P3/5N2/PPP2PPP/RNB1KB1R b KQkq - 0 1"
+let see25 = "r1bqkbnr/pppN1ppp/8/3p4/8/2N5/PPPPPPPP/R1BQKB1R w KQkq - 0 1"
 
 (*Perft*)
 let position3 = "8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1"

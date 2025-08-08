@@ -25,7 +25,7 @@ let initial_in_check = ref false
 let initial_move_record = ref []
 let initial_board_record = ref [zobrist board true !last_move !castling_right]
 
-let fen_chain = if false then standard else "r4rk1/1pp1qppp/p1np1n2/2b1p1B1/2B1P1b1/P1NP1N2/1PP1QPPP/R4RK1 w - - 0 40"
+let fen_chain = see25
 let move_list = ""
 
 let () = 

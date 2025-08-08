@@ -8,17 +8,52 @@ let () = ()
 open Libs.Board
 open Libs.Evaluation
 
-let get_attackers board tab64_square =
+(*let g move = match move with |Normal _ -> true |_ -> false
+
+let move_ordering board white_to_move last_move castling_right king_position in_check ply =
+  let legal_moves = legal_moves board white_to_move last_move castling_right king_position in_check in
+  let score move =
+    (*let copper = if g move then f board move else 0 in*)
+    (*if g move then begin
+      (*let _ = f board move in ();*)
+      let _ = new_see board move in ();
+      (*if a <> b then begin
+        print_board board;
+        print_endline (coord.(from move) ^ coord.(to_ move))
+      end*)
+    end;*)
+    if isquiet move then begin
+      if killer_moves.(2 * ply) = move then begin
+        8000000
+      end
+      else if killer_moves.(2 * ply + 1) = move then begin
+        7000000
+      end
+      else begin
+        history_moves.(4096 * aux_history white_to_move + 64 * from move + to_ move) (*- (if copper >= 0 then 0 else 2000000*)
+      end
+    end
+    else begin
+      9000000 + mvvlva move (*- (if copper >= 0 then 0 else 10000000*)
+    end
+  in List.map snd (merge_sort (List.map (fun move -> (score move, move)) legal_moves))
+
+
+let get_attackers board square tab64_square first_attacker first_capture first_attacker_square first_attacker_direction first_attacker_distance =
   let attackers = Array.make 20 (0, 0, 0) in
-  let attacker_number = ref 0 in
+  let attacker_count = ref 0 in
+  if abs first_attacker = 1 && first_capture = 0 then begin
+    first_attacker_direction := first_attacker * 10;
+    first_attacker_distance := abs (square - first_attacker_square) / 8
+  end;
   for i = 0 to 7  do
     let direction = knight_vect.(i) in
     if tab120.(tab64_square + direction) <> (-1) then begin
       let attacker_square = tab120.(tab64_square + direction) in
       let attacker = board.(attacker_square) in
-      if abs attacker = 2 then begin
-        attackers.(!attacker_number) <- (attacker, 0, 0);
-        incr attacker_number
+      if abs attacker = 2 && attacker_square <> first_attacker_square then begin
+        attackers.(!attacker_count) <- (attacker, 0, 0);
+        incr attacker_count
       end
     end;
   done;
@@ -30,9 +65,15 @@ let get_attackers board tab64_square =
       let attacker = board.(attacker_square) in
       if attacker <> 0 then begin
         iterate :=  false;
-        if ((abs attacker >= 3 && abs attacker <> 4) || (abs attacker = 1 && direction * attacker < 0)) then begin
-          attackers.(!attacker_number) <- (attacker, direction, 1);
-          incr attacker_number
+        if ((abs attacker >= 3 && abs attacker <> 4) || (abs attacker = 1 && direction * attacker > 0)) then begin
+          if attacker_square <> first_attacker_square then begin
+            attackers.(!attacker_count) <- (attacker, direction, 1);
+            incr attacker_count
+          end
+          else begin
+            first_attacker_direction := direction;
+            first_attacker_distance := 1
+          end
         end
       end;
       let distance = ref 2 in
@@ -46,8 +87,14 @@ let get_attackers board tab64_square =
           iterate :=  false
           end
         else begin
-          attackers.(!attacker_number) <- (attacker, direction, !distance);
-          incr attacker_number;
+          if attacker_square <> first_attacker_square then begin
+            attackers.(!attacker_count) <- (attacker, direction, !distance);
+            incr attacker_count
+          end
+          else begin
+            first_attacker_direction := direction;
+            first_attacker_distance := !distance
+          end;
           iterate :=  false
         end
       done
@@ -62,8 +109,14 @@ let get_attackers board tab64_square =
       if attacker <> 0 then begin
         iterate :=  false;
         if abs attacker >= 4 then begin
-          attackers.(!attacker_number) <- (attacker, direction, 1);
-          incr attacker_number
+          if attacker_square <> first_attacker_square then begin
+            attackers.(!attacker_count) <- (attacker, direction, 1);
+            incr attacker_count
+          end
+          else begin
+            first_attacker_direction := direction;
+            first_attacker_distance := 1
+          end
         end
       end;
       let distance = ref 2 in
@@ -77,14 +130,173 @@ let get_attackers board tab64_square =
           iterate :=  false
         end
         else begin
-          attackers.(!attacker_number) <- (attacker, direction, !distance);
-          incr attacker_number;
+          if attacker_square <> first_attacker_square then begin
+            attackers.(!attacker_count) <- (attacker, direction, !distance);
+            incr attacker_count;
+          end
+          else begin
+            first_attacker_direction := direction;
+            first_attacker_distance := !distance
+          end;
           iterate :=  false
         end
       done
     end
   done;
-  attackers, attacker_number
+  attackers, !attacker_count
+
+let directions = [|0; 4; 0; 0; 0; 0; 0; 0; 0; 3; 4; 3|]
+
+let xray_attackers board tab64_square direction distance =
+  let xray_attacker = ref (0, 0, 0) in
+  let chessman = directions.(abs direction) in
+  let iterate = ref true in
+  let distance = ref (distance + 1) in
+  while (!iterate && tab120.(tab64_square + (!distance * direction)) <> (-1)) do
+    let attacker_square = tab120.(tab64_square + (!distance * direction)) in
+    let attacker = board.(attacker_square) in
+    if attacker = 0 then begin
+      incr distance
+    end
+    else if not (List.mem (abs attacker) [chessman; 5])  then begin
+      iterate :=  false
+    end
+    else begin
+      xray_attacker := (attacker, direction, !distance);
+      iterate :=  false
+    end
+  done;
+  !xray_attacker
+
+let smaller attackers player_sign attacker_count smaller_attacker direction distance attacker_index =
+  smaller_attacker := (20 * !player_sign);
+  attacker_index := 0;
+  for i = 0 to attacker_count do
+    let attacker, _,_ = attackers.(i) in
+    if attacker * !player_sign > 0 && abs attacker < abs !smaller_attacker then begin
+      smaller_attacker := attacker;
+      attacker_index := i
+    end
+  done;
+  let _, direction_local, distance_local = attackers.(!attacker_index) in
+  direction := direction_local;
+  distance := distance_local;
+  attackers.(!attacker_index) <- (0, 0, 0);
+  player_sign := !player_sign * (-1)
+
+let new_see board move =
+  let square, first_attacker, first_atttacker_square, first_capture = match move with
+    |Normal {piece; from; to_; capture} -> to_, piece, from, capture
+    |Promotion {from; to_; capture; promotion} -> to_, (if promotion > 0 then 1 else (-1)), from, capture
+    |Enpassant {from; to_} -> to_ , (if to_ < 24 then 1 else (-1)), from, (if to_ < 24 then (-1) else 1)
+    |_ -> 0,0,0,0
+  in let smaller_attacker = ref first_attacker in
+  let direction = ref 0 in
+  let distance = ref 0 in
+  let tab64_square = tab64.(square) in
+  let attackers, attacker_count = get_attackers board square tab64_square first_attacker first_capture first_atttacker_square direction distance in (*Array.iter (fun (a,_,_) -> print_string (string_of_int a ^" ")) attackers; print_newline ();*)
+  let player_sign = ref (if first_attacker > 0 then (-1) else 1) in
+  let gain = Array.make 20 0 in
+  gain.(0) <- tabvalue.(abs first_capture);
+  let index = ref 1 in
+  let iterate = ref true in
+  let attacker_index = ref attacker_count in
+  while !iterate do (*print_string (string_of_int !smaller_attacker ^" ");*)
+    if abs !smaller_attacker < 10 then begin
+      gain.(!index) <- tabvalue.(abs !smaller_attacker) - gain.(!index - 1);
+      incr index;
+      if abs !smaller_attacker <> 2 && abs !smaller_attacker <> 6 then begin
+        attackers.(!attacker_index) <- xray_attackers board tab64_square !direction !distance
+      end;
+      smaller attackers player_sign attacker_count smaller_attacker direction distance attacker_index;
+    end
+    else begin
+      iterate := false
+    end
+  done;(* print_newline (); Array.iter (fun a -> print_string (string_of_int a ^" ")) gain;*)
+  for i = (!index - 2) downto 1 do
+    gain.(i - 1) <- - (max (-gain.(i - 1)) gain.(i))
+  done;
+  gain.(0)*)
+
+
+(*let get_attackers board tab64_square =
+  let attackers = Array.make 20 (0, 0, 0) in
+  let attacker_count = ref 0 in
+  for i = 0 to 7  do
+    let direction = knight_vect.(i) in
+    if tab120.(tab64_square + direction) <> (-1) then begin
+      let attacker_square = tab120.(tab64_square + direction) in
+      let attacker = board.(attacker_square) in
+      if abs attacker = 2 then begin
+        attackers.(!attacker_count) <- (attacker, 0, 0);
+        incr attacker_count
+      end
+    end;
+  done;
+  for i = 0 to 3 do
+    let direction = bishop_vect.(i) in
+    let iterate = ref (tab120.(tab64_square + direction) <> (-1)) in
+    if !iterate then begin
+      let attacker_square = tab120.(tab64_square + direction) in
+      let attacker = board.(attacker_square) in
+      if attacker <> 0 then begin
+        iterate :=  false;
+        if ((abs attacker >= 3 && abs attacker <> 4) || (abs attacker = 1 && direction * attacker < 0)) then begin
+          attackers.(!attacker_count) <- (attacker, direction, 1);
+          incr attacker_count
+        end
+      end;
+      let distance = ref 2 in
+      while (!iterate && tab120.(tab64_square + (!distance * direction)) <> (-1)) do
+        let attacker_square = tab120.(tab64_square + (!distance * direction)) in
+        let attacker = board.(attacker_square) in
+        if attacker = 0 then begin
+          incr distance
+        end
+        else if not (List.mem (abs attacker) [3; 5]) then begin
+          iterate :=  false
+          end
+        else begin
+          attackers.(!attacker_count) <- (attacker, direction, !distance);
+          incr attacker_count;
+          iterate :=  false
+        end
+      done
+    end
+  done;
+  for i = 0 to 3 do
+    let direction = rook_vect.(i) in
+    let iterate = ref (tab120.(tab64_square + direction) <> (-1)) in
+    if !iterate then begin
+      let attacker_square = tab120.(tab64_square + direction) in
+      let attacker = board.(attacker_square)in
+      if attacker <> 0 then begin
+        iterate :=  false;
+        if abs attacker >= 4 then begin
+          attackers.(!attacker_count) <- (attacker, direction, 1);
+          incr attacker_count
+        end
+      end;
+      let distance = ref 2 in
+      while (!iterate && tab120.(tab64_square + (!distance * direction)) <> (-1)) do
+        let attacker_square = tab120.(tab64_square + (!distance * direction)) in
+        let attacker = board.(attacker_square) in
+        if attacker = 0 then begin
+          incr distance
+        end
+        else if not (List.mem (abs attacker) [4; 5])  then begin
+          iterate :=  false
+        end
+        else begin
+          attackers.(!attacker_count) <- (attacker, direction, !distance);
+          incr attacker_count;
+          iterate :=  false
+        end
+      done
+    end
+  done;
+  attackers, !attacker_count
 
 let xray_attackers board tab64_square direction distance =
   let xray_attacker = ref (0, 0, 0) in
@@ -106,10 +318,10 @@ let xray_attackers board tab64_square direction distance =
   done;
   !xray_attacker
 
-let smaller attackers player_sign attacker_number  =
+let smaller attackers player_sign attacker_count  =
   let smaller_attacker = ref (20 * !player_sign) in
   let attacker_index = ref 0 in
-  for i = 0 to !attacker_number - 1 do
+  for i = 0 to attacker_count - 1 do
     let attacker, _,_ = attackers.(i) in
     if attacker * !player_sign > 0 && abs attacker < abs !smaller_attacker then begin
       smaller_attacker := attacker;
@@ -118,34 +330,34 @@ let smaller attackers player_sign attacker_number  =
   done;
   let _, direction, distance = attackers.(!attacker_index) in
   attackers.(!attacker_index) <- (0, 0, 0);
-  decr attacker_number;
   player_sign := !player_sign * (-1);
   !smaller_attacker, direction, distance, !attacker_index
 
-let new_see board square =
+let new_see board square (*attacker*) (*capture*) =
   let tab64_square = tab64.(square) in
-  let attackers, attacker_number = get_attackers board tab64_square in
+  let attackers, attacker_count = get_attackers board tab64_square in
   let player_sign = ref (if board.(square) > 0 then (-1) else 1) in
   let gain = Array.make 20 0 in
-  gain.(0) <- tabvalue.(abs board.(square));
+  gain.(0) <- tabvalue.(abs board.(square)); (*tabvalue.(abs capture);*)
   let index = ref 1 in
-  while !attacker_number <> 0 do
-    let smaller_attacker, direction, distance, attacker_index = (smaller attackers player_sign attacker_number) in
+  let iterate = ref true in
+  while !iterate do
+    let smaller_attacker, direction, distance, attacker_index = (smaller attackers player_sign attacker_count) in
     if abs smaller_attacker < 10 then begin
       gain.(!index) <- tabvalue.(abs smaller_attacker) - gain.(!index - 1);
       incr index;
       if abs smaller_attacker <> 2 && abs smaller_attacker <> 6 then begin
-        attackers.(attacker_index) <- xray_attackers board tab64_square direction distance
+        attackers.(attacker_index) <- xray_attackers board tab64_square direction (distance + 1)
       end
     end
     else begin
-      attacker_number := 0
+      iterate := false
     end
   done;
-  for i = !index downto 1 do
+  for i = (!index - 2) downto 1 do
     gain.(i - 1) <- - (max (-gain.(i - 1)) gain.(i))
   done;
-  gain.(0)
+  gain.(0)*)
 
 (*let score =
                 if !first_move then begin

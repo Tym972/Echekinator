@@ -38,7 +38,8 @@
  ouvertures
  strategie2
  to_algebraic
- oldevaluations)
+ oldevaluations
+ bitboards)
  (libraries 
  unix
  threads
