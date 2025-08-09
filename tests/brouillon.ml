@@ -8,6 +8,31 @@ let () = ()
 open Libs.Board
 open Libs.Evaluation
 
+(*let score =
+  if !first_move then begin
+    first_move := false;
+    - pvs board (not white_to_move) move new_castling_right new_record new_half_moves (depth - 1) initial_depth (- !beta0) (- !alpha0) evaluation new_zobrist ispv
+  end
+  else begin
+    let score_lmr =
+    if not (in_check || depth < 3 || ispv || !zugzwang || !counter < 4) && isquiet move then begin
+      - pvs board (not white_to_move) move new_castling_right new_record new_half_moves (depth - 2) initial_depth (- !alpha0 - 1) (- !alpha0) evaluation new_zobrist false
+    end
+    else
+      !alpha0 + 1
+    in if score_lmr > !alpha0 then begin
+      let score_0 = - pvs board (not white_to_move) move new_castling_right new_record new_half_moves (depth - 1) initial_depth (- !alpha0 - 1) (- !alpha0) evaluation new_zobrist false
+        in if (score_0 > !alpha0 && ispv) then begin 
+          - pvs board (not white_to_move) move new_castling_right new_record new_half_moves (depth - 1) initial_depth (- !beta0) (- !alpha0) evaluation new_zobrist true
+        end
+        else begin
+          score_0
+        end
+      end
+      else
+        score_lmr
+  end*)
+
 (*let g move = match move with |Normal _ -> true |_ -> false
 
 let move_ordering board white_to_move last_move castling_right king_position in_check ply =
@@ -358,32 +383,6 @@ let new_see board square (*attacker*) (*capture*) =
     gain.(i - 1) <- - (max (-gain.(i - 1)) gain.(i))
   done;
   gain.(0)*)
-
-(*let score =
-                if !first_move then begin
-                  first_move := false;
-                  - pvs board (not white_to_move) move new_castling_right new_record new_half_moves (depth - 1) initial_depth (- !beta0) (- !alpha0) evaluation new_zobrist ispv
-                end
-                else begin
-                  let score_lmr =
-                    if not (in_check || depth < 3 || ispv || !zugzwang || !counter < 4) && isquiet move then begin
-                      - pvs board (not white_to_move) move new_castling_right new_record new_half_moves (depth - 2) initial_depth (- !alpha0 - 1) (- !alpha0) evaluation new_zobrist true
-                    end
-                    else
-                      !alpha0 + 1
-                  in if score_lmr > !alpha0 then begin
-                    let score_0 = - pvs board (not white_to_move) move new_castling_right new_record new_half_moves (depth - 1) initial_depth (- !alpha0 - 1) (- !alpha0) evaluation new_zobrist false
-                    in if (score_0 > !alpha0 && ispv) then begin 
-                      - pvs board (not white_to_move) move new_castling_right new_record new_half_moves (depth - 1) initial_depth (- !beta0) (- !alpha0) evaluation new_zobrist true
-                    end
-                    else begin
-                      score_0
-                    end
-                  end
-                  else begin
-                    score_lmr
-                  end
-                end *)
 
 let f tb tn board =
   let material = ref 0 in

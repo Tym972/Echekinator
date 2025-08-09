@@ -137,7 +137,9 @@ let rec pvs board white_to_move last_move castling_right board_record half_moves
           end
           else begin
             let first_move = ref (not hash_ordering) in
+            let counter = ref (-1) in
             while (!no_cut && !moves <> []) do
+              incr counter;
               let move = List.hd !moves in
               let new_castling_right = modification_roque move castling_right in
               let new_zobrist = new_zobrist move last_move zobrist_position castling_right new_castling_right board in
@@ -150,14 +152,24 @@ let rec pvs board white_to_move last_move castling_right board_record half_moves
                   - pvs board (not white_to_move) move new_castling_right new_record new_half_moves (depth - 1) initial_depth (- !beta0) (- !alpha0) evaluation new_zobrist ispv
                 end
                 else begin
-                  let score_0 = - pvs board (not white_to_move) move new_castling_right new_record new_half_moves (depth - 1) initial_depth (- !alpha0 - 1) (- !alpha0) evaluation new_zobrist false
-                  in if (score_0 > !alpha0 && ispv) then begin 
-                    - pvs board (not white_to_move) move new_castling_right new_record new_half_moves (depth - 1) initial_depth (- !beta0) (- !alpha0) evaluation new_zobrist true
+                  let score_lmr =
+                    if not (in_check || depth < 3 || ispv || !zugzwang || !counter < 5) then begin
+                      - pvs board (not white_to_move) move new_castling_right new_record new_half_moves (depth - 2) initial_depth (- !alpha0 - 1) (- !alpha0) evaluation new_zobrist false
+                    end
+                    else
+                      !alpha0 + 1
+                  in if score_lmr > !alpha0 then begin
+                    let score_0 = - pvs board (not white_to_move) move new_castling_right new_record new_half_moves (depth - 1) initial_depth (- !alpha0 - 1) (- !alpha0) evaluation new_zobrist false
+                    in if (score_0 > !alpha0 && ispv) then begin 
+                      - pvs board (not white_to_move) move new_castling_right new_record new_half_moves (depth - 1) initial_depth (- !beta0) (- !alpha0) evaluation new_zobrist true
+                    end
+                    else begin
+                      score_0
+                    end
                   end
-                  else begin
-                    score_0
-                  end
-                end 
+                  else
+                    score_lmr
+                end
               in if score > !best_score then begin
                 best_score := score;
                 best_move := move;
