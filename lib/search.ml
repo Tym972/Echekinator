@@ -153,8 +153,18 @@ let rec pvs board white_to_move last_move castling_right board_record half_moves
                 end
                 else begin
                   let score_lmr =
-                    if not (in_check || depth < 3 || ispv || !zugzwang || !counter < 5) then begin
-                      - pvs board (not white_to_move) move new_castling_right new_record new_half_moves (depth - 2) initial_depth (- !alpha0 - 1) (- !alpha0) evaluation new_zobrist false
+                    let reduction =
+                      let float_depth = float_of_int depth in
+                      let float_counter = float_of_int !counter in
+                      int_of_float begin
+                        if isquiet move then
+                          1.35 +. log (float_depth) *. log (float_counter) /. 2.75
+                        else
+                          0.20 +. log (float_depth) *. log (float_counter) /. 3.35
+                      end
+                      in
+                    if not (in_check || depth < 3 || ispv || !zugzwang || reduction = 0) then begin
+                      - pvs board (not white_to_move) move new_castling_right new_record new_half_moves (depth - 1 - reduction) initial_depth (- !alpha0 - 1) (- !alpha0) evaluation new_zobrist false
                     end
                     else
                       !alpha0 + 1
