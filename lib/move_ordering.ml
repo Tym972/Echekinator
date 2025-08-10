@@ -135,7 +135,7 @@ let rec see board square white_to_move =
   end;
   !value
 
-let f board move =
+let see_forced board move =
   make board move;
     let note = tabvalue.(abs (capture move)) - see board (to_ move) (piece move > 0) in
   unmake board move;
@@ -370,9 +370,9 @@ let g move = match move with |Normal _ -> true |_ -> false
 let move_ordering board white_to_move last_move castling_right king_position in_check ply =
   let legal_moves = legal_moves board white_to_move last_move castling_right king_position in_check in
   let score move =
-    (*let copper = if g move then f board move else 0 in*)
+    (*let copper = if g move then see_forced board move else 0 in*)
     (*if g move then begin
-      let _ = f board move in ();
+      let _ = see_forced board move in ();
       (*let _ = new_see board move in ();*)
       (*if a <> b then begin
         print_board board;
@@ -388,10 +388,14 @@ let move_ordering board white_to_move last_move castling_right king_position in_
         7000000
       end
       else begin
-        history_moves.(4096 * aux_history white_to_move + 64 * from move + to_ move) (*- (if copper >= 0 then 0 else 2000000*)
+        history_moves.(4096 * aux_history white_to_move + 64 * from move + to_ move)
       end
     end
     else begin
-      9000000 + mvvlva move (*- (if copper >= 0 then 0 else 10000000*)
+      let see_score = see_forced board move in
+      if see_score >= 0 then
+        9000000 + see_score
+      else
+        see_score - 1000000
     end
   in List.map snd (merge_sort (List.map (fun move -> (score move, move)) legal_moves))
