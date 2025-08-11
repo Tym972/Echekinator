@@ -162,8 +162,7 @@ let rec pvs board white_to_move last_move castling_right board_record half_moves
                         else
                           0.20 +. log (float_depth) *. log (float_counter) /. 3.35
                       end
-                      in
-                    if not (in_check || depth < 3 || ispv || !zugzwang || reduction = 0) then begin
+                    in if not (in_check || depth < 3 || !zugzwang || reduction = 0) then begin
                       - pvs board (not white_to_move) move new_castling_right new_record new_half_moves (depth - 1 - reduction) initial_depth (- !alpha0 - 1) (- !alpha0) evaluation new_zobrist false
                     end
                     else
