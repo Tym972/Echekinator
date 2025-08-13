@@ -44,25 +44,12 @@ let rec pvs board white_to_move last_move castling_right board_record half_moves
   end
   else begin
     let no_cut = ref true in
-    let alpha0 = ref alpha in
-    let beta0 = ref beta in
+    let alpha0 = ref (max alpha (ply - 99999)) in
+    let beta0 = ref (min beta (99999 - ply)) in
     let best_score = ref (-infinity) in
-    let mating_value = if alpha > 99000 then 99999 - ply else if beta < (-99000) then ply - 99999 else 0 in
-    if mating_value <> 0 then begin
-      if mating_value > 0 && mating_value < beta then begin
-        beta0 := mating_value;
-        if alpha >= mating_value then begin
-          best_score := mating_value;
-          no_cut := false
-        end
-      end
-      else if mating_value < 0 && mating_value > alpha then begin
-        alpha0 := mating_value;
-        if beta <= mating_value then begin
-          best_score := mating_value;
-          no_cut := false
-        end
-      end
+    if !alpha0 >= !beta0 then begin
+      best_score := !alpha0;
+      no_cut := false
     end;
     if !no_cut then begin
       let best_move = ref Null in

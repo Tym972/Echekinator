@@ -8,6 +8,24 @@ let () = ()
 open Libs.Board
 open Libs.Evaluation
 
+(*let mating_value = if alpha > 99000 then 99999 - ply else if beta < (-99000) then ply - 99999 else 0 in
+    if mating_value <> 0 then begin
+      if mating_value > 0 && mating_value < beta then begin
+        beta0 := mating_value;
+        if alpha >= mating_value then begin
+          best_score := mating_value;
+          no_cut := false
+        end
+      end
+      else if mating_value < 0 && mating_value > alpha then begin
+        alpha0 := mating_value;
+        if beta <= mating_value then begin
+          best_score := mating_value;
+          no_cut := false
+        end
+      end
+    end;*)
+
 (*let score =
   if !first_move then begin
     first_move := false;
