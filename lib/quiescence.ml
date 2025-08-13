@@ -57,11 +57,11 @@ let rec quiescence_search board white_to_move alpha beta evaluation cap depth ki
   !best_score
 
 (*Fonction permettant d'évaluer un board à la depth 0*)
-let quiescence_treatment_depth_0 initial_depth evaluation board white_to_move last_move alpha beta king_position in_check =
+let quiescence_treatment_depth_0 ply evaluation board white_to_move last_move alpha beta king_position in_check =
   let legal_moves = legal_moves board white_to_move last_move (false, false, false, false) king_position in_check
   in if legal_moves = [] then begin
     if in_check then begin
-      (initial_depth - 99999)
+      (ply - 99999)
     end
     else begin
       0

@@ -285,7 +285,7 @@ let go instructions board white_to_move last_move castling_right king_position i
       let var_depth = ref 0 in
       while not !stop_calculation && !var_depth < !depth do
         incr var_depth;
-        let new_score = pvs board white_to_move last_move castling_right board_record demi_coups !var_depth !var_depth (-infinity) infinity evaluation (List.hd board_record) true in
+        let new_score = pvs board white_to_move last_move castling_right board_record demi_coups !var_depth 0 (-infinity) infinity evaluation (List.hd board_record) true in
         if not !stop_calculation then begin
           let exec_time = Sys.time () -. start_time in
           best_score := score new_score;
