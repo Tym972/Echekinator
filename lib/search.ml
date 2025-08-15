@@ -139,7 +139,6 @@ let rec pvs board white_to_move last_move castling_right board_record half_moves
               best_score := 0
             end
             else begin
-              let first_move = ref (not hash_ordering) in
               let counter = ref (-1) in
               while (!no_cut && !moves <> []) do
                 incr counter;
@@ -150,8 +149,7 @@ let rec pvs board white_to_move last_move castling_right board_record half_moves
                 make board move;
                 moves := List.tl !moves;
                 let score =
-                  if !first_move then begin
-                    first_move := false;
+                  if not (!counter <> 0 || hash_ordering) then begin
                     - pvs board (not white_to_move) move new_castling_right new_record new_half_moves (depth - 1) (ply + 1) (- !beta0) (- !alpha0) evaluation new_zobrist ispv
                   end
                   else begin
@@ -159,13 +157,15 @@ let rec pvs board white_to_move last_move castling_right board_record half_moves
                       let reduction =
                         let float_depth = float_of_int depth in
                         let float_counter = float_of_int !counter in
-                        int_of_float begin
-                          if isquiet move then
-                            1.35 +. log (float_depth) *. log (float_counter) /. 2.75
-                          else
-                            0.20 +. log (float_depth) *. log (float_counter) /. 3.35
-                        end
-                      in if not (in_check || depth < 3 || reduction = 0 || depth - reduction < 1) then begin
+                        min
+                          (int_of_float begin
+                            if isquiet move then
+                              1.35 +. log (float_depth) *. log (float_counter) /. 2.75
+                            else
+                              0.20 +. log (float_depth) *. log (float_counter) /. 3.35
+                          end)
+                          (depth - 1)
+                      in if not (in_check || depth < 3 || reduction = 0) then begin
                         - pvs board (not white_to_move) move new_castling_right new_record new_half_moves (depth - 1 - reduction) (ply + 1 + reduction) (- !alpha0 - 1) (- !alpha0) evaluation new_zobrist false
                       end
                       else
