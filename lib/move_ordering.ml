@@ -135,9 +135,9 @@ let rec see board square white_to_move =
   end;
   !value
 
-let see_forced board move =
+let see_forced board move white_to_move =
   make board move;
-    let note = tabvalue.(abs (capture move)) - see board (to_ move) (piece move > 0) in
+    let note = tabvalue.(abs (capture move)) - see board (to_ move) white_to_move in
   unmake board move;
   note
 
@@ -392,7 +392,7 @@ let move_ordering board white_to_move last_move castling_right king_position in_
       end
     end
     else begin
-      let see_score = see_forced board move in
+      let see_score = see_forced board move white_to_move in
       if see_score >= 0 then
         9000000 + see_score
       else

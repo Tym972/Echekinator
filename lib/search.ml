@@ -45,7 +45,7 @@ let rec pvs board white_to_move last_move castling_right board_record half_moves
   else begin
     let no_cut = ref true in
     let alpha0 = ref (max alpha (ply - 99999)) in
-    let beta0 = ref (min beta (99999 - ply)) in
+    let beta0 = ref (min beta (99998 - ply)) in
     let best_score = ref (-infinity) in
     if !alpha0 >= !beta0 then begin
       best_score := !alpha0;
@@ -165,7 +165,7 @@ let rec pvs board white_to_move last_move castling_right board_record half_moves
                           else
                             0.20 +. log (float_depth) *. log (float_counter) /. 3.35
                         end
-                      in if not (in_check || depth < 3 || !zugzwang || reduction = 0) then begin
+                      in if not (in_check || depth < 3 || reduction = 0 || depth - reduction < 1) then begin
                         - pvs board (not white_to_move) move new_castling_right new_record new_half_moves (depth - 1 - reduction) (ply + 1 + reduction) (- !alpha0 - 1) (- !alpha0) evaluation new_zobrist false
                       end
                       else
