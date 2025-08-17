@@ -13,6 +13,9 @@ let kiwipete = "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq -
 (*Lasker-Reichhelm*)
 let lasker = "8/k7/3p4/p2P1p2/P2P1P2/8/8/K7 w - - 0 1"
 
+(*Sacrifice de cavalier obvious*)
+let obvious = "3q1rk1/Q1pn1ppp/4p3/1NPpPb2/5P2/4P3/Pr4PP/R3KB1R b KQ - 1 15"
+
 (*Test Mat*)
 let tour_et_roi = "8/7K/8/8/8/8/R7/7k w - - 0 1"
 let deux_fous_et_roi = "8/8/8/3k4/8/3K4/3BB3/8 w - - 0 1"

@@ -1,7 +1,6 @@
 (*Module implémentant les fonctions qui permettent de générer les moves possibles à partir d'une position*)
 
 open Board
-open Zobrist
 
 (*Fonction indiquant si une square est attaquée par une pièce ennemie*)
 let threatened board square white_to_move =
@@ -512,6 +511,14 @@ let from_long_white_rook = ref 56
 let from_short_black_rook = ref 7
 let from_long_black_rook = ref 0
 
+(*Constantes pour le calcul du hash zobrist et du vecteur NNUE*)
+let zobrist_from_white_king = ref 725
+let zobrist_from_black_king = ref 59
+let zobrist_from_short_white_rook = ref 759
+let zobrist_from_long_white_rook = ref 675
+let zobrist_from_short_black_rook = ref 93
+let zobrist_from_long_black_rook = ref 9
+
 (*Cases de passage du roi pour le castlings*)
 let white_short_path = [|61; 62; 0; 0; 0; 0|]
 let white_long_path = [|59; 58; 0; 0; 0|]
@@ -611,6 +618,18 @@ let castling_update start_position =
   aux player_sign from_king depart_tour_pr from_long_rook clouage_roi_1 clouage_roi_2 roi_clouable  long_rook_in_a long_rook_in_b tour_pr_en_h long_directions vect_fou_roque_pr vect_fou_roque_gr)
   [((-1), from_black_king, from_short_black_rook, from_long_black_rook, black_king_pin_1, black_king_pin_2, black_king_pinnable, black_long_rook_in_a, black_long_rook_in_b, black_short_rook_in_h, black_long_directions, black_short_bishop_vect, black_long_bishop_vect);
   (1, from_white_king, from_short_white_rook, from_long_white_rook, white_king_pin_1, white_king_pin_2, white_king_pinnable, white_long_rook_in_a, white_long_rook_in_b, white_short_rook_in_h, white_long_directions, white_short_bishop_vect, white_long_bishop_vect)];
+  let func reference square piece =
+    if piece > 0 then begin
+      reference := 12 * square + (piece - 1) 
+    end
+    else begin
+      reference := 12 * square + (5 - piece)
+    end
+  in List.iter
+  (fun (reference, square, piece) -> func reference square piece)
+  [(zobrist_from_white_king, !from_white_king, 6); (zobrist_from_black_king, !from_black_king, (-6));
+  (zobrist_from_short_white_rook, !from_short_white_rook, 4); (zobrist_from_long_white_rook, !from_long_white_rook, 4);
+  (zobrist_from_short_black_rook, !from_short_black_rook, (-4)); (zobrist_from_long_black_rook, !from_long_black_rook, (-4))];
   let j = ref 0 in
   let aux path path_lenght empties j i =
     path.(!j) <- i;
@@ -1430,40 +1449,6 @@ let make_move_1 board move white_to_move last_move castling_rights =
   castling_rights := modification_roque move !castling_rights;
   last_move := move;
   white_to_move := not !white_to_move
-
-(*Fonction renvoyant le relevé des positions actualisé*)
-let new_board_record last_move board_record board white_to_move castling_rights =
-  if is_irreversible last_move then begin
-    [zobrist board white_to_move last_move castling_rights]
-  end
-  else begin
-    zobrist board white_to_move last_move castling_rights :: !board_record
-  end
-
-(*Fonction permettant de jouer un move en actualisant les variables d'états de la partie*)
-let make_move_2 board move white_to_move last_move castling_rights moves_record board_record = 
-  make_move_1 board move white_to_move last_move castling_rights;
-  moves_record := move :: !moves_record;
-  board_record := new_board_record move board_record board !white_to_move !castling_rights
-
-(*Fonction permettant de jouer une list de moves*)
-let make_list move_list board last_move moves_record board_record castling_rights white_to_move =
-  let rec func move_list board last_move moves_record board_record castling_rights white_to_move controle = match move_list with
-    |[] -> ()
-    |move :: t when !controle ->
-      let king_position = (index_array board (king !white_to_move)) in
-      if List.mem move (legal_moves board !white_to_move !last_move !castling_rights king_position (threatened board king_position !white_to_move)) then begin
-        make_move_2 board move white_to_move last_move castling_rights moves_record board_record;
-        func t board last_move moves_record board_record castling_rights white_to_move controle
-      end
-      else if move = Null then begin
-        func t board last_move moves_record board_record castling_rights white_to_move controle
-      end
-      else begin
-        controle := false
-      end
-    |_ -> ()
-  in func move_list board last_move moves_record board_record castling_rights white_to_move (ref true)
 
 (*Fonction indiquant si un move est valide*)
 let is_legal board move white_to_move =

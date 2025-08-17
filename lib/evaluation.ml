@@ -2,6 +2,7 @@
 
 open Board
 open Piece_square_tables
+open Generator
 
 (*Valeur des pièces pour l'évaluation*)
 let tabvalue = [|0; 10; 32; 33; 51; 88; 950|]
@@ -214,3 +215,143 @@ let roi_seul board =
 (*Fonction indiquant si une partie est dans sa phase finale*)
 let finale board =
   pieces_esseulee board || roi_seul board
+
+open Zobrist
+
+let board_vector = Array.make 781 0
+
+let vector board white_to_move last_move (prb, grb, prn, grn) =
+  for i = 0 to 63 do
+    let piece = board.(i) in
+    if piece > 0 then begin
+      board_vector.(12 * i + (piece - 1)) <- 1
+    end
+    else if piece < 0 then begin
+      board_vector.(12 * i + (5 - piece)) <- 1
+    end
+  done;
+  if white_to_move then begin
+    board_vector.(768) <- 1
+  end;
+  if prb then begin
+    board_vector.(769) <- 1
+  end;
+  if grb then begin
+    board_vector.(770) <- 1
+  end;
+  if prn then begin
+    board_vector.(771) <- 1
+  end;
+  if grn then begin
+    board_vector.(772) <- 1
+  end;
+  let pep = column_ep last_move board in
+  if pep <> (-1) then begin
+    board_vector.(773 + pep) <- 1
+  end
+
+let new_vector move penultimate_move (aprb, agrb, aprn, agrn) (nprb, ngrb, nprn, ngrn) board =
+  let pep_adversaire = column_ep penultimate_move board in
+  if pep_adversaire <> (-1) then begin
+    board_vector.(773 + pep_adversaire) <- 0
+  end;
+  if aprb <> nprb then begin
+    board_vector.(769) <- 0
+  end;
+  if agrb <> ngrb then begin
+    board_vector.(770) <- 0
+  end;
+  if aprn <> nprn then begin
+    board_vector.(771) <- 0
+  end;
+  if agrn <> ngrn then begin
+    board_vector.(772) <- 0
+  end;
+  match move with
+    |Normal {piece; from; to_; capture} -> begin
+      if (abs piece = 1 && abs (from - to_) = 16) && ((from mod 8 <> 0 && board.(to_ - 1) = - piece) || (from mod 8 <> 7 && board.(to_ + 1) = - piece)) then begin
+        board_vector.(773 + (from mod 8)) <- 1
+      end;
+      if piece > 0 then begin
+        if capture = 0 then begin
+          board_vector.(12 * from + (piece - 1)) <- 0;
+          board_vector.(12 * to_ + (piece - 1)) <- 1
+        end
+        else begin
+          board_vector.(12 * from + (piece - 1)) <- 0;
+          board_vector.(12 * to_ + (piece - 1)) <- 1;
+          board_vector.(12 * to_ + (5 - capture)) <- 0
+        end
+      end
+      else begin
+        if capture = 0 then begin
+          board_vector.(12 * from + (5 - piece)) <- 0;
+          board_vector.(12 * to_ + (5 - piece)) <- 1
+        end
+        else begin
+          board_vector.(12 * from + (5 - piece)) <- 0;
+          board_vector.(12 * to_ + (5 - piece)) <- 1;
+          board_vector.(12 * to_ + (capture - 1)) <- 0
+        end
+      end
+    end
+    |Castling {sort} -> begin (*ALERTE 960!!!!*)
+      match sort with
+      |1 ->
+        board_vector.(!zobrist_from_white_king) <- 0;
+        board_vector.(749) <- 1;
+        board_vector.(!zobrist_from_short_white_rook) <- 0;
+        board_vector.(735) <- 1
+      |2 ->
+        board_vector.(!zobrist_from_white_king) <- 0;
+        board_vector.(701) <- 1;
+        board_vector.(!zobrist_from_long_white_rook) <- 0;
+        board_vector.(711) <- 1
+      |3 ->
+        board_vector.(!zobrist_from_black_king) <- 0;
+        board_vector.(83) <- 1;
+        board_vector.(!zobrist_from_short_black_rook) <- 0;
+        board_vector.(69) <- 1
+      |_ ->
+        board_vector.(!zobrist_from_black_king) <- 0;
+        board_vector.(35) <- 1;
+        board_vector.(!zobrist_from_long_black_rook) <- 0;
+        board_vector.(45) <- 1
+    end
+    |Enpassant {from; to_} -> begin
+      if from < 32 then begin
+        board_vector.(12 * from) <- 0;
+        board_vector.(12 * to_) <- 1;
+        board_vector.(12 * (to_ + 8) + 6) <- 0
+      end
+      else begin
+        board_vector.(12 * from + 6) <- 0;
+        board_vector.(12 * to_ + 6) <- 1;
+        board_vector.(12 * (to_ - 8)) <- 0
+      end
+    end
+    |Promotion {from; to_; promotion; capture} -> begin
+      if to_ < 8 then begin
+        if capture = 0 then begin
+          board_vector.(12 * from) <- 0;
+          board_vector.(12 * to_ + (promotion - 1)) <- 1;
+        end
+        else begin
+          board_vector.(12 * from) <- 0;
+          board_vector.(12 * to_ + (promotion - 1)) <- 1;
+          board_vector.(12 * to_ + (5 - capture)) <- 0;
+        end
+      end
+      else begin
+        if capture = 0 then begin
+          board_vector.(12 * from + 6) <- 0;
+          board_vector.(12 * to_ + (5 - promotion)) <- 0;
+        end
+        else begin
+          board_vector.(12 * from + 6) <- 0;
+          board_vector.(12 * to_ + (5 - promotion)) <- 1;
+          board_vector.(12 * to_ + (capture - 1)) <- 0;
+        end
+      end
+    end
+    |Null -> ()

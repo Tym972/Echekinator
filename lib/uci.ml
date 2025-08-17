@@ -36,6 +36,40 @@ let rec string_of_list list = match list with
   |[] -> ""
   |h :: t -> h ^ " " ^ string_of_list t
 
+(*Fonction renvoyant le relevé des positions actualisé*)
+let new_board_record last_move board_record board white_to_move castling_rights =
+  if is_irreversible last_move then begin
+    [zobrist board white_to_move last_move castling_rights]
+  end
+  else begin
+    zobrist board white_to_move last_move castling_rights :: !board_record
+  end
+
+(*Fonction permettant de jouer un move en actualisant les variables d'états de la partie*)
+let make_move_2 board move white_to_move last_move castling_rights moves_record board_record = 
+  make_move_1 board move white_to_move last_move castling_rights;
+  moves_record := move :: !moves_record;
+  board_record := new_board_record move board_record board !white_to_move !castling_rights
+
+(*Fonction permettant de jouer une list de moves*)
+let make_list move_list board last_move moves_record board_record castling_rights white_to_move =
+  let rec func move_list board last_move moves_record board_record castling_rights white_to_move controle = match move_list with
+    |[] -> ()
+    |move :: t when !controle ->
+      let king_position = (index_array board (king !white_to_move)) in
+      if List.mem move (legal_moves board !white_to_move !last_move !castling_rights king_position (threatened board king_position !white_to_move)) then begin
+        make_move_2 board move white_to_move last_move castling_rights moves_record board_record;
+        func t board last_move moves_record board_record castling_rights white_to_move controle
+      end
+      else if move = Null then begin
+        func t board last_move moves_record board_record castling_rights white_to_move controle
+      end
+      else begin
+        controle := false
+      end
+    |_ -> ()
+  in func move_list board last_move moves_record board_record castling_rights white_to_move (ref true)
+
 (*Answer to the command "uci"*)
 let uci () =
   print_endline (

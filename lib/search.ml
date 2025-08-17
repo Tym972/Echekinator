@@ -139,9 +139,8 @@ let rec pvs board white_to_move last_move castling_right board_record half_moves
               best_score := 0
             end
             else begin
-              let counter = ref (-1) in
+              let counter = ref 0 in
               while (!no_cut && !moves <> []) do
-                incr counter;
                 let move = List.hd !moves in
                 let new_castling_right = modification_roque move castling_right in
                 let new_zobrist = new_zobrist move last_move zobrist_position castling_right new_castling_right board in
@@ -202,7 +201,8 @@ let rec pvs board white_to_move last_move castling_right board_record half_moves
                     end;
                   end
                 end;
-                unmake board move
+                unmake board move;
+                incr counter
               done
             end
           end

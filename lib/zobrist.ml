@@ -1,5 +1,6 @@
 (*Module implémentant une fonction de hachage de*)
 open Board
+open Generator
 
 (*Création d'un tableau de nombres pseudo aléatoires. 12 * 64 cases
   pour chaque pièce de chaque case, + 1 case pour indiquer le trait + 4 cases
@@ -17,7 +18,7 @@ let column_ep move board = match move with
   |_ -> -1
 
 (*Fonction de hachage*)
-let zobrist board trait_aux_blancs dernier_move (prb, grb, prn, grn) =
+let zobrist board white_to_move last_move (prb, grb, prn, grn) =
   let h = ref 0 in
   for i = 0 to 63 do
     let piece = board.(i) in
@@ -28,7 +29,7 @@ let zobrist board trait_aux_blancs dernier_move (prb, grb, prn, grn) =
       h := !h lxor tab_zobrist.(12 * i + (5 - piece))
     end
   done;
-  if trait_aux_blancs then begin
+  if white_to_move then begin
     h := !h lxor tab_zobrist.(768)
   end;
   if prb then begin
@@ -43,18 +44,18 @@ let zobrist board trait_aux_blancs dernier_move (prb, grb, prn, grn) =
   if grn then begin
     h := !h lxor tab_zobrist.(772)
   end;
-  let pep = column_ep dernier_move board in
+  let pep = column_ep last_move board in
   if pep <> (-1) then begin
     h := !h lxor tab_zobrist.(773 + pep)
   end;
   !h
 
 (*Fonction caulculant la valeur de la fonction de zobrist en fonction de la précédente et du move joué. Non utilisée.*)
-let new_zobrist move avant_dernier_move ancien_zobrist (aprb, agrb, aprn, agrn) (nprb, ngrb, nprn, ngrn) board =
-  let h = ref (ancien_zobrist lxor tab_zobrist.(768)) in
-  let pep_adversaire = column_ep avant_dernier_move board in
-  if pep_adversaire <> (-1) then begin
-    h := !h lxor tab_zobrist.(773 + pep_adversaire)
+let new_zobrist move penultimate_move old_zobrist (aprb, agrb, aprn, agrn) (nprb, ngrb, nprn, ngrn) board =
+  let h = ref (old_zobrist lxor tab_zobrist.(768)) in
+  let pep_opponent = column_ep penultimate_move board in
+  if pep_opponent <> (-1) then begin
+    h := !h lxor tab_zobrist.(773 + pep_opponent)
   end;
   if aprb <> nprb then begin
     h:= !h lxor tab_zobrist.(769)
@@ -90,12 +91,12 @@ let new_zobrist move avant_dernier_move ancien_zobrist (aprb, agrb, aprn, agrn) 
         end
       end
     end
-    |Castling {sort} -> begin
+    |Castling {sort} -> begin (*ALERTE 960!!!!*)
       match sort with
-      |1 -> tab_zobrist.(725) lxor tab_zobrist.(749) lxor tab_zobrist.(759) lxor tab_zobrist.(735)
-      |2 -> tab_zobrist.(725) lxor tab_zobrist.(701) lxor tab_zobrist.(675) lxor tab_zobrist.(711)
-      |3 -> tab_zobrist.(59) lxor tab_zobrist.(83) lxor tab_zobrist.(93) lxor tab_zobrist.(69)
-      |_ -> tab_zobrist.(59) lxor tab_zobrist.(35) lxor tab_zobrist.(9) lxor tab_zobrist.(45)
+      |1 -> tab_zobrist.(!zobrist_from_white_king) lxor tab_zobrist.(749) lxor tab_zobrist.(!zobrist_from_short_white_rook) lxor tab_zobrist.(735)
+      |2 -> tab_zobrist.(!zobrist_from_white_king) lxor tab_zobrist.(701) lxor tab_zobrist.(!zobrist_from_long_white_rook) lxor tab_zobrist.(711)
+      |3 -> tab_zobrist.(!zobrist_from_black_king) lxor tab_zobrist.(83) lxor tab_zobrist.(!zobrist_from_short_black_rook) lxor tab_zobrist.(69)
+      |_ -> tab_zobrist.(!zobrist_from_black_king) lxor tab_zobrist.(35) lxor tab_zobrist.(!zobrist_from_long_black_rook) lxor tab_zobrist.(45)
     end
     |Enpassant {from; to_} -> begin
       if from < 32 then begin
