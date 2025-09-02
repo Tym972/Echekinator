@@ -806,7 +806,7 @@ let castlings board white_to_move (white_short, white_long, black_short, black_l
 
 (*Fonction adaptant les droits aux roques en fonction du move*)
 let modification_roque move (white_short, white_long, black_short, black_long) =
-  if (white_short || white_long || black_short || black_long) then  begin match move with
+  if (white_short || white_long || black_short || black_long) then begin match move with
     |Normal {from; piece; to_; capture = _} ->
       if piece = 6 then begin
         false, false, black_short && to_ <> !from_short_black_rook, black_long && to_ <> !from_long_black_rook
@@ -936,6 +936,268 @@ let unmake board move = match move with
   |Promotion {from; to_; promotion; capture} -> begin
     board.(from) <- if promotion > 0 then 1 else (-1);
     board.(to_) <- capture
+  end
+  |Null -> ()
+
+(*Fonction permettant de jouer un move sur l'échiquier*)
+let make_acc board move = match move with
+  |Normal {piece; from; to_; capture} -> begin
+    board.(from) <- 0;
+    board.(to_) <- piece;
+    if piece > 0 then begin
+      let idx_to = 12 * to_ + (piece - 1) in
+      let idx_from = 12 * from + (piece - 1) in
+      if capture = 0 then begin
+        for i = 0 to n - 1 do
+          accumulator.(i) <- accumulator.(i) +. hidden_weights.(i * 768 + idx_to) -. hidden_weights.(i * 768 + idx_from)
+        done
+      end
+      else begin
+        let idx_capture = (12 * to_ + (5 - capture)) in
+        for i = 0 to n - 1 do
+          accumulator.(i) <- accumulator.(i) +. hidden_weights.(i * 768 + idx_to) -. hidden_weights.(i * 768 + idx_from) -. hidden_weights.(i * 768 + idx_capture)
+        done
+      end
+    end
+    else begin
+      let idx_to = 12 * to_ + (5 - piece) in
+      let idx_from = 12 * from + (5 - piece) in
+      if capture = 0 then begin
+        for i = 0 to n - 1 do
+          accumulator.(i) <- accumulator.(i) +. hidden_weights.(i * 768 + idx_to) -. hidden_weights.(i * 768 + idx_from)
+        done
+      end
+      else begin
+        let idx_capture = (12 * to_ + (capture - 1)) in
+        for i = 0 to n - 1 do
+          accumulator.(i) <- accumulator.(i) +. hidden_weights.(i * 768 + idx_to) -. hidden_weights.(i * 768 + idx_from) -. hidden_weights.(i * 768 + idx_capture)
+        done 
+      end
+    end
+  end
+  |Castling {sort} -> begin
+    match sort with
+    |1 ->
+      board.(!from_white_king) <- 0;
+      board.(62) <- 6;
+      board.(!from_short_white_rook) <- 0;
+      board.(61) <- 4;
+      for i = 0 to n - 1 do
+        accumulator.(i) <- accumulator.(i) +. hidden_weights.(i * 768 + 749) +. hidden_weights.(i * 768 + 735) -. hidden_weights.(i * 768 + !zobrist_from_white_king) -. hidden_weights.(i * 768 + !zobrist_from_short_white_rook)
+      done
+    |2 ->
+      board.(!from_white_king) <- 0;
+      board.(58) <- 6;
+      board.(!from_long_white_rook) <- 0;
+      board.(59) <- 4;
+      for i = 0 to n - 1 do
+        accumulator.(i) <- accumulator.(i) +. hidden_weights.(i * 768 + 701) +. hidden_weights.(i * 768 + 711) -. hidden_weights.(i * 768 + !zobrist_from_white_king) -. hidden_weights.(i * 768 + !zobrist_from_long_white_rook)
+      done
+    |3 ->
+      board.(!from_black_king) <- 0;
+      board.(6) <- (-6);
+      board.(!from_short_black_rook) <- 0;
+      board.(5) <- (-4);
+      for i = 0 to n - 1 do
+        accumulator.(i) <- accumulator.(i) +. hidden_weights.(i * 768 + 83) +. hidden_weights.(i * 768 + 69) -. hidden_weights.(i * 768 + !zobrist_from_black_king) -. hidden_weights.(i * 768 + !zobrist_from_short_black_rook)
+      done
+    |_ ->
+      board.(!from_black_king) <- 0;
+      board.(2) <- (-6);
+      board.(!from_long_black_rook) <- 0;
+      board.(3) <- (-4);
+      for i = 0 to n - 1 do
+        accumulator.(i) <- accumulator.(i) +. hidden_weights.(i * 768 + 35) +. hidden_weights.(i * 768 + 45) -. hidden_weights.(i * 768 + !zobrist_from_black_king) -. hidden_weights.(i * 768 + !zobrist_from_long_black_rook)
+      done
+  end
+  |Enpassant {from; to_} -> begin
+    if from < 32 then begin
+      board.(from) <- 0;
+      board.(to_) <- 1;
+      board.(to_ + 8) <- 0;
+      let idx_to = 12 * to_ in
+      let idx_from = 12 * from in
+      let idx_capture = 12 * (to_ + 8) + 6 in
+      for i = 0 to n - 1 do
+        accumulator.(i) <- accumulator.(i) +. hidden_weights.(i * 768 + idx_to) -. hidden_weights.(i * 768 + idx_from) -. hidden_weights.(i * 768 + idx_capture)
+      done
+    end
+    else begin
+      board.(from) <- 0;
+      board.(to_) <- (-1);
+      board.(to_ - 8) <- 0;
+      let idx_to = 12 * to_ + 6 in
+      let idx_from = 12 * from + 6 in
+      let idx_capture = 12 * (to_ - 8) in
+      for i = 0 to n - 1 do
+        accumulator.(i) <- accumulator.(i) +. hidden_weights.(i * 768 + idx_to) -. hidden_weights.(i * 768 + idx_from) -. hidden_weights.(i * 768 + idx_capture)
+      done
+    end
+  end
+  |Promotion {from; to_; promotion; capture} -> begin
+    board.(from) <- 0;
+    board.(to_) <- promotion;
+    if to_ < 8 then begin
+      let idx_to = 12 * to_ + (promotion - 1) in
+      let idx_from = 12 * from in
+      if capture = 0 then begin
+        for i = 0 to n - 1 do
+          accumulator.(i) <- accumulator.(i) +. hidden_weights.(i * 768 + idx_to) -. hidden_weights.(i * 768 + idx_from)
+        done
+      end
+      else begin
+        let idx_capture = (12 * to_ + (5 - capture)) in
+        for i = 0 to n - 1 do
+          accumulator.(i) <- accumulator.(i) +. hidden_weights.(i * 768 + idx_to) -. hidden_weights.(i * 768 + idx_from) -. hidden_weights.(i * 768 + idx_capture)
+        done
+      end
+    end
+    else begin
+      let idx_to = 12 * to_ + (5 - promotion) in
+      let idx_from = 12 * from + 6 in
+      if capture = 0 then begin 
+        for i = 0 to n - 1 do
+          accumulator.(i) <- accumulator.(i) +. hidden_weights.(i * 768 + idx_to) -. hidden_weights.(i * 768 + idx_from)
+        done
+      end
+      else begin
+        let idx_capture = 12 * to_ + (capture - 1) in
+        for i = 0 to n - 1 do
+          accumulator.(i) <- accumulator.(i) +. hidden_weights.(i * 768 + idx_to) -. hidden_weights.(i * 768 + idx_from) -. hidden_weights.(i * 768 + idx_capture)
+        done
+      end
+    end
+  end
+  |Null -> ()
+
+(*Fonction permettant l'annulation d'un move*)
+let unmake_acc board move = match move with
+  |Normal {piece; from; to_; capture} -> begin
+    board.(from) <- piece;
+    board.(to_) <- capture;
+    if piece > 0 then begin
+      let idx_to = 12 * to_ + (piece - 1) in
+      let idx_from = 12 * from + (piece - 1) in
+      if capture = 0 then begin
+        for i = 0 to n - 1 do
+          accumulator.(i) <- accumulator.(i) -. hidden_weights.(i * 768 + idx_to) +. hidden_weights.(i * 768 + idx_from)
+        done
+      end
+      else begin
+        let idx_capture = (12 * to_ + (5 - capture)) in
+        for i = 0 to n - 1 do
+          accumulator.(i) <- accumulator.(i) -. hidden_weights.(i * 768 + idx_to) +. hidden_weights.(i * 768 + idx_from) +. hidden_weights.(i * 768 + idx_capture)
+        done
+      end
+    end
+    else begin
+      let idx_to = 12 * to_ + (5 - piece) in
+      let idx_from = 12 * from + (5 - piece) in
+      if capture = 0 then begin
+        for i = 0 to n - 1 do
+          accumulator.(i) <- accumulator.(i) -. hidden_weights.(i * 768 + idx_to) +. hidden_weights.(i * 768 + idx_from)
+        done
+      end
+      else begin
+        let idx_capture = (12 * to_ + (capture - 1)) in
+        for i = 0 to n - 1 do
+          accumulator.(i) <- accumulator.(i) -. hidden_weights.(i * 768 + idx_to) +. hidden_weights.(i * 768 + idx_from) +. hidden_weights.(i * 768 + idx_capture)
+        done 
+      end
+    end
+  end
+  |Castling {sort} -> begin
+    match sort with
+    |1 ->
+      board.(62) <- 0;
+      board.(!from_white_king) <- 6;
+      board.(61) <- 0;
+      board.(!from_short_white_rook) <- 4;
+      for i = 0 to n - 1 do
+        accumulator.(i) <- accumulator.(i) -. hidden_weights.(i * 768 + 749) -. hidden_weights.(i * 768 + 735) +. hidden_weights.(i * 768 + !zobrist_from_white_king) +. hidden_weights.(i * 768 + !zobrist_from_short_white_rook)
+      done
+    |2 ->
+      board.(58) <- 0;
+      board.(!from_white_king) <- 6;
+      board.(59) <- 0;
+      board.(!from_long_white_rook) <- 4;
+      for i = 0 to n - 1 do
+        accumulator.(i) <- accumulator.(i) -. hidden_weights.(i * 768 + 701) -. hidden_weights.(i * 768 + 711) +. hidden_weights.(i * 768 + !zobrist_from_white_king) +. hidden_weights.(i * 768 + !zobrist_from_long_white_rook)
+      done
+    |3 ->
+      board.(6) <- 0;
+      board.(!from_black_king) <- (-6);
+      board.(5) <- 0;
+      board.(!from_short_black_rook) <- (-4);
+      for i = 0 to n - 1 do
+        accumulator.(i) <- accumulator.(i) -. hidden_weights.(i * 768 + 83) -. hidden_weights.(i * 768 + 69) +. hidden_weights.(i * 768 + !zobrist_from_black_king) +. hidden_weights.(i * 768 + !zobrist_from_short_black_rook)
+      done
+    |_ ->
+      board.(2) <- 0;
+      board.(!from_black_king) <- (-6);
+      board.(3) <- 0;
+      board.(!from_long_black_rook) <- (-4);
+      for i = 0 to n - 1 do
+        accumulator.(i) <- accumulator.(i) -. hidden_weights.(i * 768 + 35) -. hidden_weights.(i * 768 + 45) +. hidden_weights.(i * 768 + !zobrist_from_black_king) +. hidden_weights.(i * 768 + !zobrist_from_long_black_rook)
+      done
+  end
+  |Enpassant {from; to_} -> begin
+    if from < 32 then begin
+      board.(from) <- 1;
+      board.(to_) <- 0;
+      board.(to_ + 8) <- (-1);
+      let idx_to = 12 * to_ in
+      let idx_from = 12 * from in
+      let idx_capture = 12 * (to_ + 8) + 6 in
+      for i = 0 to n - 1 do
+        accumulator.(i) <- accumulator.(i) -. hidden_weights.(i * 768 + idx_to) +. hidden_weights.(i * 768 + idx_from) +. hidden_weights.(i * 768 + idx_capture)
+      done
+    end
+    else begin
+      board.(from) <- (-1);
+      board.(to_) <- 0;
+      board.(to_ - 8) <- 1;
+      let idx_to = 12 * to_ + 6 in
+      let idx_from = 12 * from + 6 in
+      let idx_capture = 12 * (to_ - 8) in
+      for i = 0 to n - 1 do
+        accumulator.(i) <- accumulator.(i) -. hidden_weights.(i * 768 + idx_to) +. hidden_weights.(i * 768 + idx_from) +. hidden_weights.(i * 768 + idx_capture)
+      done
+    end
+  end
+  |Promotion {from; to_; promotion; capture} -> begin
+    board.(from) <- if promotion > 0 then 1 else (-1);
+    board.(to_) <- capture;
+    if to_ < 8 then begin
+      let idx_to = 12 * to_ + (promotion - 1) in
+      let idx_from = 12 * from in
+      if capture = 0 then begin 
+        for i = 0 to n - 1 do
+          accumulator.(i) <- accumulator.(i) -. hidden_weights.(i * 768 + idx_to) +. hidden_weights.(i * 768 + idx_from)
+        done
+      end
+      else begin
+        let idx_capture = (12 * to_ + (5 - capture)) in
+        for i = 0 to n - 1 do
+          accumulator.(i) <- accumulator.(i) -. hidden_weights.(i * 768 + idx_to) +. hidden_weights.(i * 768 + idx_from) +. hidden_weights.(i * 768 + idx_capture)
+        done
+      end
+    end
+    else begin
+      let idx_to = 12 * to_ + (5 - promotion) in
+      let idx_from = 12 * from + 6 in
+      if capture = 0 then begin 
+        for i = 0 to n - 1 do
+          accumulator.(i) <- accumulator.(i) -. hidden_weights.(i * 768 + idx_to) +. hidden_weights.(i * 768 + idx_from)
+        done
+      end
+      else begin
+        let idx_capture = 12 * to_ + (capture - 1) in
+        for i = 0 to n - 1 do
+          accumulator.(i) <- accumulator.(i) -. hidden_weights.(i * 768 + idx_to) +. hidden_weights.(i * 768 + idx_from) +. hidden_weights.(i * 768 + idx_capture)
+        done
+      end
+    end
   end
   |Null -> ()
 

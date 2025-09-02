@@ -2,7 +2,6 @@
 
 open Board
 open Piece_square_tables
-open Generator
 
 (*Valeur des pièces pour l'évaluation*)
 let tabvalue = [|0; 10; 32; 33; 51; 88; 950|]
@@ -119,41 +118,6 @@ let traitement2 white_to_move material position =
     -. (100. *. material +. position)
   end
 
-let evolved board white_to_move king_position king_in_check (alpha : int) (beta : int) =
-  let _ = alpha, beta, king_position, king_in_check in
-  let tab_pieces = [|ref 0; ref 0; ref 0; ref 0; ref 0; ref 0|] in
-  let note_ouverture(*, note_mdj*), note_finale = ref 0(*, ref 0*), ref 0 in
-  let tab_phase = [|1; 1; 2; 4|] in
-  let material = ref 0 in
-  for i = 0 to 63 do
-    let piece = board.(i) in
-    if piece > 0 then begin
-      incr tab_pieces.(piece - 1);
-      material := !material + tabvalue.(piece);
-      note_ouverture := !note_ouverture + tab_pieces_blanches_ouverture.(piece - 1).(i);
-      (*note_mdj := !note_mdj + tab_pieces_blanches_mdg.(piece - 1).(i);*)
-      note_finale := !note_finale + tab_pieces_blanches_finale.(piece - 1).(i)
-    end
-    else if piece < 0 then begin
-      incr tab_pieces.(- piece - 1);
-      material := !material - tabvalue.(- piece);
-      note_ouverture := !note_ouverture - tab_pieces_noires_ouverture.(abs piece - 1).(i);
-      (*note_mdj := !note_mdj - tab_pieces_noires_mdg.(abs piece - 1).(i);*)
-      note_finale := !note_finale - tab_pieces_noires_finale.(abs piece - 1).(i)
-    end
-  done;
-  let phase = ref 0 in
-  for i = 1 to 4 do
-    phase := !phase + !(tab_pieces.(i)) * tab_phase.(i - 1)
-  done;
-  if !phase <= 2 then begin
-    0
-  end
-  else begin
-    let phase_2 = ((float_of_int !phase) *. 256. +. ((float_of_int !phase) /. 2.)) /. (float_of_int !phase) in
-    treatment white_to_move !material (int_of_float (((float_of_int !note_ouverture *. (256. -. phase_2)) +. ((float_of_int !note_finale *. phase_2) /. 256.)) /. 5.))
-  end
-
 (*Fonction indiquant si les deux tours d'un player son connectées*)
 let tours_connectees board player = 
   let b = ref false in
@@ -216,142 +180,105 @@ let roi_seul board =
 let finale board =
   pieces_esseulee board || roi_seul board
 
-open Zobrist
-
-let board_vector = Array.make 781 0
-
-let vector board white_to_move last_move (prb, grb, prn, grn) =
-  for i = 0 to 63 do
-    let piece = board.(i) in
-    if piece > 0 then begin
-      board_vector.(12 * i + (piece - 1)) <- 1
-    end
-    else if piece < 0 then begin
-      board_vector.(12 * i + (5 - piece)) <- 1
+let board_of_vector vector =
+  let tab_piece = [|1; 2; 3; 4; 5; 6; -1; -2; -3; -4; -5; -6|] in
+  let board = Array.make 64 0 in
+  for i = 0 to 767 do
+    if vector.(i) = 1. then begin
+      board.(i / 12) <- tab_piece.(i mod 12)
     end
   done;
-  if white_to_move then begin
-    board_vector.(768) <- 1
-  end;
-  if prb then begin
-    board_vector.(769) <- 1
-  end;
-  if grb then begin
-    board_vector.(770) <- 1
-  end;
-  if prn then begin
-    board_vector.(771) <- 1
-  end;
-  if grn then begin
-    board_vector.(772) <- 1
-  end;
-  let pep = column_ep last_move board in
-  if pep <> (-1) then begin
-    board_vector.(773 + pep) <- 1
-  end
+  board
 
-let new_vector move penultimate_move (aprb, agrb, aprn, agrn) (nprb, ngrb, nprn, ngrn) board =
-  let pep_adversaire = column_ep penultimate_move board in
-  if pep_adversaire <> (-1) then begin
-    board_vector.(773 + pep_adversaire) <- 0
+let print_matrix a m n =
+  for i = 0 to (m - 1) do
+    for j = 0 to (n - 1) do
+      print_string (string_of_float a.(i * n + j) ^ " ")
+    done;
+    print_newline ()
+  done
+
+let matrix_multiplication (a, m, n1) (b, n2, p) =
+  let c = Array.make (m * p) 0. in
+    for i = 0 to (m - 1) do
+      for j = 0 to (p - 1) do
+        c.(i * p + j) <-
+        let h = ref 0. in
+        for k = 0 to (n1 - 1) do
+          h := !h +. a.(i * n2 + k) *. b.(k * p + j)
+        done;
+        !h
+      done
+    done;
+  c
+
+let matrix_addition (a, m1, n1) (b, m2, n2) =
+  let c = Array.make (m1 * n1) 0. in
+  if m1 = m2 && n1 = n2 then begin
+    for i = 0 to (m1 * n1 - 1) do
+      c.(i) <- a.(i) +. b.(i)
+    done
   end;
-  if aprb <> nprb then begin
-    board_vector.(769) <- 0
-  end;
-  if agrb <> ngrb then begin
-    board_vector.(770) <- 0
-  end;
-  if aprn <> nprn then begin
-    board_vector.(771) <- 0
-  end;
-  if agrn <> ngrn then begin
-    board_vector.(772) <- 0
-  end;
-  match move with
-    |Normal {piece; from; to_; capture} -> begin
-      if (abs piece = 1 && abs (from - to_) = 16) && ((from mod 8 <> 0 && board.(to_ - 1) = - piece) || (from mod 8 <> 7 && board.(to_ + 1) = - piece)) then begin
-        board_vector.(773 + (from mod 8)) <- 1
-      end;
-      if piece > 0 then begin
-        if capture = 0 then begin
-          board_vector.(12 * from + (piece - 1)) <- 0;
-          board_vector.(12 * to_ + (piece - 1)) <- 1
-        end
-        else begin
-          board_vector.(12 * from + (piece - 1)) <- 0;
-          board_vector.(12 * to_ + (piece - 1)) <- 1;
-          board_vector.(12 * to_ + (5 - capture)) <- 0
-        end
+  c
+
+let matrix_multiplication_ones a b m n =
+  let tab = Array.make m 0. in
+    for i = 0 to n - 1 do
+      if b.(i) = 1. then begin
+        for j = 0 to m - 1 do
+          tab.(j) <- tab.(j) +. a.(j * n + i)
+        done
       end
-      else begin
-        if capture = 0 then begin
-          board_vector.(12 * from + (5 - piece)) <- 0;
-          board_vector.(12 * to_ + (5 - piece)) <- 1
-        end
-        else begin
-          board_vector.(12 * from + (5 - piece)) <- 0;
-          board_vector.(12 * to_ + (5 - piece)) <- 1;
-          board_vector.(12 * to_ + (capture - 1)) <- 0
-        end
-      end
-    end
-    |Castling {sort} -> begin (*ALERTE 960!!!!*)
-      match sort with
-      |1 ->
-        board_vector.(!zobrist_from_white_king) <- 0;
-        board_vector.(749) <- 1;
-        board_vector.(!zobrist_from_short_white_rook) <- 0;
-        board_vector.(735) <- 1
-      |2 ->
-        board_vector.(!zobrist_from_white_king) <- 0;
-        board_vector.(701) <- 1;
-        board_vector.(!zobrist_from_long_white_rook) <- 0;
-        board_vector.(711) <- 1
-      |3 ->
-        board_vector.(!zobrist_from_black_king) <- 0;
-        board_vector.(83) <- 1;
-        board_vector.(!zobrist_from_short_black_rook) <- 0;
-        board_vector.(69) <- 1
-      |_ ->
-        board_vector.(!zobrist_from_black_king) <- 0;
-        board_vector.(35) <- 1;
-        board_vector.(!zobrist_from_long_black_rook) <- 0;
-        board_vector.(45) <- 1
-    end
-    |Enpassant {from; to_} -> begin
-      if from < 32 then begin
-        board_vector.(12 * from) <- 0;
-        board_vector.(12 * to_) <- 1;
-        board_vector.(12 * (to_ + 8) + 6) <- 0
-      end
-      else begin
-        board_vector.(12 * from + 6) <- 0;
-        board_vector.(12 * to_ + 6) <- 1;
-        board_vector.(12 * (to_ - 8)) <- 0
-      end
-    end
-    |Promotion {from; to_; promotion; capture} -> begin
-      if to_ < 8 then begin
-        if capture = 0 then begin
-          board_vector.(12 * from) <- 0;
-          board_vector.(12 * to_ + (promotion - 1)) <- 1;
-        end
-        else begin
-          board_vector.(12 * from) <- 0;
-          board_vector.(12 * to_ + (promotion - 1)) <- 1;
-          board_vector.(12 * to_ + (5 - capture)) <- 0;
-        end
-      end
-      else begin
-        if capture = 0 then begin
-          board_vector.(12 * from + 6) <- 0;
-          board_vector.(12 * to_ + (5 - promotion)) <- 0;
-        end
-        else begin
-          board_vector.(12 * from + 6) <- 0;
-          board_vector.(12 * to_ + (5 - promotion)) <- 1;
-          board_vector.(12 * to_ + (capture - 1)) <- 0;
-        end
-      end
-    end
-    |Null -> ()
+    done;
+  tab
+
+let vector_addition a b m =
+  let c = Array.make m 0. in
+  for i = 0 to (m - 1) do
+    c.(i) <- a.(i) +. b.(i)
+  done;
+  c
+
+let make_accumulator_merdique x =
+ matrix_addition ((matrix_multiplication (hidden_weights, n, 768) (x, 768, 1)), n , 1) (hidden_bias, n, 1)
+
+let make_accumulator x =
+  vector_addition ((matrix_multiplication_ones hidden_weights x n 768)) (hidden_bias) n
+
+(**)
+let relu x = if x > 0. then x else 0.
+
+let make_hidden_layer x =
+  let tab = make_accumulator x in
+  for i = 0 to n - 1 do
+    tab.(i) <- relu tab.(i)
+  done;
+  tab
+
+let make_output_layer x =
+  (matrix_multiplication (output_weight, 1, n) (make_hidden_layer x, n, 1)).(0) +. output_bias
+
+let evaluate () =
+  let score = ref output_bias in
+  for i = 0 to n - 1 do
+    score := !score +. output_weight.(i) *. (if accumulator.(i) > 0. then accumulator.(i) else 0.)
+  done;
+  !score
+
+let () =
+  vector chessboard;
+  for i = 0 to (n * 768) - 1 do
+    hidden_weights.(i) <- (float_of_int i) *. 8. +. 3. *. (float_of_int (i * i))
+  done;
+  for i = 0 to n - 1 do
+    hidden_bias.(i) <- 3. *. (float_of_int i) -. 7. ;
+    output_weight.(i) <- (float_of_int i) *. -7. +. 2. *. (float_of_int (i * i))
+  done;
+  let acc = make_accumulator board_vector in
+  let hid = make_hidden_layer board_vector in
+  for i = 0 to n - 1 do
+    accumulator.(i) <- acc.(i);
+  done;
+  for i = 0 to n - 1 do
+    hidden_layer.(i) <- hid.(i)
+  done

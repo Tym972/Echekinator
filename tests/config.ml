@@ -25,7 +25,7 @@ let initial_in_check = ref false
 let initial_move_record = ref []
 let initial_board_record = ref [zobrist board true !last_move !castling_right]
 
-let fen_chain = see25
+let fen_chain = standard
 let move_list = ""
 
 let () = 
@@ -35,7 +35,7 @@ let () =
 
 let evaluation = eval1_q
 let depth = 8
-let perft_depth = 5
+let perft_depth = 6
 
 let player_legal_moves = legal_moves board !white_to_move !last_move !castling_right
 

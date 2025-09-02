@@ -18,9 +18,12 @@ let rec adapte_delta liste_coups = match liste_coups with
 
 let compteur_quiescent = ref 0
 
+(*open Evaluation*)
+
 (*Fonction implémentant la recherche quiescente*)
 let rec quiescence_search board white_to_move alpha beta evaluation cap depth king_position in_check = incr compteur_quiescent;
   let delta = evaluation board white_to_move king_position in_check alpha beta in
+  (*let _ = evaluate () in*)
   let best_score = ref delta in
   if depth = 0 then begin
     best_score := delta
@@ -36,12 +39,12 @@ let rec quiescence_search board white_to_move alpha beta evaluation cap depth ki
     let b = ref true in
     let alpha0 = ref (max delta alpha) in
     while (!b && !cps <> []) do
-      let coup = List.hd !cps in
-      make board coup;
+      let move = List.hd !cps in
+      make board move;
       cps := List.tl !cps;
       let new_to_move = not white_to_move in
       let opponent_king_position = index_array board (king new_to_move) in
-      let score = - quiescence_search board (not white_to_move) (- beta) (- !alpha0) evaluation (captures board new_to_move coup) (depth - 1) opponent_king_position (threatened board opponent_king_position new_to_move) 
+      let score = - quiescence_search board (not white_to_move) (- beta) (- !alpha0) evaluation (captures board new_to_move move) (depth - 1) opponent_king_position (threatened board opponent_king_position new_to_move) 
       in if score > !best_score then begin
         best_score := score;
         if score >= beta then begin
@@ -51,7 +54,7 @@ let rec quiescence_search board white_to_move alpha beta evaluation cap depth ki
           alpha0 := max !alpha0 score
         end
       end;
-      unmake board coup
+      unmake board move
     done
   end;
   !best_score

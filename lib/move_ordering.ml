@@ -137,7 +137,7 @@ let rec see board square white_to_move =
 
 let see_forced board move white_to_move =
   make board move;
-    let note = tabvalue.(abs (capture move)) - see board (to_ move) white_to_move in
+  let note = tabvalue.(abs (capture move)) - see board (to_ move) white_to_move in
   unmake board move;
   note
 

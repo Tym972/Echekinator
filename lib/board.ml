@@ -89,6 +89,35 @@ let chessboard = [|
   4; 2; 3; 5; 6; 3; 2; 4
   |]
 
+(**)
+let board_vector = Array.make 768 0.
+
+(**)
+let vector board =
+  for i = 0 to 767 do
+    board_vector.(i) <- 0.
+  done;
+  for i = 0 to 63 do
+    let piece = board.(i) in
+    if piece > 0 then begin
+      board_vector.(12 * i + (piece - 1)) <- 1.
+    end
+    else if piece < 0 then begin
+      board_vector.(12 * i + (5 - piece)) <- 1.
+    end
+  done
+
+(**)
+let n = 1556
+
+(**)
+let hidden_weights = Array.make (n * 768) 0.
+let hidden_bias = Array.make n 0.
+let output_weight = Array.make n 0.
+let output_bias = 0.054845188
+let accumulator = Array.make n 0.
+let hidden_layer = Array.make n 0.
+
 (*Array used in print_board*)
 let tab_print = [|"   |"; " P |"; " N |"; " B |"; " R |"; " Q |"; " K |"; " p |"; " n |"; " b |"; " r |"; " q |"; " k |"|]
 

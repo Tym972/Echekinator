@@ -34,7 +34,16 @@ let pv_length = Array.make max_pv_length 0
   |Promotion {from; to_; capture; promotion} -> board.(from) = (if promotion > 0 then 1 else -1) && board.(to_) = capture
   |Null -> false*)
 
+(*open Evaluation*)
+
 let rec pvs board white_to_move last_move castling_right board_record half_moves depth ply alpha beta evaluation zobrist_position ispv =
+  (*let bg = Array.copy accumulator in Array.blit bg 0 accumulator 0 n;*)
+  (*vector board;
+  if evaluate () <> make_output_layer board_vector then begin
+    (*print_endline (string_of_bool (board = board_of_vector board_vector));
+    print_board board; print_board (board_of_vector board_vector);*)
+    print_endline (string_of_float (evaluate ()) ^ " " ^ string_of_float (make_output_layer board_vector))
+  end; *)
   incr node_counter;
   if !stop_calculation || repetition board_record 3 then begin
     if ispv then begin
@@ -67,6 +76,7 @@ let rec pvs board white_to_move last_move castling_right board_record half_moves
           if not (in_check || ispv || !zugzwang) then begin
             if depth < 3 then begin
               let static_eval = evaluation board white_to_move king_position in_check alpha beta in
+              (*let _ = evaluate () in*)
               let eval_margin = 150 * depth in
               if static_eval - eval_margin >= !beta0 then begin
                 best_score := static_eval - eval_margin;
@@ -76,7 +86,7 @@ let rec pvs board white_to_move last_move castling_right board_record half_moves
             else begin
               let new_zobrist = new_zobrist Null last_move zobrist_position castling_right castling_right board in
               let new_record, new_half_moves = adapt_record new_zobrist Null depth board_record half_moves in
-              let score = - pvs board (not white_to_move) Null castling_right new_record new_half_moves (depth - 3) (ply + 3) (- !beta0) (- !alpha0) evaluation new_zobrist false
+              let score = - pvs board (not white_to_move) Null castling_right new_record new_half_moves (depth - 3) (ply + 1) (- !beta0) (- !alpha0) evaluation new_zobrist false
               in if score > !best_score then begin
                 best_score := score;
                 alpha0 := max !alpha0 score;
@@ -165,7 +175,7 @@ let rec pvs board white_to_move last_move castling_right board_record half_moves
                           end)
                           (depth - 1)
                       in if not (in_check || depth < 3 || reduction = 0) then begin
-                        - pvs board (not white_to_move) move new_castling_right new_record new_half_moves (depth - 1 - reduction) (ply + 1 + reduction) (- !alpha0 - 1) (- !alpha0) evaluation new_zobrist false
+                        - pvs board (not white_to_move) move new_castling_right new_record new_half_moves (depth - 1 - reduction) (ply + 1) (- !alpha0 - 1) (- !alpha0) evaluation new_zobrist false
                       end
                       else
                         !alpha0 + 1

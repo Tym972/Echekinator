@@ -4,6 +4,7 @@ open Libs.Fen
 open Config
 open Libs.Of_algebraic
 open Positions
+open Libs.Uci
 
 let rec algoperft board white_to_move last_move castling_right depth =
   if depth = 0 then begin

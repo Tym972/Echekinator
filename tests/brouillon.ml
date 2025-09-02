@@ -8,7 +8,95 @@ let () = ()
 open Libs.Board
 open Libs.Evaluation
 
-(*let mating_value = if alpha > 99000 then 99999 - ply else if beta < (-99000) then ply - 99999 else 0 in
+(*
+let new_vector move =
+  match move with
+    |Normal {piece; from; to_; capture} -> begin
+      if piece > 0 then begin
+        if capture = 0 then begin
+          board_vector.(12 * from + (piece - 1)) <- 0.;
+          board_vector.(12 * to_ + (piece - 1)) <- 1.
+        end
+        else begin
+          board_vector.(12 * from + (piece - 1)) <- 0.;
+          board_vector.(12 * to_ + (piece - 1)) <- 1.;
+          board_vector.(12 * to_ + (5 - capture)) <- 0.
+        end
+      end
+      else begin
+        if capture = 0 then begin
+          board_vector.(12 * from + (5 - piece)) <- 0.;
+          board_vector.(12 * to_ + (5 - piece)) <- 1.
+        end
+        else begin
+          board_vector.(12 * from + (5 - piece)) <- 0.;
+          board_vector.(12 * to_ + (5 - piece)) <- 1.;
+          board_vector.(12 * to_ + (capture - 1)) <- 0.
+        end
+      end
+    end
+    |Castling {sort} -> begin
+      match sort with
+      |1 ->
+        board_vector.(!zobrist_from_white_king) <- 0.;
+        board_vector.(749) <- 1.;
+        board_vector.(!zobrist_from_short_white_rook) <- 0.;
+        board_vector.(735) <- 1.
+      |2 ->
+        board_vector.(!zobrist_from_white_king) <- 0.;
+        board_vector.(701) <- 1.;
+        board_vector.(!zobrist_from_long_white_rook) <- 0.;
+        board_vector.(711) <- 1.
+      |3 ->
+        board_vector.(!zobrist_from_black_king) <- 0.;
+        board_vector.(83) <- 1.;
+        board_vector.(!zobrist_from_short_black_rook) <- 0.;
+        board_vector.(69) <- 1.
+      |_ ->
+        board_vector.(!zobrist_from_black_king) <- 0.;
+        board_vector.(35) <- 1.;
+        board_vector.(!zobrist_from_long_black_rook) <- 0.;
+        board_vector.(45) <- 1.
+    end
+    |Enpassant {from; to_} -> begin
+      if from < 32 then begin
+        board_vector.(12 * from) <- 0.;
+        board_vector.(12 * to_) <- 1.;
+        board_vector.(12 * (to_ + 8) + 6) <- 0.
+      end
+      else begin
+        board_vector.(12 * from + 6) <- 0.;
+        board_vector.(12 * to_ + 6) <- 1.;
+        board_vector.(12 * (to_ - 8)) <- 0.
+      end
+    end
+    |Promotion {from; to_; promotion; capture} -> begin
+      if to_ < 8 then begin
+        if capture = 0 then begin
+          board_vector.(12 * from) <- 0.;
+          board_vector.(12 * to_ + (promotion - 1)) <- 1.
+        end
+        else begin
+          board_vector.(12 * from) <- 0.;
+          board_vector.(12 * to_ + (promotion - 1)) <- 1.;
+          board_vector.(12 * to_ + (5 - capture)) <- 0.
+        end
+      end
+      else begin
+        if capture = 0 then begin
+          board_vector.(12 * from + 6) <- 0.;
+          board_vector.(12 * to_ + (5 - promotion)) <- 0.
+        end
+        else begin
+          board_vector.(12 * from + 6) <- 0.;
+          board_vector.(12 * to_ + (5 - promotion)) <- 1.;
+          board_vector.(12 * to_ + (capture - 1)) <- 0.
+        end
+      end
+    end
+    |Null -> ()
+
+let mating_value = if alpha > 99000 then 99999 - ply else if beta < (-99000) then ply - 99999 else 0 in
     if mating_value <> 0 then begin
       if mating_value > 0 && mating_value < beta then begin
         beta0 := mating_value;

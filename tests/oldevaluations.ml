@@ -1197,3 +1197,38 @@ let eval3 board white_to_move king_position king_in_check (alpha : int) (beta : 
   fp board position tab_finale;
   evaluation_double board white_to_move king_position king_in_check material position;
   treatment white_to_move !material !position
+
+let evolved board white_to_move king_position king_in_check (alpha : int) (beta : int) =
+  let _ = alpha, beta, king_position, king_in_check in
+  let tab_pieces = [|ref 0; ref 0; ref 0; ref 0; ref 0; ref 0|] in
+  let note_ouverture(*, note_mdj*), note_finale = ref 0(*, ref 0*), ref 0 in
+  let tab_phase = [|1; 1; 2; 4|] in
+  let material = ref 0 in
+  for i = 0 to 63 do
+    let piece = board.(i) in
+    if piece > 0 then begin
+      incr tab_pieces.(piece - 1);
+      material := !material + tabvalue.(piece);
+      note_ouverture := !note_ouverture + tab_pieces_blanches_ouverture.(piece - 1).(i);
+      (*note_mdj := !note_mdj + tab_pieces_blanches_mdg.(piece - 1).(i);*)
+      note_finale := !note_finale + tab_pieces_blanches_finale.(piece - 1).(i)
+    end
+    else if piece < 0 then begin
+      incr tab_pieces.(- piece - 1);
+      material := !material - tabvalue.(- piece);
+      note_ouverture := !note_ouverture - tab_pieces_noires_ouverture.(abs piece - 1).(i);
+      (*note_mdj := !note_mdj - tab_pieces_noires_mdg.(abs piece - 1).(i);*)
+      note_finale := !note_finale - tab_pieces_noires_finale.(abs piece - 1).(i)
+    end
+  done;
+  let phase = ref 0 in
+  for i = 1 to 4 do
+    phase := !phase + !(tab_pieces.(i)) * tab_phase.(i - 1)
+  done;
+  if !phase <= 2 then begin
+    0
+  end
+  else begin
+    let phase_2 = ((float_of_int !phase) *. 256. +. ((float_of_int !phase) /. 2.)) /. (float_of_int !phase) in
+    treatment white_to_move !material (int_of_float (((float_of_int !note_ouverture *. (256. -. phase_2)) +. ((float_of_int !note_finale *. phase_2) /. 256.)) /. 5.))
+  end
