@@ -73,23 +73,25 @@ let rec pvs board white_to_move last_move castling_right board_record half_moves
           best_score := quiescence_treatment_depth_0 ply evaluation board white_to_move last_move !alpha0 !beta0 king_position in_check
         end
         else begin
-          if not (in_check || ispv || !zugzwang) then begin
-            if depth < 3 then begin
-              let static_eval = evaluation board white_to_move king_position in_check alpha beta in
-              (*let _ = evaluate () in*)
-              let eval_margin = 150 * depth in
-              if static_eval - eval_margin >= !beta0 then begin
-                best_score := static_eval - eval_margin;
-                no_cut := false
+          if not (in_check || ispv) then begin
+            let static_eval = evaluation board white_to_move king_position in_check alpha beta in
+            (*let _ = evaluate () in*)
+            if not !zugzwang then begin
+              if depth < 3 then begin
+                let eval_margin = 150 * depth in
+                if static_eval - eval_margin >= !beta0 then begin
+                  best_score := static_eval - eval_margin;
+                  no_cut := false
+                end
               end
-            end
-            else begin
-              let new_zobrist = new_zobrist Null last_move zobrist_position castling_right castling_right board in
-              let new_record, new_half_moves = adapt_record new_zobrist Null depth board_record half_moves in
-              let score = - pvs board (not white_to_move) Null castling_right new_record new_half_moves (depth - 3) (ply + 1) (- !beta0) (- !alpha0) evaluation new_zobrist false
-              in if score >= !beta0 then begin
-                best_score := score;
-                no_cut := false;
+              else if static_eval >= !beta0 then begin
+                let new_zobrist = new_zobrist Null last_move zobrist_position castling_right castling_right board in
+                let new_record, new_half_moves = adapt_record new_zobrist Null depth board_record half_moves in
+                let score = - pvs board (not white_to_move) Null castling_right new_record new_half_moves (depth - 3) (ply + 1) (- !beta0) (- !alpha0) evaluation new_zobrist false
+                in if score >= !beta0 then begin
+                  best_score := score;
+                  no_cut := false;
+                end
               end
             end
           end;
