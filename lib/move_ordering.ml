@@ -382,10 +382,10 @@ let move_ordering board white_to_move last_move castling_right king_position in_
     end;*)
     if isquiet move then begin
       if killer_moves.(2 * ply) = move then begin
-        8000000
+        2000000
       end
       else if killer_moves.(2 * ply + 1) = move then begin
-        7000000
+        1000000
       end
       else begin
         history_moves.(4096 * aux_history white_to_move + 64 * from move + to_ move)
@@ -394,8 +394,8 @@ let move_ordering board white_to_move last_move castling_right king_position in_
     else begin
       let see_score = see_forced board move white_to_move in
       if see_score >= 0 then
-        9000000 + see_score
+        3000000 + see_score
       else
-        see_score - 1000000
+        see_score
     end
   in List.map snd (merge_sort (List.map (fun move -> (score move, move)) legal_moves))
