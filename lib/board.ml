@@ -208,6 +208,9 @@ let stop_calculation = ref false
 (*Node counter*)
 let node_counter = ref 0
 
+(*Node limit*)
+let node_limit = ref infinity
+
 (*TT entries tracker*)
 let transposition_counter = ref 0
 

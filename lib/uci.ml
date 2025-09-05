@@ -179,16 +179,18 @@ let monitor_time time control =
   control := true
 
 (*Fonction mettant en forme le score retourné*)
-let score score =
+let score score var_mate =
   if abs score < 99000 then begin
     Printf.sprintf "cp %i" (int_of_float (float_of_int (score) /. 10.))
   end
   else begin
     if score mod 2 = 0 then begin
-      Printf.sprintf "mate %i" (((99999 - score) / 2) + 1)
+      var_mate := (((99999 - score) / 2) + 1);
+      Printf.sprintf "mate %i" !var_mate
     end
     else begin
-      Printf.sprintf "mate -%i" (((99999 + score) / 2))
+      var_mate := (((99999 + score) / 2));
+      Printf.sprintf "mate -%i" !var_mate
     end
   end
 
@@ -267,8 +269,7 @@ let go instructions board white_to_move last_move castling_right king_position i
       let binc = ref 0. in
       let movestogo = ref 500. in
       let depth = ref max_depth in
-      let nodes = ref infinity in
-      let mate = ref false in
+      let mate = ref (-1) in
       let movetime = ref (-1.) in
       let rec aux_searchmoves list coups_valides_joueur = match list with
         |[] -> ()
@@ -288,8 +289,8 @@ let go instructions board white_to_move last_move castling_right king_position i
             |"binc" -> begin try binc := (float_of_string g) with _ -> () end
             |"movestogo" -> begin try movestogo := (float_of_string g) with _ -> () end
             |"depth" -> begin try depth := (int_of_string g) with _ -> () end
-            |"nodes" -> begin try nodes := (int_of_string g) with _ -> () end
-            |"mate" -> mate := true
+            |"nodes" -> begin try node_limit := (int_of_string g) with _ -> () end
+            |"mate" -> begin try mate := (int_of_string g) with _ -> () end
             |"movetime" -> begin
               try
                 movetime := (float_of_string g)
@@ -316,13 +317,14 @@ let go instructions board white_to_move last_move castling_right king_position i
       end;
       let best_score = ref "cp 0" in
       let pv = ref "" in
-      let var_depth = ref 0 in
-      while not !stop_calculation && !var_depth < !depth do
+      let var_depth = ref 0 in 
+      let var_mate = ref infinity in
+      while not !stop_calculation && !var_depth < !depth && !node_counter + 1 < !node_limit && !var_mate > !mate do
         incr var_depth;
         let new_score = pvs board white_to_move last_move castling_right board_record demi_coups !var_depth 0 (-infinity) infinity evaluation (List.hd board_record) true in
-        if not !stop_calculation then begin
+        if not (!stop_calculation || !node_counter > !node_limit) then begin
           let exec_time = Sys.time () -. start_time in
-          best_score := score new_score;
+          best_score := score new_score var_mate;
           pv := pv_finder !var_depth;
           print_endline (Printf.sprintf "info depth %i seldepth %i multipv 1 score %s nodes %i nps %i hashfull %i time %i pv %s" !var_depth !var_depth !best_score !node_counter (int_of_float (float_of_int !node_counter /. exec_time)) (int_of_float (1000. *. (float_of_int !transposition_counter /. (float_of_int transposition_size)))) (int_of_float (1000. *. exec_time)) !pv);
         end

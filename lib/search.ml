@@ -45,7 +45,7 @@ let rec pvs board white_to_move last_move castling_right board_record half_moves
     print_endline (string_of_float (evaluate ()) ^ " " ^ string_of_float (make_output_layer board_vector))
   end; *)
   incr node_counter;
-  if !stop_calculation || repetition board_record 3 then begin
+  if !stop_calculation || !node_counter >= !node_limit || repetition board_record 3 then begin
     if ispv then begin
       pv_length.(ply) <- 0
     end;
@@ -86,8 +86,7 @@ let rec pvs board white_to_move last_move castling_right board_record half_moves
               end
               else if static_eval >= !beta0 then begin
                 let new_zobrist = new_zobrist Null last_move zobrist_position castling_right castling_right board in
-                let new_record, new_half_moves = adapt_record new_zobrist Null depth board_record half_moves in
-                let score = - pvs board (not white_to_move) Null castling_right new_record new_half_moves (depth - 3) (ply + 1) (- !beta0) (- !alpha0) evaluation new_zobrist false
+                let score = - pvs board (not white_to_move) Null castling_right board_record half_moves (depth - 3) (ply + 1) (- !alpha0 - 1) (- !alpha0) evaluation new_zobrist false
                 in if score >= !beta0 then begin
                   best_score := score;
                   no_cut := false;
@@ -217,7 +216,7 @@ let rec pvs board white_to_move last_move castling_right board_record half_moves
           end
         end
       end;
-      if not !stop_calculation then begin
+      if not (!stop_calculation || !node_counter >= !node_limit) then begin
         let node_type =
           if !best_score <= alpha then begin
             All
