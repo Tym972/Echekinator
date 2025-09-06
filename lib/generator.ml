@@ -805,7 +805,7 @@ let castlings board white_to_move (white_short, white_long, black_short, black_l
   !l
 
 (*Fonction adaptant les droits aux roques en fonction du move*)
-let modification_roque move (white_short, white_long, black_short, black_long) =
+let castling_modification move (white_short, white_long, black_short, black_long) =
   if (white_short || white_long || black_short || black_long) then begin match move with
     |Normal {from; piece; to_; capture = _} ->
       if piece = 6 then begin
@@ -833,11 +833,11 @@ let modification_roque move (white_short, white_long, black_short, black_long) =
   end
 
 (*Fonction analysant l'historique pour détecter les roques impossibles, en renvoyant un quadruplet de booléens : petit castlings blanc, grands castlings blanc, petit castlings noir, grands castlings noir. Non utilisée*)
-let rec roques_possibles listes_coups = match listes_coups with
+let rec possivle_castlings listes_coups = match listes_coups with
   |[] -> true, true, true, true
   |h :: t ->
-    let prb1, grb1, prn1, grn1 = roques_possibles t in
-    let prb2, grb2, prn2, grn2 = modification_roque h (prb1, grb1, prn1, grn1) in
+    let prb1, grb1, prn1, grn1 = possivle_castlings t in
+    let prb2, grb2, prn2, grn2 = castling_modification h (prb1, grb1, prn1, grn1) in
     prb1 && prb2, grb1 && grb2, prn1 && prn2, grn1 && grn2
 
 (*Fonction construisant une list des prises en passant possible d'un joueur*)
@@ -1708,7 +1708,7 @@ let captures board white_to_move last_move =
 (*Fonction permettant de jouer un move en actualisant les variables d'états de la partie*)
 let make_move_1 board move white_to_move last_move castling_rights = 
   make board move;
-  castling_rights := modification_roque move !castling_rights;
+  castling_rights := castling_modification move !castling_rights;
   last_move := move;
   white_to_move := not !white_to_move
 
