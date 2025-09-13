@@ -1,5 +1,5 @@
 open Libs.Uci
-open Libs.Of_algebraic
+open Libs.Traduction
 
 (*Fonction permettant de lancer le moteur*)
 let launcher () =

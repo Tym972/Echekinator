@@ -367,8 +367,7 @@ let aux_history white_to_move =
 
 let g move = match move with |Normal _ -> true |_ -> false
 
-let move_ordering board white_to_move last_move castling_right king_position in_check ply =
-  let legal_moves = legal_moves board white_to_move last_move castling_right king_position in_check in
+let move_ordering board white_to_move player_moves ply =
   let score move =
     (*let copper = if g move then see_forced board move else 0 in*)
     (*if g move then begin
@@ -398,4 +397,4 @@ let move_ordering board white_to_move last_move castling_right king_position in_
       else
         see_score
     end
-  in List.map snd (merge_sort (List.map (fun move -> (score move, move)) legal_moves))
+  in List.map snd (merge_sort (List.map (fun move -> (score move, move)) player_moves))

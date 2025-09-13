@@ -4,12 +4,12 @@ open Libs.Zobrist
 open Libs.Generator
 open Libs.Transposition
 open Strategie2
-open Libs.To_algebraic
+open Libs.Traduction
 open Libs.Quiescence
 
 let rec negamax plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau profondeur evaluation = incr compteur_recherche;
   let best_score = ref (-99999) in
-  let best_move = ref Aucun in
+  let best_move = ref Null in
   if repetition releve_plateau 3 then begin incr compteur_noeuds_terminaux;
     best_score := 0
   end
@@ -49,7 +49,7 @@ let rec negamax plateau trait_aux_blancs dernier_coup droit_au_roque releve_plat
 (*Implémentation d'un algorithme de recherche minimax avec élagage alpha-bêta et negamax*)
 let rec negalphabeta_simple plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau profondeur profondeur_initiale alpha beta evaluation = incr compteur_recherche;
   let best_score = ref (-99999) in
-  let best_move = ref Aucun in
+  let best_move = ref Null in
   if repetition releve_plateau 3 then begin incr compteur_noeuds_terminaux;
     best_score := 0
   end
@@ -96,7 +96,7 @@ let rec negalphabeta_simple plateau trait_aux_blancs dernier_coup droit_au_roque
 
 let rec pvs plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau profondeur profondeur_initiale alpha beta evaluation =
   let alpha0 = ref alpha in
-  let best_move = ref Aucun in
+  let best_move = ref Null in
   if repetition releve_plateau 3 then begin incr compteur_noeuds_terminaux;
     alpha0 := 0
   end
@@ -163,7 +163,7 @@ let coups_joueur_idd_simple plateau profondeur profondeur_initiale trait_aux_bla
 
 let rec negalphabeta_idd_simple plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau profondeur profondeur_initiale alpha beta evaluation idd_candidat = incr compteur_recherche;
   let best_score = ref (-99999) in
-  let best_move = ref Aucun in
+  let best_move = ref Null in
   if repetition releve_plateau 3 then begin
     best_score := 0
   end
@@ -190,7 +190,7 @@ let rec negalphabeta_idd_simple plateau trait_aux_blancs dernier_coup droit_au_r
         let nouveau_droit_au_roque = modification_roque coup droit_au_roque in
         let nouveau_releve = adapte_releve plateau coup profondeur trait_aux_blancs nouveau_droit_au_roque releve_plateau
         in let score =
-          let note, _ = negalphabeta_idd_simple plateau (not trait_aux_blancs) coup nouveau_droit_au_roque nouveau_releve (profondeur - 1) profondeur_initiale (- beta) (- !alpha0) evaluation Aucun
+          let note, _ = negalphabeta_idd_simple plateau (not trait_aux_blancs) coup nouveau_droit_au_roque nouveau_releve (profondeur - 1) profondeur_initiale (- beta) (- !alpha0) evaluation Null
           in - note
         in if score > !best_score then begin
           best_score := score;
@@ -232,7 +232,7 @@ let idd_simple_print plateau trait_aux_blancs dernier_coup droit_au_roque releve
 
 let idd_trans_print plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau profondeur alpha beta evaluation =
   let score = ref 0 in
-  let move = ref Aucun in
+  let move = ref Null in
   for i = 1 to profondeur do
     let new_score, new_move = negalphabeta_trans plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau i i alpha beta evaluation (List.hd releve_plateau) in
     move := new_move;
@@ -243,7 +243,7 @@ let idd_trans_print plateau trait_aux_blancs dernier_coup droit_au_roque releve_
 
 let idd_total_print plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau profondeur alpha beta evaluation =
   let score = ref 0 in
-  let move = ref Aucun in
+  let move = ref Null in
   for i = 1 to profondeur do
     let new_score, new_move = negalphabeta_total plateau trait_aux_blancs dernier_coup droit_au_roque releve_plateau i i alpha beta evaluation (List.hd releve_plateau) in
     move := new_move;

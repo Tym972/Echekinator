@@ -23,10 +23,6 @@ let adapt_record zobrist_position move depth board_record half_moves =
     zobrist_position :: board_record, half_moves + 1
   end
 
-let max_pv_length = max_depth
-let pv_table = Array.make ((max_pv_length) * (max_pv_length + 1) / 2) Null
-let pv_length = Array.make max_pv_length 0
-
 (*let verif board move = match move with
   |Normal {piece; from; to_; capture} -> board.(from) = piece && board.(to_) = capture
   |Enpassant {from; to_} -> board.(from) = (if from < 32 then 1 else -1)  && board.(to_) = 0
@@ -104,7 +100,7 @@ let rec pvs board white_to_move last_move castling_right board_record half_moves
             in if score > !best_score then begin
               best_score := score;
               best_move := hash_move;
-              if ispv && not (!stop_calculation || !node_counter >= !node_limit) then begin
+              if ispv then begin
                 pv_table.(ply * (2 * max_pv_length + 1 - ply) / 2) <- !best_move;
                 for i = 1 to pv_length.(ply + 1) do
                   pv_table.(ply * (2 * max_pv_length + 1 - ply) / 2 + i) <- pv_table.((ply + 1) * (2 * max_pv_length - ply) / 2 + i - 1)
@@ -126,9 +122,9 @@ let rec pvs board white_to_move last_move castling_right board_record half_moves
           if !no_cut then begin
             let moves =
               if hash_ordering then
-                ref (List.filter (fun c -> c <> hash_move) (move_ordering board white_to_move last_move castling_right king_position in_check ply))
+                ref (List.filter (fun c -> c <> hash_move) (move_ordering board white_to_move (legal_moves board white_to_move last_move castling_right king_position in_check) ply))
               else
-                ref (move_ordering board white_to_move last_move castling_right king_position in_check ply)
+                ref (move_ordering board white_to_move (legal_moves board white_to_move last_move castling_right king_position in_check) ply)
             in if !moves = [] && not hash_ordering then begin
               if ispv then begin
                 pv_length.(ply) <- 0
@@ -192,7 +188,7 @@ let rec pvs board white_to_move last_move castling_right board_record half_moves
                 in if score > !best_score then begin
                   best_score := score;
                   best_move := move;
-                  if ispv && not (!stop_calculation || !node_counter >= !node_limit) then begin
+                  if ispv then begin
                     pv_table.(ply * (2 * max_pv_length + 1 - ply) / 2) <- !best_move;
                     for i = 1 to pv_length.(ply + 1) do
                       pv_table.(ply * (2 * max_pv_length + 1 - ply) / 2 + i) <- pv_table.((ply + 1) * (2 * max_pv_length - ply) / 2 + i - 1)
@@ -206,7 +202,7 @@ let rec pvs board white_to_move last_move castling_right board_record half_moves
                       history_moves.(4096 * aux_history white_to_move + 64 * from !best_move + to_ !best_move) <- depth * depth;
                       killer_moves.(2 * ply + 1) <- killer_moves.(2 * ply);
                       killer_moves.(2 * ply) <- !best_move;
-                    end;
+                    end
                   end
                 end;
                 unmake board move;
@@ -245,11 +241,29 @@ let rec pvs board white_to_move last_move castling_right board_record half_moves
     !best_score
   end
 
-let root_search board white_to_move last_move castling_right board_record half_moves king_position in_check depth evaluation zobrist_position first_move =
+let english_pieces_lowercase = [|""; "p"; "n"; "b"; "r"; "q"; "k"|]
+(*Fonction traduisant un move en sa notation UCI*)
+let uci_of_mouvement move = match move with
+  |Castling {sort} ->
+    let from_king, to_short, to_long, from_short_rook, from_long_rook = if sort < 3 then !from_white_king, 62, 58, !from_short_white_rook, !from_long_white_rook else !from_black_king, 6, 2, !from_short_black_rook, !from_long_black_rook in
+    let arrivee_roque, depart_tour = if sort mod 2 = 1 then to_short, from_short_rook else to_long, from_long_rook in
+    coord.(from_king) ^ coord.(if not !chess_960 then arrivee_roque else depart_tour)
+  |Promotion {from = _; to_ = _; capture = _; promotion} -> coord.(from move) ^ coord.(to_ move) ^ english_pieces_lowercase.(abs promotion)
+  |Null -> "0000"
+  |_ -> coord.(from move) ^ coord.(to_ move)
+
+let pv_finder depth =
+  let pv = ref "" in
+  for i = 0 to (min pv_length.(0) depth) - 1 do 
+    pv := !pv ^ (uci_of_mouvement pv_table.(i)) ^ " ";
+  done;
+  !pv
+
+let root_search board white_to_move last_move castling_right board_record half_moves in_check depth alpha beta evaluation zobrist_position first_move player_moves pv =
   incr node_counter;
   let no_cut = ref true in
-  let alpha0 = ref (-infinity) in
-  let beta0 = ref infinity in
+  let alpha0 = ref alpha in
+  let beta0 = ref beta in
   let best_score = ref (-infinity) in
   let best_move = ref Null in
   if first_move <> Null then begin
@@ -258,16 +272,15 @@ let root_search board white_to_move last_move castling_right board_record half_m
     let new_record, new_half_moves = adapt_record new_zobrist first_move depth board_record half_moves in
     make board first_move;
     let score = - pvs board (not white_to_move) first_move new_castling_right new_record new_half_moves (depth - 1) 1 (- !beta0) (- !alpha0) evaluation new_zobrist true
-    in if score > !best_score then begin
+    in if score > !best_score && not (!stop_calculation || !node_counter >= !node_limit) then begin
       best_score := score;
       best_move := first_move;
-      if not (!stop_calculation || !node_counter >= !node_limit) then begin
-        pv_table.(0) <- !best_move;
-        for i = 1 to pv_length.(1) do
-          pv_table.(i) <- pv_table.(max_pv_length + i - 1)
-        done;
-        pv_length.(0) <- pv_length.(1) + 1
-      end;
+      pv_table.(0) <- !best_move;
+      for i = 1 to pv_length.(1) do
+        pv_table.(i) <- pv_table.(max_pv_length + i - 1)
+      done;
+      pv_length.(0) <- pv_length.(1) + 1;
+      pv := pv_finder depth;
       alpha0 := max !alpha0 score;
       if score >= !beta0 then begin
         no_cut := false;
@@ -283,10 +296,11 @@ let root_search board white_to_move last_move castling_right board_record half_m
   if !no_cut then begin
     let moves =
       if first_move <> Null then
-        ref (List.filter (fun c -> c <> first_move) (move_ordering board white_to_move last_move castling_right king_position in_check 0))
+        ref (List.filter (fun c -> c <> first_move) (move_ordering board white_to_move player_moves 0))
       else
-        ref (move_ordering board white_to_move last_move castling_right king_position in_check 0)
-      in if !moves = [] && first_move = Null then begin
+        ref (move_ordering board white_to_move player_moves 0)
+      in
+    if !moves = [] && first_move = Null then begin
       pv_length.(0) <- 0;
       if in_check then begin
         best_score := - 99999
@@ -342,24 +356,23 @@ let root_search board white_to_move last_move castling_right board_record half_m
             else
               score_lmr
           end
-        in if score > !best_score then begin
+        in if score > !best_score && not (!stop_calculation || !node_counter >= !node_limit) then begin
           best_score := score;
           best_move := move;
-          if not (!stop_calculation || !node_counter >= !node_limit) then begin
-            pv_table.(0) <- !best_move;
-            for i = 1 to pv_length.(1) do
-              pv_table.(i) <- pv_table.(max_pv_length + i - 1)
-            done;
-            pv_length.(0) <- pv_length.(1) + 1
-          end;
+          pv_table.(0) <- !best_move;
+          for i = 1 to pv_length.(1) do
+            pv_table.(i) <- pv_table.(max_pv_length + i - 1)
+          done;
+          pv_length.(0) <- pv_length.(1) + 1;
+          pv := pv_finder depth;
           alpha0 := max !alpha0 score;
           if score >= !beta0 then begin
-          no_cut := false;
+            no_cut := false;
             if isquiet !best_move then begin
               history_moves.(4096 * aux_history white_to_move + 64 * from !best_move + to_ !best_move) <- depth * depth;
               killer_moves.(1) <- killer_moves.(0);
               killer_moves.(0) <- !best_move;
-            end;
+            end
           end
         end;
         unmake board move;

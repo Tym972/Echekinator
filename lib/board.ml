@@ -202,6 +202,15 @@ let infinity = 999999999
 (*Max depth reached by the search*)
 let max_depth = 255
 
+(**)
+let max_pv_length = max_depth
+
+(**)
+let pv_table = Array.make ((max_pv_length) * (max_pv_length + 1) / 2) Null
+
+(**)
+let pv_length = Array.make max_pv_length 0
+
 (*Variable used to forcefully stop the search*)
 let stop_calculation = ref false
 

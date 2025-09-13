@@ -265,3 +265,24 @@ let move_list_of_algebric_list algebraic_list initial_white_to_move initial_last
 (*Fonction convertissant la notation d'un string de coups notés algébriquement en une list de coups notés avec le type Mouvement*)
 let move_list_of_san san initial_white_to_move initial_last_move initial_castling_right start_position =
   move_list_of_algebric_list (algebric_list_of_san san) initial_white_to_move initial_last_move initial_castling_right start_position
+
+(*Tableau assoicant la valeur des pièces pour le moteur (indice) à leur notation algébrique anglaise*)
+let english_pieces_lowercase = [|""; "p"; "n"; "b"; "r"; "q"; "k"|]
+
+(*Fonction traduisant un move en sa notation UCI*)
+let uci_of_mouvement move = match move with
+  |Castling {sort} ->
+    let from_king, to_short, to_long, from_short_rook, from_long_rook = if sort < 3 then !from_white_king, 62, 58, !from_short_white_rook, !from_long_white_rook else !from_black_king, 6, 2, !from_short_black_rook, !from_long_black_rook in
+    let arrivee_roque, depart_tour = if sort mod 2 = 1 then to_short, from_short_rook else to_long, from_long_rook in
+    coord.(from_king) ^ coord.(if not !chess_960 then arrivee_roque else depart_tour)
+  |Promotion {from = _; to_ = _; capture = _; promotion} -> coord.(from move) ^ coord.(to_ move) ^ english_pieces_lowercase.(abs promotion)
+  |Null -> "0000"
+  |_ -> coord.(from move) ^ coord.(to_ move)
+
+(**)
+let pv_finder depth =
+  let pv = ref "" in
+  for i = 0 to (min pv_length.(0) depth) - 1 do 
+    pv := !pv ^ (uci_of_mouvement pv_table.(i)) ^ " ";
+  done;
+  !pv

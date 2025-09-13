@@ -833,10 +833,10 @@ let castling_modification move (white_short, white_long, black_short, black_long
   end
 
 (*Fonction analysant l'historique pour détecter les roques impossibles, en renvoyant un quadruplet de booléens : petit castlings blanc, grands castlings blanc, petit castlings noir, grands castlings noir. Non utilisée*)
-let rec possivle_castlings listes_coups = match listes_coups with
+let rec possible_castlings listes_coups = match listes_coups with
   |[] -> true, true, true, true
   |h :: t ->
-    let prb1, grb1, prn1, grn1 = possivle_castlings t in
+    let prb1, grb1, prn1, grn1 = possible_castlings t in
     let prb2, grb2, prn2, grn2 = castling_modification h (prb1, grb1, prn1, grn1) in
     prb1 && prb2, grb1 && grb2, prn1 && prn2, grn1 && grn2
 
