@@ -57,13 +57,14 @@ let score_node node_type = match node_type with
 
 let store tt key node_type depth value move generation =
   let index = key mod transposition_size in
-  let _, old_node_type, old_depth, _, _, old_generation = tt.(index) in
+  let old_key, old_node_type, old_depth, _, old_best_move, old_generation = tt.(index) in
   if old_depth = (-1) then begin
     tt.(index) <- (key, node_type, depth, value, move, generation);
     incr transposition_counter
   end
-  else if !go_counter - old_generation > 5 || depth > old_depth || depth = old_depth && score_node node_type > score_node old_node_type then begin
-    tt.(index) <- (key, node_type, depth, value, move, generation)
+  else if (!go_counter - old_generation > 5) || (depth > old_depth) || (depth = old_depth && score_node node_type > score_node old_node_type) then begin
+    let stored_move = if move = Null && key = old_key then old_best_move else move in
+    tt.(index) <- (key, node_type, depth, value, stored_move, generation)
   end
 
 let probe tt key =

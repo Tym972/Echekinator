@@ -99,13 +99,15 @@ let rec pvs board white_to_move last_move castling_right board_record half_moves
             let score = - pvs board (not white_to_move) hash_move new_castling_right new_record new_half_moves (depth - 1) (ply + 1) (- !beta0) (- !alpha0) evaluation new_zobrist ispv
             in if score > !best_score then begin
               best_score := score;
-              best_move := hash_move;
-              if ispv then begin
-                pv_table.(ply * (2 * max_pv_length + 1 - ply) / 2) <- !best_move;
-                for i = 1 to pv_length.(ply + 1) do
-                  pv_table.(ply * (2 * max_pv_length + 1 - ply) / 2 + i) <- pv_table.((ply + 1) * (2 * max_pv_length - ply) / 2 + i - 1)
-                done;
-                pv_length.(ply) <- pv_length.(ply + 1) + 1
+              if score > !alpha0 then begin
+                best_move := hash_move;
+                if ispv then begin
+                  pv_table.(ply * (2 * max_pv_length + 1 - ply) / 2) <- !best_move;
+                  for i = 1 to pv_length.(ply + 1) do
+                    pv_table.(ply * (2 * max_pv_length + 1 - ply) / 2 + i) <- pv_table.((ply + 1) * (2 * max_pv_length - ply) / 2 + i - 1)
+                  done;
+                  pv_length.(ply) <- pv_length.(ply + 1) + 1
+                end
               end;
               alpha0 := max !alpha0 score;
               if score >= !beta0 then begin
@@ -187,13 +189,15 @@ let rec pvs board white_to_move last_move castling_right board_record half_moves
                   end
                 in if score > !best_score then begin
                   best_score := score;
-                  best_move := move;
-                  if ispv then begin
-                    pv_table.(ply * (2 * max_pv_length + 1 - ply) / 2) <- !best_move;
-                    for i = 1 to pv_length.(ply + 1) do
-                      pv_table.(ply * (2 * max_pv_length + 1 - ply) / 2 + i) <- pv_table.((ply + 1) * (2 * max_pv_length - ply) / 2 + i - 1)
-                    done;
-                    pv_length.(ply) <- pv_length.(ply + 1) + 1
+                  if score > !alpha0 then begin
+                    best_move := move;
+                    if ispv then begin
+                      pv_table.(ply * (2 * max_pv_length + 1 - ply) / 2) <- !best_move;
+                      for i = 1 to pv_length.(ply + 1) do
+                        pv_table.(ply * (2 * max_pv_length + 1 - ply) / 2 + i) <- pv_table.((ply + 1) * (2 * max_pv_length - ply) / 2 + i - 1)
+                      done;
+                      pv_length.(ply) <- pv_length.(ply + 1) + 1
+                    end
                   end;
                   alpha0 := max !alpha0 score;
                   if score >= !beta0 then begin
@@ -215,6 +219,9 @@ let rec pvs board white_to_move last_move castling_right board_record half_moves
       if not (!stop_calculation || !node_counter >= !node_limit) then begin
         let node_type =
           if !best_score <= alpha then begin
+            if ispv then begin
+              pv_length.(ply) <- 0
+            end;
             All
           end
           else if !best_score >= beta then begin
@@ -358,13 +365,15 @@ let root_search board white_to_move last_move castling_right board_record half_m
           end
         in if score > !best_score && not (!stop_calculation || !node_counter >= !node_limit) then begin
           best_score := score;
-          best_move := move;
-          pv_table.(0) <- !best_move;
-          for i = 1 to pv_length.(1) do
-            pv_table.(i) <- pv_table.(max_pv_length + i - 1)
-          done;
-          pv_length.(0) <- pv_length.(1) + 1;
-          pv := pv_finder depth;
+          if score > !alpha0 || (!counter = 0 && first_move = Null) then begin
+            best_move := move;
+            pv_table.(0) <- !best_move;
+            for i = 1 to pv_length.(1) do
+              pv_table.(i) <- pv_table.(max_pv_length + i - 1)
+            done;
+            pv_length.(0) <- pv_length.(1) + 1;
+            pv := pv_finder depth
+          end;
           alpha0 := max !alpha0 score;
           if score >= !beta0 then begin
             no_cut := false;

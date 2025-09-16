@@ -338,11 +338,9 @@ let go instructions board white_to_move last_move castling_right king_position i
             print_ponder := (try (List.nth (word_detection !pv) 1) with _ -> "0000");
             let bound = 
               if new_score <= !alpha then begin
-                pv := !print_bestmove ^ " " ^ !print_ponder;
                 " upperbound"
               end
               else if new_score >= !beta then begin
-                pv := !print_bestmove ^ " " ^ !print_ponder;
                 " lowerbound"
               end
               else begin
