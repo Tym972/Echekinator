@@ -32,7 +32,7 @@ let adapt_record zobrist_position move depth board_record half_moves =
 
 (*open Evaluation*)
 
-let rec pvs board white_to_move last_move castling_right board_record half_moves depth ply alpha beta evaluation zobrist_position ispv =
+let rec pvs board white_to_move last_move castling_rights board_record half_moves depth ply alpha beta evaluation zobrist_position ispv =
   (*let bg = Array.copy accumulator in Array.blit bg 0 accumulator 0 n;*)
   (*vector board;
   if evaluate () <> make_output_layer board_vector then begin
@@ -66,11 +66,11 @@ let rec pvs board white_to_move last_move castling_right board_record half_moves
         let king_position = index_array board (king white_to_move) in
         let in_check = threatened board king_position white_to_move in
         if depth = 0 then begin
-          best_score := quiescence_treatment_depth_0 ply evaluation board white_to_move last_move !alpha0 !beta0 king_position in_check
+          best_score := quiescence_treatment_depth_0 ply evaluation board white_to_move last_move castling_rights half_moves !alpha0 !beta0 king_position in_check
         end
         else begin
           if not (in_check || ispv) then begin
-            let static_eval = evaluation board white_to_move king_position in_check alpha beta in
+            let static_eval = evaluation board white_to_move in
             (*let _ = evaluate () in*)
             if not !zugzwang then begin
               if depth < 3 then begin
@@ -81,8 +81,8 @@ let rec pvs board white_to_move last_move castling_right board_record half_moves
                 end
               end
               else if static_eval >= !beta0 then begin
-                let new_zobrist = new_zobrist Null last_move zobrist_position castling_right castling_right board in
-                let score = - pvs board (not white_to_move) Null castling_right board_record half_moves (depth - 3) (ply + 1) (- !alpha0 - 1) (- !alpha0) evaluation new_zobrist false
+                let new_zobrist = new_zobrist Null last_move zobrist_position castling_rights castling_rights board in
+                let score = - pvs board (not white_to_move) Null castling_rights board_record half_moves (depth - 3) (ply + 1) (- !alpha0 - 1) (- !alpha0) evaluation new_zobrist false
                 in if score >= !beta0 then begin
                   best_score := score;
                   no_cut := false;
@@ -92,8 +92,8 @@ let rec pvs board white_to_move last_move castling_right board_record half_moves
           end;
           let hash_ordering = !no_cut && hash_move <> Null (*&& verif board hash_move*) in
           if hash_ordering then begin
-            let new_castling_right = castling_modification hash_move castling_right in
-            let new_zobrist = new_zobrist hash_move last_move zobrist_position castling_right new_castling_right board in
+            let new_castling_right = castling_modification hash_move castling_rights in
+            let new_zobrist = new_zobrist hash_move last_move zobrist_position castling_rights new_castling_right board in
             let new_record, new_half_moves = adapt_record new_zobrist hash_move depth board_record half_moves in
             make board hash_move;
             let score = - pvs board (not white_to_move) hash_move new_castling_right new_record new_half_moves (depth - 1) (ply + 1) (- !beta0) (- !alpha0) evaluation new_zobrist ispv
@@ -124,9 +124,9 @@ let rec pvs board white_to_move last_move castling_right board_record half_moves
           if !no_cut then begin
             let moves =
               if hash_ordering then
-                ref (List.filter (fun c -> c <> hash_move) (move_ordering board white_to_move (legal_moves board white_to_move last_move castling_right king_position in_check) ply))
+                ref (List.filter (fun c -> c <> hash_move) (move_ordering board white_to_move (legal_moves board white_to_move last_move castling_rights king_position in_check) ply))
               else
-                ref (move_ordering board white_to_move (legal_moves board white_to_move last_move castling_right king_position in_check) ply)
+                ref (move_ordering board white_to_move (legal_moves board white_to_move last_move castling_rights king_position in_check) ply)
             in if !moves = [] && not hash_ordering then begin
               if ispv then begin
                 pv_length.(ply) <- 0
@@ -148,8 +148,8 @@ let rec pvs board white_to_move last_move castling_right board_record half_moves
               let counter = ref 0 in
               while (!no_cut && !moves <> []) do
                 let move = List.hd !moves in
-                let new_castling_right = castling_modification move castling_right in
-                let new_zobrist = new_zobrist move last_move zobrist_position castling_right new_castling_right board in
+                let new_castling_right = castling_modification move castling_rights in
+                let new_zobrist = new_zobrist move last_move zobrist_position castling_rights new_castling_right board in
                 let new_record, new_half_moves = adapt_record new_zobrist move depth board_record half_moves in
                 make board move;
                 moves := List.tl !moves;
@@ -256,17 +256,17 @@ let uci_of_mouvement move = match move with
     let arrivee_roque, depart_tour = if sort mod 2 = 1 then to_short, from_short_rook else to_long, from_long_rook in
     coord.(from_king) ^ coord.(if not !chess_960 then arrivee_roque else depart_tour)
   |Promotion {from = _; to_ = _; capture = _; promotion} -> coord.(from move) ^ coord.(to_ move) ^ english_pieces_lowercase.(abs promotion)
-  |Null -> "0000"
+  |Null -> "(none)"
   |_ -> coord.(from move) ^ coord.(to_ move)
 
 let pv_finder depth =
-  let pv = ref "" in
+  let pv = ref [] in
   for i = 0 to (min pv_length.(0) depth) - 1 do 
-    pv := !pv ^ (uci_of_mouvement pv_table.(i)) ^ " ";
+    pv := !pv @ [pv_table.(i)];
   done;
   !pv
 
-let root_search board white_to_move last_move castling_right board_record half_moves in_check depth alpha beta evaluation zobrist_position first_move player_moves pv =
+let root_search board white_to_move last_move castling_rights board_record half_moves in_check depth alpha beta evaluation zobrist_position first_move player_moves short_pv_table multi =
   incr node_counter;
   let no_cut = ref true in
   let alpha0 = ref alpha in
@@ -274,8 +274,8 @@ let root_search board white_to_move last_move castling_right board_record half_m
   let best_score = ref (-infinity) in
   let best_move = ref Null in
   if first_move <> Null then begin
-    let new_castling_right = castling_modification first_move castling_right in
-    let new_zobrist = new_zobrist first_move last_move zobrist_position castling_right new_castling_right board in
+    let new_castling_right = castling_modification first_move castling_rights in
+    let new_zobrist = new_zobrist first_move last_move zobrist_position castling_rights new_castling_right board in
     let new_record, new_half_moves = adapt_record new_zobrist first_move depth board_record half_moves in
     make board first_move;
     let score = - pvs board (not white_to_move) first_move new_castling_right new_record new_half_moves (depth - 1) 1 (- !beta0) (- !alpha0) evaluation new_zobrist true
@@ -287,7 +287,7 @@ let root_search board white_to_move last_move castling_right board_record half_m
         pv_table.(i) <- pv_table.(max_pv_length + i - 1)
       done;
       pv_length.(0) <- pv_length.(1) + 1;
-      pv := pv_finder depth;
+      short_pv_table.(multi) <- pv_finder depth;
       alpha0 := max !alpha0 score;
       if score >= !beta0 then begin
         no_cut := false;
@@ -324,8 +324,8 @@ let root_search board white_to_move last_move castling_right board_record half_m
       let counter = ref 0 in
       while (!no_cut && !moves <> []) do
         let move = List.hd !moves in
-        let new_castling_right = castling_modification move castling_right in
-        let new_zobrist = new_zobrist move last_move zobrist_position castling_right new_castling_right board in
+        let new_castling_right = castling_modification move castling_rights in
+        let new_zobrist = new_zobrist move last_move zobrist_position castling_rights new_castling_right board in
         let new_record, new_half_moves = adapt_record new_zobrist move depth board_record half_moves in
         make board move;
         moves := List.tl !moves;
@@ -372,7 +372,7 @@ let root_search board white_to_move last_move castling_right board_record half_m
               pv_table.(i) <- pv_table.(max_pv_length + i - 1)
             done;
             pv_length.(0) <- pv_length.(1) + 1;
-            pv := pv_finder depth
+            short_pv_table.(multi) <- pv_finder depth
           end;
           alpha0 := max !alpha0 score;
           if score >= !beta0 then begin

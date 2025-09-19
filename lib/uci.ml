@@ -31,11 +31,6 @@ let lire_entree message suppression =
   else
     entree
 
-(*Fonction transformant une list de string en string*)
-let rec string_of_list list = match list with
-  |[] -> ""
-  |h :: t -> h ^ " " ^ string_of_list t
-
 (*Fonction renvoyant le relevé des positions actualisé*)
 let new_board_record last_move board_record board white_to_move castling_rights =
   if is_irreversible last_move then begin
@@ -168,7 +163,7 @@ let position instructions board white_to_move last_move castling_right king_posi
       in position_of_fen (aux_fen (pop instructions 2)) start_position initial_white_to_move initial_last_move initial_castling_right initial_king_position initial_in_check initial_moves_record initial_board_record;
       reset board white_to_move last_move castling_right king_position in_check moves_record board_record start_position !initial_white_to_move !initial_last_move !initial_castling_right !initial_king_position !initial_in_check !initial_moves_record !initial_board_record;
       if ((List.length instructions) > !index_moves && List.nth instructions !index_moves = "moves") then begin
-        let reverse_historique = move_list_of_san (string_of_list (pop instructions (!index_moves + 1))) !initial_white_to_move !initial_last_move !initial_castling_right board in
+        let reverse_historique = move_list_of_san (String.concat " " (pop instructions (!index_moves + 1))) !initial_white_to_move !initial_last_move !initial_castling_right board in
         make_list reverse_historique board last_move moves_record board_record castling_right king_position in_check white_to_move
       end
     end
@@ -244,122 +239,163 @@ let go instructions board white_to_move last_move castling_right king_position i
     |_ ->
       let commands = ["searchmoves"; "ponder"; "wtime"; "btime"; "winc"; "binc"; "movestogo"; "depth"; "nodes"; "mate"; "movetime"; "infinite"] in
       let searchmoves = ref (legal_moves board white_to_move last_move castling_right king_position in_check) in
-      let first_move = Array.make max_multipv Null in
-      let _, _, _, move = probe transposition_table zobrist_position in
-      first_move.(0) <- move;
-      let is_pondering = ref false in
-      let wtime = ref (float_of_int infinity) in
-      let btime = ref (float_of_int infinity) in
-      let winc = ref 0. in
-      let binc = ref 0. in
-      let movestogo = ref 500. in
-      let depth = ref max_depth in
-      let mate = ref (-1) in
-      let movetime = ref (-1.) in
-      let aux_searchmoves list  =
-        let new_list = ref [] in
-        let control = ref true in
-        let rec func list = match list with
-          |h::t when !control ->
-            let move = tolerance board h white_to_move !searchmoves in
-            if List.mem move !searchmoves then begin
-              new_list := move :: !new_list;
+      if !searchmoves = [] then begin
+        let result = if in_check then "mate" else "cp" in
+        print_endline (Printf.sprintf "info depth 0 score %s 0" result);
+        print_endline "bestmove (none)"
+      end
+      else begin
+        let is_pondering = ref false in
+        let wtime = ref (float_of_int infinity) in
+        let btime = ref (float_of_int infinity) in
+        let winc = ref 0. in
+        let binc = ref 0. in
+        let movestogo = ref 500. in
+        let depth = ref max_depth in
+        let mate = ref (-1) in
+        let movetime = ref (-1.) in
+        let aux_searchmoves list  =
+          let new_list = ref [] in
+          let control = ref true in
+          let rec func list = match list with
+            |h::t when !control ->
+              let move = tolerance board h white_to_move !searchmoves in
+              if List.mem move !searchmoves then begin
+                new_list := move :: !new_list
+              end
+              else if List.mem h commands then begin
+                control := false
+              end;
               func t
-            end
-            else if List.mem h commands then begin
-              control := false
-            end
-          |_ -> ()
-        in func list;
-        searchmoves := !new_list
-      in let rec aux instruction = match instruction with
-        |h :: g :: t ->
-          begin match h with
-            |"searchmoves" -> aux_searchmoves (g :: t)
-            |"ponder" -> begin is_pondering := true end
-            |"wtime" -> begin try wtime := (float_of_string g) with _ -> () end
-            |"btime" -> begin try btime := (float_of_string g) with _ -> () end
-            |"winc" -> begin try winc := (float_of_string g) with _ -> () end
-            |"binc" -> begin try binc := (float_of_string g) with _ -> () end
-            |"movestogo" -> begin try movestogo := (float_of_string g) with _ -> () end
-            |"depth" -> begin try depth := (int_of_string g) with _ -> () end
-            |"nodes" -> begin try node_limit := (int_of_string g) with _ -> () end
-            |"mate" -> begin try mate := (int_of_string g) with _ -> () end
-            |"movetime" -> begin
-              try
-                movetime := (float_of_string g)
-              with _ -> () end
             |_ -> ()
-        end;
-        aux (g :: t)
-        |_ -> ()
-      in aux instructions;
-      search_time :=
-        if !movetime > 0. then begin
-          !movetime
-        end
-        else begin
-          if white_to_move then begin
-            (if !wtime > !winc then !wtime +. !winc else !wtime) /. (min !movestogo !horizon)
+          in func list;
+          searchmoves := !new_list;
+          if !searchmoves = [] then begin
+            stop_calculation := true
+          end
+        in let rec aux instruction = match instruction with
+          |h :: g :: t ->
+            begin match h with
+              |"searchmoves" -> aux_searchmoves (g :: t)
+              |"ponder" -> begin is_pondering := true end
+              |"wtime" -> begin try wtime := (float_of_string g) with _ -> () end
+              |"btime" -> begin try btime := (float_of_string g) with _ -> () end
+              |"winc" -> begin try winc := (float_of_string g) with _ -> () end
+              |"binc" -> begin try binc := (float_of_string g) with _ -> () end
+              |"movestogo" -> begin try movestogo := (float_of_string g) with _ -> () end
+              |"depth" -> begin try depth := (int_of_string g) with _ -> () end
+              |"nodes" -> begin try node_limit := (int_of_string g) with _ -> () end
+              |"mate" -> begin try mate := (int_of_string g) with _ -> () end
+              |"movetime" -> begin
+                try
+                  movetime := (float_of_string g)
+                with _ -> () end
+              |_ -> ()
+          end;
+          aux (g :: t)
+          |_ -> ()
+        in aux instructions; 
+        search_time :=
+          if !movetime > 0. then begin
+            !movetime
           end
           else begin
-            (if !btime > !binc then !btime +. !binc else !btime) /. (min !movestogo !horizon)
-          end
-        end;
-      if not !is_pondering then begin
-        let _ = Thread.create (fun () -> monitor_time !search_time stop_calculation) () in ()
-      end;
-      let best_score = ref "cp 0" in
-      let pv = ref "" in
-      let var_depth = ref 0 in 
-      let var_mate = ref infinity in
-      let alpha = ref (-infinity) in
-      let beta = ref infinity in
-      let print_bestmove = ref "0000" in
-      let print_ponder = ref "0000" in
-      while not !stop_calculation && !var_depth < !depth && !node_counter + 1 < !node_limit && !var_mate > !mate do
-        incr var_depth;
-        let searchmoves_copy = ref !searchmoves in
-        for multi = 1 to !multipv do
-          let new_score =
-            let score = ref (root_search board white_to_move last_move castling_right board_record half_moves in_check !var_depth !alpha !beta evaluation zobrist_position first_move.(multi - 1) !searchmoves_copy pv) in
-            while not (!stop_calculation || !node_counter > !node_limit || (!score > !alpha && !score < !beta)) do
-              if !score <= !alpha then begin
-                alpha := - infinity
-              end
-              else if !score >= !beta then begin
-                beta := infinity
-              end;
-              score := root_search board white_to_move last_move castling_right board_record half_moves in_check !var_depth !alpha !beta evaluation zobrist_position first_move.(multi - 1) !searchmoves_copy pv;
-            done;
-            !score
-          in if new_score > (-infinity) then begin
-            print_bestmove := (try (List.nth (word_detection !pv) 0) with _ -> "0000");
-            print_ponder := (try (List.nth (word_detection !pv) 1) with _ -> "0000");
-            let bound = 
-              if new_score <= !alpha then begin
-                " upperbound"
-              end
-              else if new_score >= !beta then begin
-                " lowerbound"
-              end
-              else begin
-                ""
-              end
-            in 
-            alpha := new_score - 25;
-            beta := new_score + 25;
-            best_score := score new_score var_mate ^ bound;
-            let exec_time = Sys.time () -. start_time in
-            print_endline (Printf.sprintf "info depth %i seldepth %i multipv %i score %s nodes %i nps %i hashfull %i time %i pv %s" !var_depth !var_depth multi !best_score !node_counter (int_of_float (float_of_int !node_counter /. exec_time)) (int_of_float (1000. *. (float_of_int !transposition_counter /. (float_of_int transposition_size)))) (int_of_float (1000. *. exec_time)) !pv);
-            first_move.(multi - 1) <- pv_table.(0);
-            if !multipv - multi > 0 then begin
-              searchmoves_copy := List.filter (fun move -> move <> pv_table.(0)) !searchmoves_copy; print_endline (string_of_int (List.length !searchmoves_copy))
+            if white_to_move then begin
+              (if !wtime > !winc then !wtime +. !winc else !wtime) /. (min !movestogo !horizon)
             end
-          end
-        done
-      done;
-      print_endline (Printf.sprintf "bestmove %s ponder %s" !print_bestmove !print_ponder)
+            else begin
+              (if !btime > !binc then !btime +. !binc else !btime) /. (min !movestogo !horizon)
+            end
+          end;
+        if not !is_pondering then begin
+          let _ = Thread.create (fun () -> monitor_time !search_time stop_calculation) () in ()
+        end;
+        pv_table.(0) <- (let _, _, _, move = probe transposition_table zobrist_position in move);
+        let number_of_pv = min !multipv (List.length !searchmoves) in
+        let print_score_table = Array.make number_of_pv "cp 0" in
+        let short_pv_table = Array.make number_of_pv [] in
+        let alpha_table = Array.make number_of_pv (-infinity) in
+        let beta_table = Array.make number_of_pv infinity in
+        let reached_depth_table = Array.make number_of_pv 0 in
+        let info_table = Array.make number_of_pv ((-1), 0, 0) in
+        let var_depth = ref 0 in 
+        let var_mate = ref infinity in
+        let info = ref [] in
+        while not !stop_calculation && !var_depth < !depth && !node_counter + 1 < !node_limit && !var_mate > !mate do
+          incr var_depth;
+          let searchmoves_copy = ref !searchmoves in
+          for multi = 0 to (number_of_pv - 1) do
+            let first_move =
+              let acc = ref Null in
+              let counter = ref 0 in
+              while !acc = Null && !counter < number_of_pv do
+                let candidate = try List.hd short_pv_table.(!counter) with _ -> Null in
+                if List.mem candidate !searchmoves_copy then begin
+                  acc := candidate
+                end;
+                incr counter
+              done;
+              !acc
+            in let new_score =
+              let score = ref (root_search board white_to_move last_move castling_right board_record half_moves in_check !var_depth alpha_table.(multi) beta_table.(multi) evaluation zobrist_position first_move !searchmoves_copy short_pv_table multi) in
+              while not (!stop_calculation || !node_counter > !node_limit || (!score > alpha_table.(multi) && !score < beta_table.(multi))) do
+                if !score <= alpha_table.(multi) then begin
+                  alpha_table.(multi) <- - infinity
+                end
+                else if !score >= beta_table.(multi) then begin
+                  beta_table.(multi) <- infinity
+                end;
+                score := root_search board white_to_move last_move castling_right board_record half_moves in_check !var_depth alpha_table.(multi) beta_table.(multi) evaluation zobrist_position first_move !searchmoves_copy short_pv_table multi;
+              done;
+              !score
+            in if new_score > (-infinity) then begin
+              let bound = 
+                if new_score <= alpha_table.(multi) then begin
+                  " upperbound"
+                end
+                else if new_score >= beta_table.(multi) then begin
+                  " lowerbound"
+                end
+                else begin
+                  ""
+                end
+              in
+              alpha_table.(multi) <- new_score - 25;
+              beta_table.(multi) <- new_score + 25;
+              reached_depth_table.(multi) <- !var_depth;
+              print_score_table.(multi) <- score new_score var_mate ^ bound;
+              info_table.(multi) <- !var_depth, new_score, multi;
+              if number_of_pv > multi + 1 then begin
+                searchmoves_copy := List.filter (fun move -> move <> pv_table.(0)) !searchmoves_copy
+              end
+            end
+          done;
+          info := merge_sort (Array.to_list info_table);
+          let exec_time = Sys.time () -. start_time in
+          let nps = int_of_float (float_of_int !node_counter /. exec_time) in
+          let hashfull = int_of_float (1000. *. (float_of_int !transposition_counter /. (float_of_int transposition_size))) in
+          let time =  (int_of_float (1000. *. exec_time)) in
+          let rec aux_info list n = match list with
+            |[] -> ()
+            |(depth, _, multi) :: t ->
+              if !var_depth = depth then begin
+                let score = print_score_table.(multi) in
+                let pv = (String.concat " " (List.map uci_of_mouvement short_pv_table.(multi))) in
+                print_endline (Printf.sprintf "info depth %i seldepth %i multipv %i score %s nodes %i nps %i hashfull %i time %i pv %s" !var_depth !var_depth n score !node_counter nps hashfull time pv)
+              end;
+              aux_info t (n + 1)
+          in aux_info !info 1;
+        done;
+        let _, _, best_number = try List.hd !info with _ -> (0, 0, (-1)) in
+        if best_number = (-1) then begin
+          print_endline ("info depth 0 score cp 0" ^ "\n" ^ "bestmove (none)");
+        end
+        else begin
+          let print_bestmove = "bestmove " ^ try (uci_of_mouvement  (List.hd short_pv_table.(best_number))) with _ -> "(none)" in
+          let print_ponder = try (" ponder " ^ uci_of_mouvement  (List.nth short_pv_table.(best_number) 1)) with _ -> "" in
+          print_endline (print_bestmove ^ print_ponder)
+        end
+      end
 
 let checkers board white_to_move =
   let position_roi = (index_array board (king white_to_move)) in
@@ -418,7 +454,7 @@ let echekinator () =
       |"stop" -> stop_calculation := true
       |"d" -> display board !white_to_move !last_move !castling_right !moves_record !board_record
       |"eval" ->
-        let eval = (float_of_int (evaluation board !white_to_move !king_position !in_check (-infinity) infinity)) /. 1000. in
+        let eval = (float_of_int (evaluation board !white_to_move)) /. 1000. in
         print_endline ("HCE Evaluation : " ^ (if eval > 0. then "+" else "") ^ string_of_float eval)
       |"ponderhit" -> let _ = Thread.create (fun () -> monitor_time !search_time stop_calculation) () in ()
       |_ -> print_endline (Printf.sprintf "Unknown command: '%s'. Type help for more information." command)

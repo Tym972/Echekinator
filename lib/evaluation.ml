@@ -95,18 +95,15 @@ let eval_materiel3 board (tb, tn) white_to_move =
   else*)
     !material, !position
   
-let eval1_q board white_to_move king_position king_in_check (alpha : int) (beta : int) =
-  let _ = alpha, beta, king_position, king_in_check in
+let eval1_q board white_to_move =
   let material, position = eval_materiel3 board tab_ouverture white_to_move in
   treatment white_to_move (material + 2 * (doubled board)) (position / 5)
 
-let eval2_q board white_to_move king_position king_in_check (alpha : int) (beta : int) =
-  let _ = alpha, beta, king_position, king_in_check in
+let eval2_q board white_to_move =
   let material, position = eval_materiel3 board tab_mdg white_to_move in
   treatment white_to_move (material + 2 * (doubled board)) (position / 5)
 
-let eval3_q board white_to_move king_position king_in_check (alpha : int) (beta : int) =
-  let _ = alpha, beta, king_position, king_in_check in
+let eval3_q board white_to_move =
   let material, position = eval_materiel3 board tab_finale white_to_move in
   treatment white_to_move (material + 2 * (doubled board)) (position / 5)
 

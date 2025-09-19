@@ -21,8 +21,8 @@ let compteur_quiescent = ref 0
 (*open Evaluation*)
 
 (*Fonction implémentant la recherche quiescente*)
-let rec quiescence_search board white_to_move alpha beta evaluation cap depth king_position in_check = incr compteur_quiescent;
-  let delta = evaluation board white_to_move king_position in_check alpha beta in
+let rec quiescence_search board white_to_move alpha beta evaluation cap depth = incr compteur_quiescent;
+  let delta = evaluation board white_to_move in
   (*let _ = evaluate () in*)
   let best_score = ref delta in
   if depth = 0 then begin
@@ -43,8 +43,7 @@ let rec quiescence_search board white_to_move alpha beta evaluation cap depth ki
       make board move;
       cps := List.tl !cps;
       let new_to_move = not white_to_move in
-      let opponent_king_position = index_array board (king new_to_move) in
-      let score = - quiescence_search board (not white_to_move) (- beta) (- !alpha0) evaluation (captures board new_to_move move) (depth - 1) opponent_king_position (threatened board opponent_king_position new_to_move) 
+      let score = - quiescence_search board (not white_to_move) (- beta) (- !alpha0) evaluation (captures board new_to_move move) (depth - 1)
       in if score > !best_score then begin
         best_score := score;
         if score >= beta then begin
@@ -60,8 +59,8 @@ let rec quiescence_search board white_to_move alpha beta evaluation cap depth ki
   !best_score
 
 (*Fonction permettant d'évaluer un board à la depth 0*)
-let quiescence_treatment_depth_0 ply evaluation board white_to_move last_move alpha beta king_position in_check =
-  let legal_moves = legal_moves board white_to_move last_move (false, false, false, false) king_position in_check
+let quiescence_treatment_depth_0 ply evaluation board white_to_move last_move castling_right half_moves alpha beta king_position in_check =
+  let legal_moves = legal_moves board white_to_move last_move castling_right king_position in_check
   in if legal_moves = [] then begin
     if in_check then begin
       (ply - 99999)
@@ -70,13 +69,15 @@ let quiescence_treatment_depth_0 ply evaluation board white_to_move last_move al
       0
     end
   end
+  else if half_moves = 100 then begin
+    0
+  end
   else begin
     let cap = detecte_extension legal_moves in
-    let in_check = threatened board king_position white_to_move in
     if cap = [] then begin
-      quiescence_search board white_to_move alpha beta evaluation cap 0 king_position in_check
+      quiescence_search board white_to_move alpha beta evaluation cap 0
     end
     else begin
-      quiescence_search board white_to_move alpha beta evaluation cap (-1) king_position in_check
+      quiescence_search board white_to_move alpha beta evaluation cap (-1)
     end
   end

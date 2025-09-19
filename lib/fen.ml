@@ -125,7 +125,8 @@ let board_of_fen board lines_list valid_fen =
     while !j < 8 do
       let elt = ligne.[!k] in
       let piece = try Hashtbl.find hash_fen elt with _ ->
-        let empties = (int_of_char elt) - 48 in if empties > 0 && empties < 10 then begin
+        let empties = (int_of_char elt) - 48 in
+        if empties > 0 && empties < 10 then begin
           j := !j + empties;
           0
         end
@@ -209,7 +210,7 @@ let valid_castlings start_position castlings castling_right =
   [(true, from_white_rooks, from_white_king); (false, from_black_rooks, from_black_king)];
   let index = ref 0 in
   let aux_string king_position castlings_number white_to_move index =
-  let increment = if white_to_move then 56 else 0 in
+    let increment = if white_to_move then 56 else 0 in
     if castlings_number = 2 then begin
       let result = (try Hashtbl.find hash_castling_xfen (Char.lowercase_ascii castlings.[!index]) + increment with _ -> (-2)), (try Hashtbl.find hash_castling_xfen (Char.lowercase_ascii castlings.[!index + 1]) + increment with _ -> (-2))
       in index := !index + 2;
@@ -255,8 +256,8 @@ let valid_castlings start_position castlings castling_right =
     let from_short_black = ref (if short_black = (-2) || not !black_short then (-1) else if short_black = 7 then (List.hd !from_black_rooks) else short_black) in
     let occupied_white_list = List.filter (fun square -> square > (-1)) [!from_long_white; !from_short_white; !from_white_king] in
     let occupied_black_list = List.filter (fun square -> square > (-1)) [!from_long_black; !from_short_black; !from_black_king] in
-    let aux_depart from white_to_move occupied_list =
-      if !from < 0 then begin
+    let aux_depart from white_to_move occupied_list possible =
+      if !from < 0 && possible then begin
         let candidate, direction = if !from = (-1) then 7, incr else 0, decr in
         let increment = if white_to_move then 56 else 0 in
         let b = ref true in
@@ -270,11 +271,11 @@ let valid_castlings start_position castlings castling_right =
           end
         done
       end
-    in List.iter (fun (from, white_to_move, occupied_list) -> aux_depart from white_to_move occupied_list)
-    [(from_long_white, true, occupied_white_list); (from_short_white, true, occupied_white_list); (from_white_king, true, occupied_white_list);
-    (from_long_black, false, occupied_black_list); (from_short_black, false, occupied_black_list); (from_black_king, false, occupied_black_list)];
-    List.iter (fun (position, piece) -> provisional_board.(position) <- piece)
-    [(!from_white_king, 6); (!from_black_king, (-6)); (!from_long_white, 4); (!from_short_white, 4); (!from_long_black, (-4)); (!from_short_black, (-4))];
+    in List.iter (fun (from, white_to_move, occupied_list, possible) -> aux_depart from white_to_move occupied_list possible)
+    [(from_long_white, true, occupied_white_list, !white_long); (from_short_white, true, occupied_white_list, !white_short); (from_white_king, true, occupied_white_list, (!white_long || !white_short));
+    (from_long_black, false, occupied_black_list, !black_long); (from_short_black, false, occupied_black_list, !black_short); (from_black_king, false, occupied_black_list, (!black_long || !black_short))];
+    List.iter (fun (position, piece, possible) -> if possible then provisional_board.(position) <- piece)
+    [(!from_white_king, 6, (!white_long || !white_short)); (!from_black_king, (-6), (!black_long || !black_short)); (!from_long_white, 4, !white_long); (!from_short_white, 4, !white_short); (!from_long_black, (-4), !black_long); (!from_short_black, (-4), !black_short)];
     castling_update provisional_board
   end
 
@@ -335,11 +336,6 @@ let position_of_fen chain start_position initial_white_to_move initial_last_move
           if poussee_pep <> Null then begin
             initial_last_move := poussee_pep
           end;
-          if (threatened start_position (index_array start_position (king (not !initial_white_to_move))) (not !initial_white_to_move)|| legal_moves start_position !initial_white_to_move !initial_last_move !initial_castling_right !initial_king_position !initial_in_check = []) then begin
-            initial_white_to_move := not !initial_white_to_move;
-            initial_king_position := index_array start_position (king !initial_white_to_move);
-            initial_in_check := threatened start_position !initial_king_position !initial_white_to_move
-          end;
           valid_castlings start_position (List.nth !split_fen 2) initial_castling_right;
           initial_board_record := [];
           let rec ajoute liste_ref i =
@@ -362,7 +358,7 @@ let position_of_fen chain start_position initial_white_to_move initial_last_move
             end
           in nombre_coup !initial_white_to_move (List.nth !split_fen 5)
         end;
-        if (not !valid_fen) || threatened start_position (index_array start_position (king (not !initial_white_to_move))) (not !initial_white_to_move) || legal_moves start_position !initial_white_to_move !initial_last_move !initial_castling_right !initial_king_position !initial_in_check = [] then begin
+        if not !valid_fen then begin
           reset start_position initial_white_to_move initial_last_move initial_castling_right initial_king_position initial_in_check initial_moves_record initial_board_record chessboard true Null (true, true, true, true) !from_white_king false [] [zobrist chessboard true Null (true, true, true, true)]
         end
       end
