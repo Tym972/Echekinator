@@ -360,8 +360,8 @@ let go instructions board white_to_move last_move castling_right king_position i
                   ""
                 end
               in
-              alpha_table.(multi) <- new_score - 25;
-              beta_table.(multi) <- new_score + 25;
+              alpha_table.(multi) <- new_score - 250;
+              beta_table.(multi) <- new_score + 250;
               reached_depth_table.(multi) <- !var_depth;
               print_score_table.(multi) <- score new_score var_mate ^ bound;
               info_table.(multi) <- !var_depth, new_score, multi;
