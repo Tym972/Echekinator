@@ -1705,13 +1705,6 @@ let captures board white_to_move last_move =
     end
   end
 
-(*Fonction permettant de jouer un move en actualisant les variables d'états de la partie*)
-let make_move_1 board move white_to_move last_move castling_rights = 
-  make board move;
-  castling_rights := castling_modification move !castling_rights;
-  last_move := move;
-  white_to_move := not !white_to_move
-
 (*Fonction indiquant si un move est valide*)
 let is_legal board move white_to_move =
   let b = ref true in

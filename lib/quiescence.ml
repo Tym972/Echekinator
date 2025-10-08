@@ -21,7 +21,8 @@ let compteur_quiescent = ref 0
 (*open Evaluation*)
 
 (*Fonction implémentant la recherche quiescente*)
-let rec quiescence_search board white_to_move alpha beta evaluation cap depth = incr compteur_quiescent;
+let rec quiescence_search board white_to_move alpha beta evaluation cap depth =
+  incr compteur_quiescent;
   let delta = evaluation board white_to_move in
   (*let _ = evaluate () in*)
   let best_score = ref delta in
@@ -59,8 +60,8 @@ let rec quiescence_search board white_to_move alpha beta evaluation cap depth = 
   !best_score
 
 (*Fonction permettant d'évaluer un board à la depth 0*)
-let quiescence_treatment_depth_0 ply evaluation board white_to_move last_move castling_right half_moves alpha beta king_position in_check =
-  let legal_moves = legal_moves board white_to_move last_move castling_right king_position in_check
+let quiescence_treatment_depth_0 ply evaluation board white_to_move last_move castling_rights half_moves alpha beta king_position in_check =
+  let legal_moves = legal_moves board white_to_move last_move castling_rights king_position in_check
   in if legal_moves = [] then begin
     if in_check then begin
       (ply - 99999)

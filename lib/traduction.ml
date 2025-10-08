@@ -242,18 +242,21 @@ let move_list_of_algebric_list algebraic_list initial_white_to_move initial_last
   let board = Array.copy start_position in
   let white_to_move = ref initial_white_to_move in
   let last_move = ref initial_last_move in
-  let right_to_castle = ref initial_castling_right in
+  let castling_rights = ref initial_castling_right in
   let algebraic_list = ref algebraic_list in
   let move_list = ref [] in
   let verification = ref true in
   while !verification && !algebraic_list <> [] do
     let move = List.hd !algebraic_list in
     let king_position = (index_array board (king !white_to_move)) in
-    let player_legal_moves = legal_moves board !white_to_move !last_move !right_to_castle king_position (threatened board king_position !white_to_move) in
+    let player_legal_moves = legal_moves board !white_to_move !last_move !castling_rights king_position (threatened board king_position !white_to_move) in
     let translated_move = tolerance board move !white_to_move player_legal_moves in
     if translated_move <> Null then begin
       move_list := translated_move :: !move_list;
-      make_move_1 board translated_move white_to_move last_move right_to_castle;
+      make board translated_move;
+      castling_rights := castling_modification translated_move !castling_rights;
+      last_move := translated_move;
+      white_to_move := not !white_to_move;
       algebraic_list := List.tl !algebraic_list
     end
     else begin

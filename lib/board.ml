@@ -209,10 +209,10 @@ let max_pv_length = max_depth
 let pv_table = Array.make ((max_pv_length) * (max_pv_length + 1) / 2) Null
 
 (**)
-let pv_length = Array.make max_pv_length 0
+let pv_length = Array.make (max_pv_length + 1) 0
 
 (*Variable used to forcefully stop the search*)
-let stop_calculation = ref false
+let out_of_time = ref false
 
 (*Node counter*)
 let node_counter = ref 0

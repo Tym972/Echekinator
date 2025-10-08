@@ -9,7 +9,7 @@ type entry = int * node * int * int * move * int
 
 let transposition_size = 10000000
 
-let transposition_table = Array.make transposition_size (0, All, (-1), 0, Null, 0)
+let transposition_table = Array.make transposition_size (0, All, (-1), 0, Null(*, (-infinity)*), 0)
 
 (*PV node : Exact value, Cut Node : Lower Bound, All Node : Upper Bound*)
 let hash_treatment (hash_node_type : node) (hash_depth : int) (hash_value : int) (hash_move : move) depth alpha beta best_score best_move no_cut ply =
@@ -46,7 +46,7 @@ let hash_treatment (hash_node_type : node) (hash_depth : int) (hash_value : int)
 (*Fonction vidant la TT*)
 let clear table =
   for i = 0 to transposition_size - 1 do
-    table.(i) <- (0, All, (-1), 0, Null, 0)
+    table.(i) <- (0, All, (-1), 0, Null(*, (-infinity)*), 0)
   done;
   transposition_counter := 0
 
@@ -55,11 +55,11 @@ let score_node node_type = match node_type with
   |Cut -> 5
   |All -> 0
 
-let store tt key node_type depth value move generation =
+let store tt key node_type depth value move (*static_eval*) generation =
   let index = key mod transposition_size in
-  let old_key, old_node_type, old_depth, old_value, old_best_move, old_generation = tt.(index) in
+  let old_key, old_node_type, old_depth, old_value, old_best_move(*, old_static_eval*), old_generation = tt.(index) in
   if old_depth = (-1) then begin
-    tt.(index) <- (key, node_type, depth, value, move, generation);
+    tt.(index) <- (key, node_type, depth, value, move(*, static_eval*), generation);
     incr transposition_counter
   end
   else if (!go_counter - old_generation > 5) || (depth > old_depth) || (depth = old_depth && score_node node_type > score_node old_node_type) then begin
@@ -68,16 +68,16 @@ let store tt key node_type depth value move generation =
         old_best_move
       else
         move
-    in tt.(index) <- (key, node_type, depth, value, stored_move, generation)
+    in tt.(index) <- (key, node_type, depth, value, stored_move(*, static_eval*), generation)
   end
   else if old_best_move = Null && move <> Null && key = old_key then begin
-    tt.(index) <- (old_key, old_node_type, old_depth, old_value, move, generation)
+    tt.(index) <- (old_key, old_node_type, old_depth, old_value, move(*, old_static_eval*), generation)
   end
 
 let probe tt key =
   let index = key mod transposition_size in
-  let old_key, old_node_type, old_depth, old_value, old_best_move, _ = tt.(index) in
+  let old_key, old_node_type, old_depth, old_value, old_best_move(*, old_static_eval*), _ = tt.(index) in
   if key = old_key then
-    old_node_type, old_depth, old_value, old_best_move
+    old_node_type, old_depth, old_value, old_best_move(*, old_static_eval*)
   else
-    (All, (-1), 0, Null)
+    (All, (-1), 0, Null(*, (-infinity)*))

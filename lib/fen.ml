@@ -54,7 +54,7 @@ let xfen_castlings board =
   castlings_representations
 
 (*Fonction représentant un board en sa notation FEN*)
-let fen board white_to_move last_move (white_short, white_long, black_short, black_long) moves_record board_record =
+let fen board white_to_move last_move (white_short, white_long, black_short, black_long) moves_record half_moves =
   let fen = ref "" in
   let empties = ref 0 in
   for i = 0 to 63 do
@@ -101,7 +101,7 @@ let fen board white_to_move last_move (white_short, white_long, black_short, bla
   end;
   let pep = enpassant board white_to_move last_move in
   fen := !fen ^ " " ^ (try coord.(to_ (List.hd pep)) ^ " " with _ -> "- ");
-  fen := !fen ^ (string_of_int (max 0 (List.length board_record - 1)) ^ " ");
+  fen := !fen ^ (string_of_int half_moves ^ " ");
   fen := !fen ^ string_of_int (1 + (List.length moves_record)/ 2);
   !fen
 
@@ -114,7 +114,7 @@ let hash_fen =
   ht
 
 (*Fonction actualisant le board en fonction de la partie "pièces" du FEN*)
-let board_of_fen board lines_list valid_fen =
+let board_of_fen board lines_list =
   for i = 0 to 63 do
     board.(i) <- 0
   done;
@@ -126,14 +126,8 @@ let board_of_fen board lines_list valid_fen =
       let elt = ligne.[!k] in
       let piece = try Hashtbl.find hash_fen elt with _ ->
         let empties = (int_of_char elt) - 48 in
-        if empties > 0 && empties < 10 then begin
-          j := !j + empties;
-          0
-        end
-        else begin
-          valid_fen := false;
-          0
-        end
+        j := !j + empties;
+        0
       in if piece <> 0 then begin
         board.(8 * i + !j) <- piece;
         incr j
@@ -280,7 +274,7 @@ let valid_castlings start_position castlings castling_right =
   end
 
 (*Fonction permettant de réinitialiser un board à l'état d'origine*)
-let reset board white_to_move last_move castling_right king_position in_check moves_record board_record start_position initial_white_to_move initial_last_move initial_castling_right initial_king_position initial_in_check initial_moves_record initial_board_record = 
+let reset board white_to_move last_move castling_right king_position in_check moves_record zobrist_position board_record half_moves start_position initial_white_to_move initial_last_move initial_castling_right initial_king_position initial_in_check initial_moves_record initial_zobrist_position initial_half_moves = 
   for i = 0 to 63 do
     board.(i) <- start_position.(i)
   done;
@@ -291,76 +285,52 @@ let reset board white_to_move last_move castling_right king_position in_check mo
   king_position := initial_king_position;
   in_check := initial_in_check;
   moves_record := initial_moves_record;
-  board_record := initial_board_record
+  zobrist_position := initial_zobrist_position;
+  board_record := [initial_zobrist_position];
+  half_moves := initial_half_moves
 
 (*Fonction traduisant une position FEN en l'int array correspondant. Par défaut si non rensigné, le trait est au blancs, il n'y a plus de castlings, pas de capture en passant, aucun coup joué*)
-let position_of_fen chain start_position initial_white_to_move initial_last_move initial_castling_right initial_king_position initial_in_check initial_moves_record initial_board_record =
+let position_of_fen chain start_position initial_white_to_move initial_last_move initial_castling_right initial_king_position initial_in_check initial_moves_record initial_zobrist_position initial_board_record initial_half_moves =
   let split_fen = ref (word_detection chain) in
   let fen_length = List.length !split_fen in
-  if fen_length > 0 then begin
-    let pieces_position = (List.nth !split_fen 0) in
-    let validite chain =
-      let kings = ref "" in
-      let longueur = String.length chain in
-      for i = 0 to longueur - 1 do
-        if String.contains "kK" chain.[i] then kings := (String.make 1 chain.[i]) ^ !kings
-      done;
-      String.length !kings = 2 && String.contains !kings 'K' && String.contains !kings 'k'
-    in if validite pieces_position then begin
-      let split_ligne = Str.split (Str.regexp "/") pieces_position in
-      if List.length split_ligne = 8 && not (String.exists (fun c -> String.contains "pP" c) (List.hd split_ligne ^ (List.nth split_ligne 7))) then begin
-        let valid_fen = ref true in
-        begin
-          try board_of_fen start_position split_ligne valid_fen with _ -> valid_fen := false
-        end;
-        if !valid_fen then begin
-          let complete longueur = 
-            let rec aux acc longueur = match longueur with
-              |5 -> aux ("1" :: acc) 6
-              |4 -> aux ("0" :: acc) 5
-              |3 | 2 -> aux  ("-" :: acc) (longueur + 1)
-              |1 -> aux ("w" :: acc) 2
-              |_ -> acc
-            in List.rev (aux [] longueur)
-          in split_fen := !split_fen @ (complete fen_length);
-          if List.nth !split_fen 1 = "w" then begin
-            initial_king_position := index_array start_position (king !initial_white_to_move);
-            initial_in_check := threatened start_position !initial_king_position !initial_white_to_move
-          end
-          else begin
-            initial_white_to_move := false;
-            initial_king_position := index_array start_position (king !initial_white_to_move);
-            initial_in_check := threatened start_position !initial_king_position !initial_white_to_move
-          end;
-          let poussee_pep = ep_deduction start_position (List.nth !split_fen 3) !initial_white_to_move in
-          if poussee_pep <> Null then begin
-            initial_last_move := poussee_pep
-          end;
-          valid_castlings start_position (List.nth !split_fen 2) initial_castling_right;
-          initial_board_record := [];
-          let rec ajoute liste_ref i =
-            if i > 0 then begin
-              liste_ref := i :: !initial_board_record;
-              ajoute liste_ref (i - 1)
-            end
-          in ajoute initial_board_record (try int_of_string (List.nth !split_fen 4) with _ -> 0);
-          initial_board_record := (zobrist start_position !initial_white_to_move !initial_last_move !initial_castling_right) :: !initial_board_record;
-          let nombre_coup white_to_move coups_complets =
-            if white_to_move then begin
-              for _ = 1 to try (2 * (int_of_string (List.nth !split_fen 5) - 1)) with _ -> 0 do 
-                initial_moves_record := Null :: !initial_moves_record
-              done
-            end
-            else begin
-              for _ = 1 to try (2 * (int_of_string coups_complets - 1) + 1) with _ -> 0 do 
-                initial_moves_record := Null :: !initial_moves_record
-              done
-            end
-          in nombre_coup !initial_white_to_move (List.nth !split_fen 5)
-        end;
-        if not !valid_fen then begin
-          reset start_position initial_white_to_move initial_last_move initial_castling_right initial_king_position initial_in_check initial_moves_record initial_board_record chessboard true Null (true, true, true, true) !from_white_king false [] [zobrist chessboard true Null (true, true, true, true)]
-        end
-      end
-    end
+  let pieces_position = (List.nth !split_fen 0) in
+  let split_ligne = Str.split (Str.regexp "/") pieces_position in
+  board_of_fen start_position split_ligne;
+  let complete longueur = 
+    let rec aux acc longueur = match longueur with
+      |5 -> aux ("1" :: acc) 6
+      |4 -> aux ("0" :: acc) 5
+      |3 | 2 -> aux  ("-" :: acc) (longueur + 1)
+      |1 -> aux ("w" :: acc) 2
+      |_ -> acc
+    in List.rev (aux [] longueur)
+  in split_fen := !split_fen @ (complete fen_length);
+  if List.nth !split_fen 1 = "w" then begin
+    initial_king_position := index_array start_position (king !initial_white_to_move);
+    initial_in_check := threatened start_position !initial_king_position !initial_white_to_move
   end
+  else begin
+    initial_white_to_move := false;
+    initial_king_position := index_array start_position (king !initial_white_to_move);
+    initial_in_check := threatened start_position !initial_king_position !initial_white_to_move
+  end;
+  let poussee_pep = ep_deduction start_position (List.nth !split_fen 3) !initial_white_to_move in
+  if poussee_pep <> Null then begin
+    initial_last_move := poussee_pep
+  end;
+  valid_castlings start_position (List.nth !split_fen 2) initial_castling_right;
+  initial_half_moves := (try int_of_string (List.nth !split_fen 4) with _ -> 0);
+  initial_zobrist_position := zobrist start_position !initial_white_to_move !initial_last_move !initial_castling_right;
+  initial_board_record := [!initial_zobrist_position];
+  let nombre_coup white_to_move coups_complets =
+    if white_to_move then begin
+      for _ = 1 to try (2 * (int_of_string (List.nth !split_fen 5) - 1)) with _ -> 0 do 
+        initial_moves_record := Null :: !initial_moves_record
+      done
+    end
+    else begin
+      for _ = 1 to try (2 * (int_of_string coups_complets - 1) + 1) with _ -> 0 do 
+        initial_moves_record := Null :: !initial_moves_record
+      done
+    end
+  in nombre_coup !initial_white_to_move (List.nth !split_fen 5)
