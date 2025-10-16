@@ -85,8 +85,16 @@ let threatened board square white_to_move =
   end;
   !threat
 
+let add_move move moves number_of_moves =
+  moves.(!number_of_moves) <- move;
+  incr number_of_moves
+
+let remove_move index moves number_of_moves =
+  moves.(index) <- moves.(!number_of_moves - 1);
+  decr number_of_moves
+
 (*Fonction construisant une list des déplacements possible d'une tour*)
-let rook_moves board square list =
+let rook_moves board square moves number_of_moves =
   let piece = board.(square) in
   let tab64_square = tab64.(square) in
   for i = 0 to 3 do
@@ -97,21 +105,21 @@ let rook_moves board square list =
       let attacker_square = tab120.(tab64_square + (!distance * direction)) in
       let attacker = board.(attacker_square) in
       if attacker = 0 then begin
-        list := Normal {piece = piece; from = square; to_ = attacker_square; capture = 0} :: !list;
+        add_move (Normal {piece = piece; from = square; to_ = attacker_square; capture = 0}) moves number_of_moves;
         incr distance
       end
       else if piece * attacker > 0 then begin
         iterate :=  false
       end
       else begin 
-        list := Normal {piece = piece; from = square; to_ = attacker_square; capture = attacker} :: !list;
+        add_move (Normal {piece = piece; from = square; to_ = attacker_square; capture = attacker}) moves number_of_moves;
         iterate :=  false
       end
     done
   done
 
 (*Fonction construisant une list des déplacements possible d'un fou*)
-let bishop_moves board square list =
+let bishop_moves board square moves number_of_moves =
   let piece = board.(square) in
   let tab64_square = tab64.(square) in
   for i = 0 to 3 do
@@ -122,21 +130,21 @@ let bishop_moves board square list =
       let attacker_square = tab120.(tab64_square + (!distance * direction)) in
       let attacker = board.(attacker_square) in
       if attacker = 0 then begin
-        list := Normal {piece = piece; from = square; to_ = attacker_square; capture = 0} :: !list;
+        add_move (Normal {piece = piece; from = square; to_ = attacker_square; capture = 0}) moves number_of_moves;
         incr distance
       end
       else if piece * attacker > 0 then begin
         iterate :=  false
       end
       else begin
-        list := Normal {piece = piece; from = square; to_ = attacker_square; capture = attacker} :: !list;
+        add_move (Normal {piece = piece; from = square; to_ = attacker_square; capture = attacker}) moves number_of_moves;
         iterate :=  false
       end
     done
   done
 
 (*Fonction construisant une list des déplacements possible d'un cavalier*)
-let knight_moves board square list =
+let knight_moves board square moves number_of_moves =
   let piece = board.(square) in
   let tab64_square = tab64.(square) in
   for i = 0 to 7 do
@@ -145,13 +153,13 @@ let knight_moves board square list =
       let attacker_square = tab120.(tab64_square + direction) in
       let attacker = board.(attacker_square) in
       if piece * attacker <= 0 then begin
-        list := Normal {piece = piece; from = square; to_ = attacker_square; capture = attacker} :: !list
+        add_move (Normal {piece = piece; from = square; to_ = attacker_square; capture = attacker}) moves number_of_moves;
       end
     end
   done
 
 (*Fonction construisant une list des déplacements possible d'une dame*)
-let queen_moves board square list =
+let queen_moves board square moves number_of_moves =
   let piece = board.(square) in
   let tab64_square = tab64.(square) in
   for i = 0 to 7 do
@@ -162,22 +170,21 @@ let queen_moves board square list =
       let attacker_square = tab120.(tab64_square + (!distance * direction)) in
       let attacker = board.(attacker_square) in
       if attacker = 0 then begin
-        list := Normal {piece = piece; from = square; to_ = attacker_square; capture = 0} :: !list;
+        add_move (Normal {piece = piece; from = square; to_ = attacker_square; capture = 0}) moves number_of_moves;
         incr distance
       end
       else if piece * attacker > 0 then begin
         iterate :=  false
       end
       else begin
-        list := Normal {piece = piece; from = square; to_ = attacker_square; capture = attacker} :: !list;
+        add_move (Normal {piece = piece; from = square; to_ = attacker_square; capture = attacker}) moves number_of_moves;
         iterate :=  false
       end
     done
   done
 
 (*Fonction construisant une list des déplacements possible d'un roi*)
-let king_moves board square =
-  let list = ref [] in
+let king_moves board square moves number_of_moves =
   let piece = board.(square) in
   let tab64_square = tab64.(square) in
   for i = 0 to 7 do
@@ -186,35 +193,29 @@ let king_moves board square =
       let attacker_square = tab120.(tab64_square + direction) in
       let attacker = board.(attacker_square) in
       if piece * attacker <= 0 then begin
-        list := Normal {piece = piece; from = square; to_ = attacker_square; capture = attacker} :: !list
+        add_move (Normal {piece = piece; from = square; to_ = attacker_square; capture = attacker}) moves number_of_moves
       end
     end
-  done;
-  !list
+  done
 
 (*Fonction construisant une list des déplacements possible d'un pion*)
-let pawn_moves board square list =
+let pawn_moves board square moves number_of_moves =
   let piece = board.(square) in
   let tab64_square = tab64.(square) in
   if piece > 0 then begin
     let attacker_square_1 = tab120.(tab64_square - 10) in
     if board.(attacker_square_1) = 0 then begin
       if square > 15 then begin
-        list := Normal {piece = 1; from = square; to_ = attacker_square_1; capture = 0} :: !list;
+        add_move (Normal {piece = 1; from = square; to_ = attacker_square_1; capture = 0}) moves number_of_moves;
         if (square > 47 && square < 56) then begin
           let attacker_square_2 = tab120.(tab64_square - 20) in
           if board.(attacker_square_2) = 0 then begin
-            list := Normal {piece = 1; from = square; to_ = attacker_square_2; capture = 0} :: !list
+            add_move (Normal {piece = 1; from = square; to_ = attacker_square_2; capture = 0}) moves number_of_moves
           end
         end
       end
       else begin
-        list :=
-        Promotion {from = square; to_ = attacker_square_1; promotion = 5; capture = 0} ::
-        Promotion {from = square; to_ = attacker_square_1; promotion = 4; capture = 0} ::
-        Promotion {from = square; to_ = attacker_square_1; promotion = 3; capture = 0} ::
-        Promotion {from = square; to_ = attacker_square_1; promotion = 2; capture = 0} ::
-        !list
+        List.iter (fun i -> add_move (Promotion {from = square; to_ = attacker_square_1; promotion = i; capture = 0}) moves number_of_moves) [5; 4; 3; 2]
       end
     end;
     if ((square + 1) mod 8 <> 0) then begin
@@ -222,15 +223,10 @@ let pawn_moves board square list =
       let attacker_3 = board.(attacker_square_3) in
       if attacker_3 < 0 then begin
         if square > 15 then begin
-          list := Normal {piece = 1; from = square; to_ = attacker_square_3; capture = attacker_3} :: !list
+          add_move (Normal {piece = 1; from = square; to_ = attacker_square_3; capture = attacker_3}) moves number_of_moves
         end
         else begin
-          list :=
-          Promotion {from = square; to_ = attacker_square_3; promotion = 5; capture = attacker_3} ::
-          Promotion {from = square; to_ = attacker_square_3; promotion = 4; capture = attacker_3} ::
-          Promotion {from = square; to_ = attacker_square_3; promotion = 3; capture = attacker_3} ::
-          Promotion {from = square; to_ = attacker_square_3; promotion = 2; capture = attacker_3} ::
-          !list
+          List.iter (fun i -> add_move (Promotion {from = square; to_ = attacker_square_3; promotion = i; capture = attacker_3}) moves number_of_moves) [5; 4; 3; 2]
         end
       end
     end;
@@ -239,15 +235,10 @@ let pawn_moves board square list =
       let attacker_4 = board.(attacker_square_4) in
       if attacker_4 < 0 then begin
         if square > 15 then begin
-          list := Normal {piece = 1; from = square; to_ = attacker_square_4; capture = attacker_4} :: !list
+          add_move (Normal {piece = 1; from = square; to_ = attacker_square_4; capture = attacker_4}) moves number_of_moves
         end
         else begin
-          list :=
-          Promotion {from = square; to_ = attacker_square_4; promotion = 5; capture = attacker_4} ::
-          Promotion {from = square; to_ = attacker_square_4; promotion = 4; capture = attacker_4} ::
-          Promotion {from = square; to_ = attacker_square_4; promotion = 3; capture = attacker_4} ::
-          Promotion {from = square; to_ = attacker_square_4; promotion = 2; capture = attacker_4} ::
-          !list
+          List.iter (fun i -> add_move (Promotion {from = square; to_ = attacker_square_4; promotion = i; capture = attacker_4}) moves number_of_moves) [5; 4; 3; 2]
         end
       end
     end
@@ -256,21 +247,16 @@ let pawn_moves board square list =
     let attacker_square_1 = tab120.(tab64_square + 10) in
     if board.(attacker_square_1) = 0 then begin
       if square < 48 then begin
-        list := Normal {piece = (-1); from = square; to_ = attacker_square_1; capture = 0} :: !list;
+        add_move (Normal {piece = (-1); from = square; to_ = attacker_square_1; capture = 0}) moves number_of_moves;
         if (square > 7 && square < 16) then begin
           let attacker_square_2 = tab120.(tab64_square + 20) in
           if (board.(attacker_square_2) = 0) then begin
-            list := Normal {piece = (-1); from = square; to_ = attacker_square_2; capture = 0} :: !list
+            add_move (Normal {piece = (-1); from = square; to_ = attacker_square_2; capture = 0}) moves number_of_moves
           end
         end
       end
       else begin
-        list :=
-        Promotion {from = square; to_ = attacker_square_1; promotion = (-5); capture = 0} ::
-        Promotion {from = square; to_ = attacker_square_1; promotion = (-4); capture = 0} ::
-        Promotion {from = square; to_ = attacker_square_1; promotion = (-3); capture = 0} ::
-        Promotion {from = square; to_ = attacker_square_1; promotion = (-2); capture = 0} ::
-        !list
+        List.iter (fun i -> add_move (Promotion {from = square; to_ = attacker_square_1; promotion = i; capture = 0}) moves number_of_moves) [(-5); (-4); (-3); (-2)]
       end
     end;
     if (square mod 8 <> 0) then begin
@@ -278,15 +264,10 @@ let pawn_moves board square list =
       let attacker_3 = board.(attacker_square_3) in
       if attacker_3 > 0 then begin
         if square < 48 then begin
-          list := Normal {piece = (-1); from = square; to_ = attacker_square_3; capture = attacker_3} :: !list
+          add_move (Normal {piece = (-1); from = square; to_ = attacker_square_3; capture = attacker_3}) moves number_of_moves
         end
         else begin
-          list :=
-          Promotion {from = square; to_ = attacker_square_3; promotion = (-5); capture = attacker_3} ::
-          Promotion {from = square; to_ = attacker_square_3; promotion = (-4); capture = attacker_3} ::
-          Promotion {from = square; to_ = attacker_square_3; promotion = (-3); capture = attacker_3} ::
-          Promotion {from = square; to_ = attacker_square_3; promotion = (-2); capture = attacker_3} ::
-          !list
+          List.iter (fun i -> add_move (Promotion {from = square; to_ = attacker_square_3; promotion = i; capture = attacker_3}) moves number_of_moves) [(-5); (-4); (-3); (-2)]
         end
       end
     end;
@@ -295,15 +276,10 @@ let pawn_moves board square list =
       let attacker_4 = board.(attacker_square_4) in
       if attacker_4 > 0 then begin
         if square < 48 then begin
-          list := Normal {piece = (-1); from = square; to_ = attacker_square_4; capture = attacker_4} :: !list
+          add_move (Normal {piece = (-1); from = square; to_ = attacker_square_4; capture = attacker_4}) moves number_of_moves
         end
         else begin
-          list :=
-          Promotion {from = square; to_ = attacker_square_4; promotion = (-5); capture = attacker_4} ::
-          Promotion {from = square; to_ = attacker_square_4; promotion = (-4); capture = attacker_4} ::
-          Promotion {from = square; to_ = attacker_square_4; promotion = (-3); capture = attacker_4} ::
-          Promotion {from = square; to_ = attacker_square_4; promotion = (-2); capture = attacker_4} ::
-          !list
+          List.iter (fun i -> add_move (Promotion {from = square; to_ = attacker_square_4; promotion = i; capture = attacker_4}) moves number_of_moves) [(-5); (-4); (-3); (-2)]
         end
       end
     end
@@ -313,15 +289,15 @@ let pawn_moves board square list =
 let tabfun = [|pawn_moves; knight_moves; bishop_moves; rook_moves; queen_moves|]
 
 (*Fonction construisant une list des déplacements classique possibles d'un joueur*)
-let pseudo_legal_moves board white_to_move king_position =
-  let move_list = ref [] in
-  let king_move_list = king_moves board king_position in
+let pseudo_legal_moves board white_to_move king_position king_moves_index moves number_of_moves =
+  king_moves board king_position moves number_of_moves;
+  king_moves_index := (0, !number_of_moves - 1);
   if white_to_move then begin
     let aux from arrive =
       for i = from downto arrive do
         let piece = board.(i) in
         if piece > 0 then begin
-          (tabfun.(piece - 1) board i move_list)
+          (tabfun.(piece - 1) board i moves number_of_moves)
         end
       done
     in List.iter (fun (a, b) -> aux a b) [63, king_position + 1; king_position - 1, 0]
@@ -331,16 +307,15 @@ let pseudo_legal_moves board white_to_move king_position =
       for i = from to to_ do
         let piece = board.(i) in
         if piece < 0 then begin
-          (tabfun.(- piece - 1) board i move_list)
+          (tabfun.(- piece - 1) board i moves number_of_moves)
         end
       done
     in List.iter (fun (a, b) -> aux a b) [0, king_position - 1; king_position + 1, 63]
-  end;
-  !move_list, king_move_list
+  end
 
 let pin_table = Array.make 64 0
 
-let pin_generator piece square board pinned_list =
+let pin_generator piece square board moves number_of_moves =
   let tab64_square = tab64.(square) in
   let direction = pin_table.(square) in
   let func direction =
@@ -350,14 +325,14 @@ let pin_generator piece square board pinned_list =
       let attacker_square = tab120.(tab64_square + (!distance * direction)) in
       let attacker = board.(attacker_square) in
       if attacker = 0 then begin
-        pinned_list := Normal {piece = piece; from = square; to_ = attacker_square; capture = 0} :: !pinned_list;
+        add_move (Normal {piece = piece; from = square; to_ = attacker_square; capture = 0}) moves number_of_moves;
         incr distance
       end
       else if piece * attacker > 0 then begin
         iterate :=  false
       end
       else begin 
-        pinned_list := Normal {piece = piece; from = square; to_ = attacker_square; capture = attacker} :: !pinned_list;
+        add_move (Normal {piece = piece; from = square; to_ = attacker_square; capture = attacker}) moves number_of_moves;
         iterate :=  false
       end
     done
@@ -367,11 +342,11 @@ let pin_generator piece square board pinned_list =
       if abs direction = 10 then begin
         let attacker_square_1 = tab120.(tab64_square - 10) in
         if board.(attacker_square_1) = 0 then begin
-          pinned_list := Normal {piece = 1; from = square; to_ = attacker_square_1; capture = 0} :: !pinned_list;
+          add_move (Normal {piece = 1; from = square; to_ = attacker_square_1; capture = 0}) moves number_of_moves;
           if (square > 47 && square < 56) then begin
             let attacker_square_2 = tab120.(tab64_square - 20) in
             if board.(attacker_square_2) = 0 then begin
-              pinned_list := Normal {piece = 1; from = square; to_ = attacker_square_2; capture = 0} :: !pinned_list
+              add_move (Normal {piece = 1; from = square; to_ = attacker_square_2; capture = 0}) moves number_of_moves;
             end
           end
         end
@@ -381,15 +356,10 @@ let pin_generator piece square board pinned_list =
         let attacker_3 = board.(attacker_square_3) in
         if attacker_3 < 0 then begin
           if square > 15 then begin
-            pinned_list := Normal {piece = 1; from = square; to_ = attacker_square_3; capture = attacker_3} :: !pinned_list
+            add_move (Normal {piece = 1; from = square; to_ = attacker_square_3; capture = attacker_3}) moves number_of_moves;
           end
           else begin
-            pinned_list :=
-            Promotion {from = square; to_ = attacker_square_3; promotion = 5; capture = attacker_3} ::
-            Promotion {from = square; to_ = attacker_square_3; promotion = 4; capture = attacker_3} ::
-            Promotion {from = square; to_ = attacker_square_3; promotion = 3; capture = attacker_3} ::
-            Promotion {from = square; to_ = attacker_square_3; promotion = 2; capture = attacker_3} ::
-            !pinned_list
+            List.iter (fun i -> add_move (Promotion {from = square; to_ = attacker_square_3; promotion = i; capture = attacker_3}) moves number_of_moves) [5; 4; 3; 2]
           end
         end
       end;
@@ -398,15 +368,10 @@ let pin_generator piece square board pinned_list =
         let attacker_4 = board.(attacker_square_4) in
         if attacker_4 < 0 then begin
           if square > 15 then begin
-            pinned_list := Normal {piece = 1; from = square; to_ = attacker_square_4; capture = attacker_4} :: !pinned_list
+            add_move (Normal {piece = 1; from = square; to_ = attacker_square_4; capture = attacker_4}) moves number_of_moves;
           end
           else begin
-            pinned_list :=
-            Promotion {from = square; to_ = attacker_square_4; promotion = 5; capture = attacker_4} ::
-            Promotion {from = square; to_ = attacker_square_4; promotion = 4; capture = attacker_4} ::
-            Promotion {from = square; to_ = attacker_square_4; promotion = 3; capture = attacker_4} ::
-            Promotion {from = square; to_ = attacker_square_4; promotion = 2; capture = attacker_4} ::
-            !pinned_list
+            List.iter (fun i -> add_move (Promotion {from = square; to_ = attacker_square_4; promotion = i; capture = attacker_4}) moves number_of_moves) [5; 4; 3; 2]
           end
         end
       end
@@ -415,11 +380,11 @@ let pin_generator piece square board pinned_list =
       if abs direction = 10 then begin
         let attacker_square_1 = tab120.(tab64_square + 10) in
         if board.(attacker_square_1) = 0 then begin
-          pinned_list := Normal {piece = (-1); from = square; to_ = attacker_square_1; capture = 0} :: !pinned_list;
+          add_move (Normal {piece = (-1); from = square; to_ = attacker_square_1; capture = 0}) moves number_of_moves;
           if (square > 7 && square < 16) then begin
             let attacker_square_2 = tab120.(tab64_square + 20) in
             if (board.(attacker_square_2) = 0) then begin
-              pinned_list := Normal {piece = (-1); from = square; to_ = attacker_square_2; capture = 0} :: !pinned_list
+              add_move (Normal {piece = (-1); from = square; to_ = attacker_square_2; capture = 0}) moves number_of_moves;
             end
           end
         end
@@ -429,15 +394,10 @@ let pin_generator piece square board pinned_list =
         let attacker_3 = board.(attacker_square_3) in
         if attacker_3 > 0 then begin
           if square < 48 then begin
-            pinned_list := Normal {piece = (-1); from = square; to_ = attacker_square_3; capture = attacker_3} :: !pinned_list
+            add_move (Normal {piece = (-1); from = square; to_ = attacker_square_3; capture = attacker_3}) moves number_of_moves;
           end
           else begin
-            pinned_list :=
-            Promotion {from = square; to_ = attacker_square_3; promotion = (-5); capture = attacker_3} ::
-            Promotion {from = square; to_ = attacker_square_3; promotion = (-4); capture = attacker_3} ::
-            Promotion {from = square; to_ = attacker_square_3; promotion = (-3); capture = attacker_3} ::
-            Promotion {from = square; to_ = attacker_square_3; promotion = (-2); capture = attacker_3} ::
-            !pinned_list
+            List.iter (fun i -> add_move (Promotion {from = square; to_ = attacker_square_3; promotion = i; capture = attacker_3}) moves number_of_moves) [(-5); (-4); (-3); (-2)]
           end
         end
       end;
@@ -446,15 +406,10 @@ let pin_generator piece square board pinned_list =
         let attacker_4 = board.(attacker_square_4) in
         if attacker_4 > 0 then begin
           if square < 48 then begin
-            pinned_list := Normal {piece = (-1); from = square; to_ = attacker_square_4; capture = attacker_4} :: !pinned_list
+            add_move (Normal {piece = (-1); from = square; to_ = attacker_square_4; capture = attacker_4}) moves number_of_moves;
           end
           else begin
-            pinned_list :=
-            Promotion {from = square; to_ = attacker_square_4; promotion = (-5); capture = attacker_4} ::
-            Promotion {from = square; to_ = attacker_square_4; promotion = (-4); capture = attacker_4} ::
-            Promotion {from = square; to_ = attacker_square_4; promotion = (-3); capture = attacker_4} ::
-            Promotion {from = square; to_ = attacker_square_4; promotion = (-2); capture = attacker_4} ::
-            !pinned_list
+            List.iter (fun i -> add_move (Promotion {from = square; to_ = attacker_square_4; promotion = i; capture = attacker_4}) moves number_of_moves) [(-5); (-4); (-3); (-2)]
           end
         end
       end
@@ -466,21 +421,22 @@ let pin_generator piece square board pinned_list =
 
 
 (*Fonction construisant une list des déplacements classique possibles d'un joueur*)
-let pin_moves board white_to_move king_position pinned_pieces =
-  let move_list = ref [] in
-  let king_move_list = king_moves board king_position in
-  let pinned_list = ref [] in
+let pin_moves board white_to_move king_position king_moves_index pinned_pieces pinned_moves_index moves number_of_moves =
+  king_moves board king_position moves number_of_moves;
+  king_moves_index := (0, !number_of_moves - 1);
   if white_to_move then begin
     let aux from to_ = 
     for square = from downto to_ do
       let piece = board.(square) in
       if not (List.mem square pinned_pieces) then begin
         if piece > 0 then begin
-          tabfun.(piece - 1) board square move_list
+          tabfun.(piece - 1) board square moves number_of_moves
         end
       end
       else begin
-        pin_generator piece square board pinned_list
+        let first_pinned_move_index = !number_of_moves in
+        pin_generator piece square board moves number_of_moves;
+        pinned_moves_index := (first_pinned_move_index, !number_of_moves - 1) :: !pinned_moves_index
       end
     done in List.iter (fun (a, b) -> aux a b) [63, king_position + 1; king_position - 1, 0]
   end
@@ -490,16 +446,17 @@ let pin_moves board white_to_move king_position pinned_pieces =
         let piece = board.(square) in
         if not (List.mem square pinned_pieces) then begin
           if piece < 0 then begin
-            tabfun.(- piece - 1) board square move_list
+            tabfun.(- piece - 1) board square moves number_of_moves
           end
         end
         else begin
-          pin_generator piece square board pinned_list
+          let first_pinned_move_index = !number_of_moves in
+          pin_generator piece square board moves number_of_moves;
+          pinned_moves_index := (first_pinned_move_index, !number_of_moves - 1) :: !pinned_moves_index
         end
       done
     in List.iter (fun (a, b) -> aux a b) [0, king_position - 1; king_position + 1, 63]
-  end;
-  !move_list, king_move_list, !pinned_list
+  end
 
 let chess_960 = ref false
 
@@ -782,27 +739,25 @@ let possible_long board white_to_move =
   end
 
 (*Fonction construisant une list des roques possible d'un joueur*)
-let castlings board white_to_move (white_short, white_long, black_short, black_long) =
-  let l = ref [] in 
+let castlings board white_to_move (white_short, white_long, black_short, black_long) moves number_of_moves =
   if white_to_move then begin
     let pseudo_e2 = board.(!white_king_pin_1) in
     if not (!white_king_pinnable && (pseudo_e2 = (-1) || board.(!white_king_pin_2) = (-2))) then begin
-      if white_short && (!white_short_rook_in_h || board.(63) > (-4)) && List.for_all (fun square -> board.(square) = 0) !white_short_empties && not (castling_threats board 1 !white_king_pin_1 pseudo_e2 white_short_path !white_short_path_length white_short_bishop_vect white_castling_knights_vect 1)
-          then l := Castling {sort = 1} :: !l
+      if white_short && (!white_short_rook_in_h || board.(63) > (-4)) && List.for_all (fun square -> board.(square) = 0) !white_short_empties && not (castling_threats board 1 !white_king_pin_1 pseudo_e2 white_short_path !white_short_path_length white_short_bishop_vect white_castling_knights_vect 1) then
+        add_move (Castling {sort = 1}) moves number_of_moves
       end;
-      if white_long && (!white_long_rook_in_a || possible_long board true) && List.for_all (fun square -> board.(square) = 0) !white_long_empties && not (castling_threats board 1 !white_king_pin_1 pseudo_e2 white_long_path !white_long_path_length white_long_bishop_vect white_castling_knights_vect !white_long_directions)
-        then l := Castling {sort = 2} :: !l
+      if white_long && (!white_long_rook_in_a || possible_long board true) && List.for_all (fun square -> board.(square) = 0) !white_long_empties && not (castling_threats board 1 !white_king_pin_1 pseudo_e2 white_long_path !white_long_path_length white_long_bishop_vect white_castling_knights_vect !white_long_directions) then
+         add_move (Castling {sort = 2}) moves number_of_moves
   end
   else begin
     let pseudo_e7 = - board.(!black_king_pin_1) in
     if not (!black_king_pinnable && (pseudo_e7 = (-1) || board.(!black_king_pin_2) = 2)) then begin
-      if black_short && (!black_short_rook_in_h || board.(7) < 4) && List.for_all (fun square -> board.(square) = 0) !black_short_empties && not (castling_threats board (-1) !black_king_pin_1 pseudo_e7 black_short_path !black_short_path_length black_short_bishop_vect black_castlings_knights_vect 1)
-          then l := Castling {sort = 3} :: !l
+      if black_short && (!black_short_rook_in_h || board.(7) < 4) && List.for_all (fun square -> board.(square) = 0) !black_short_empties && not (castling_threats board (-1) !black_king_pin_1 pseudo_e7 black_short_path !black_short_path_length black_short_bishop_vect black_castlings_knights_vect 1) then
+         add_move (Castling {sort = 3}) moves number_of_moves
       end;
-      if black_long && (!black_long_rook_in_a || possible_long board false) && List.for_all (fun square -> board.(square) = 0) !black_long_empties && not (castling_threats board (-1) !black_king_pin_1 pseudo_e7 black_long_path !black_long_path_length black_long_bishop_vect black_castlings_knights_vect !black_long_directions)
-        then l := Castling {sort = 4} :: !l
-    end;
-  !l
+      if black_long && (!black_long_rook_in_a || possible_long board false) && List.for_all (fun square -> board.(square) = 0) !black_long_empties && not (castling_threats board (-1) !black_king_pin_1 pseudo_e7 black_long_path !black_long_path_length black_long_bishop_vect black_castlings_knights_vect !black_long_directions)then
+         add_move (Castling {sort = 4}) moves number_of_moves
+    end
 
 (*Fonction adaptant les droits aux roques en fonction du move*)
 let castling_modification move (white_short, white_long, black_short, black_long) =
@@ -841,8 +796,7 @@ let rec possible_castlings listes_coups = match listes_coups with
     prb1 && prb2, grb1 && grb2, prn1 && prn2, grn1 && grn2
 
 (*Fonction construisant une list des prises en passant possible d'un joueur*)
-let enpassant board white_to_move last_move =
-  let list = ref [] in
+let enpassant board white_to_move last_move moves number_of_moves =
   if white_to_move then begin
     let aux move = match move with
       |Normal {piece; from; to_; capture = _} when (piece = (-1) && to_ - from = 16) -> to_
@@ -851,11 +805,11 @@ let enpassant board white_to_move last_move =
     in if to_ <> (-1) then begin
       let right = to_ + 1
       in if (right <> 32 && board.(right) = 1) then begin
-        list := Enpassant {from = right; to_ = right - 9} :: !list
+        add_move (Enpassant {from = right; to_ = right - 9}) moves number_of_moves
       end;
       let left = to_ - 1
       in if (left <> 23 && board.(left) = 1) then begin
-        list := Enpassant {from = left; to_ = left - 7} :: !list
+        add_move (Enpassant {from = left; to_ = left - 7}) moves number_of_moves
       end
     end
   end
@@ -867,15 +821,14 @@ let enpassant board white_to_move last_move =
     in if to_ <> (-1) then begin
       let right = to_ + 1
       in if (right <> 40 && board.(right) = (-1)) then begin
-        list := Enpassant {from = right; to_ = right + 7} :: !list
+        add_move (Enpassant {from = right; to_ = right + 7}) moves number_of_moves
       end;
       let left = to_ - 1
       in if (left <> 31 && board.(left) = (-1)) then begin
-        list := Enpassant {from = left; to_ = left + 9} :: !list
+        add_move (Enpassant {from = left; to_ = left + 9}) moves number_of_moves
       end
     end
-  end;
-  !list
+  end
 
 (*Fonction permettant de jouer un move sur l'échiquier*)
 let make board move = match move with
@@ -1285,34 +1238,58 @@ let pinned_squares board king_square white_to_move =
 
 (*Fonction construisant une list des moves légaux du joueur*)
 let legal_moves board white_to_move last_move (white_short, white_long, black_short, black_long) king_position in_check =
-  let move_list = ref [] in
-  let aux move king_position =
+  let moves = Array.make 256 Null in
+  let number_of_moves = ref 0 in
+  let king_moves_index = ref (0,0) in
+  let to_remove = ref [] in
+  let aux move move_index king_position =
     make board move;
-    if not (threatened board king_position white_to_move) then begin
-      move_list := move :: !move_list
+    if threatened board king_position white_to_move then begin
+      to_remove := move_index :: !to_remove
     end;
     unmake board move
-  in List.iter (fun prise_en_passant -> aux prise_en_passant king_position) (enpassant board white_to_move last_move);
-  if in_check then begin
-    let moves, king_moves = pseudo_legal_moves board white_to_move king_position in
-    List.iter (fun king_move -> aux king_move (to_ king_move)) king_moves;
-    List.iter (fun other_move -> aux other_move king_position) moves;
-    !move_list
+  in if in_check then begin
+    pseudo_legal_moves board white_to_move king_position king_moves_index moves number_of_moves;
+    for i = fst !king_moves_index to snd !king_moves_index do
+      let king_move = moves.(i) in
+      aux king_move i (to_ king_move)
+    done;
+    for i = snd !king_moves_index + 1 to !number_of_moves - 1 do
+      let other_move = moves.(i) in
+      aux other_move i king_position
+    done
   end
   else begin
     let castling_rights = if white_to_move then white_short || white_long else black_short || black_long in
     let pinned_pieces = pinned_squares board king_position white_to_move in
     if pinned_pieces = [] then begin
-      let moves, king_moves = pseudo_legal_moves board white_to_move king_position in
-      List.iter (fun king_move -> aux king_move (to_ king_move)) king_moves;
-      if castling_rights then (castlings board white_to_move (white_short, white_long, black_short, black_long)) @ !move_list @ moves else !move_list @ moves
+      pseudo_legal_moves board white_to_move king_position king_moves_index moves number_of_moves;
+      for i = fst !king_moves_index to snd !king_moves_index do
+        let king_move = moves.(i) in
+        aux king_move i (to_ king_move)
+      done;
+      if castling_rights then
+        (castlings board white_to_move (white_short, white_long, black_short, black_long)) moves number_of_moves
     end
     else begin
-      let moves, king_moves, pinned_moves = pin_moves board white_to_move king_position pinned_pieces in
-      List.iter (fun king_move -> aux king_move (to_ king_move)) king_moves;
-      if castling_rights then (castlings board white_to_move (white_short, white_long, black_short, black_long)) @ !move_list @ pinned_moves @ moves else !move_list @ pinned_moves @ moves
+      let pinned_moves_index = ref [] in
+      pin_moves board white_to_move king_position king_moves_index pinned_pieces pinned_moves_index moves number_of_moves;
+      for i = fst !king_moves_index to snd !king_moves_index do
+        let king_move = moves.(i) in
+        aux king_move i (to_ king_move)
+      done;
+      if castling_rights then
+        (castlings board white_to_move (white_short, white_long, black_short, black_long)) moves number_of_moves
     end
-  end
+  end;
+  let index_first_ep = !number_of_moves in
+  enpassant board white_to_move last_move moves number_of_moves;
+  for i = index_first_ep to !number_of_moves - 1 do
+    let prise_en_passant = moves.(i) in
+    aux prise_en_passant i king_position
+  done;
+  List.iter (fun index -> remove_move index moves number_of_moves) !to_remove;
+  moves, number_of_moves
 
 (*Fonction construisant une list des déplacements possible d'une tour*)
 let rook_captures board square list =
@@ -1684,7 +1661,12 @@ let captures board white_to_move last_move =
       move_list := move :: !move_list
     end;
     unmake board move
-  in List.iter (fun prise_en_passant -> aux prise_en_passant king_position) (enpassant board white_to_move last_move);
+  in let ep_array = Array.make 2 Null in
+  let number_of_ep = ref 0 in
+  enpassant board white_to_move last_move ep_array number_of_ep;
+  for i = 0 to !number_of_ep - 1 do
+    aux ep_array.(i) king_position
+  done;
   if threatened board king_position white_to_move then begin
     let moves, king_moves = pseudo_legal_captures board white_to_move king_position in
     List.iter (fun king_move -> aux king_move (to_ king_move)) king_moves;
@@ -1739,26 +1721,14 @@ let is_legal_effective board move white_to_move king_position in_check pinned_pi
   end;
   !b
 
-(*Fonction renvoyant le statut de la partie (2 si elle est en cours, 0 si il y a pat, 1 si les blancs l'emportent, -1 si les noirs l'emportent)*)
-let win board white_to_move last_move king_position in_check =
-  let winner = ref 2 in
-  if white_to_move then begin
-    if (legal_moves board white_to_move last_move (false, false, false, false) king_position in_check) = [] then begin
-      if threatened board (index_array board 6) true then
-        winner := -1
-      else
-        winner := 0
-    end
-  end
-  else begin
-    if (legal_moves board white_to_move last_move (false, false, false, false) king_position in_check) = [] then begin
-      if threatened board (index_array board (-6)) false then
-        winner := 1
-      else
-        winner := 0
-    end
-  end;
-  !winner
-
 (*Tableau dont les élément indiquent si la présence de la pièce d'indice correspondant est imcompatible avec la nulle par manque de matériel*)
 let insufficient_mating_materiel_vect = [|false; true; false; false; true; true; false|]
+
+let move_array_mem move legal_moves number_of_legal_moves =
+  let mem = ref false in
+  let i = ref 0 in
+  while !i < number_of_legal_moves && not !mem do
+    if legal_moves.(!i) = move then mem := true;
+    incr i
+  done;
+  !mem

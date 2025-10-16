@@ -57,7 +57,7 @@ let rec pvs board white_to_move last_move castling_rights board_record half_move
     end; *)
 
     (*Check repetion or fifty moves rule*)
-    if repetition board_record 3 || (half_moves = 100 && (not in_check || (legal_moves board white_to_move last_move castling_rights king_position in_check <> []))) then begin
+    if repetition board_record 3 || (half_moves = 100 && (not in_check || (let _, number_of_moves = legal_moves board white_to_move last_move castling_rights king_position in_check in !number_of_moves <> 0))) then begin
       if ispv then begin
         pv_length.(ply) <- 0
       end;
@@ -130,8 +130,9 @@ let rec pvs board white_to_move last_move castling_rights board_record half_move
             if !no_cut then begin
               let counter = ref 0 in
               let steelpulse = ref 0 in
-              let rec move_loop move_list = match move_list with
-                |move :: t when !no_cut ->
+              let move_loop player_moves ordering_array number_of_moves =
+                while !no_cut && !number_of_moves > 0 do
+                  let move = move_picker player_moves ordering_array number_of_moves in
                   let new_castling_right = castling_modification move castling_rights in
                   let new_zobrist = new_zobrist move last_move zobrist_position castling_rights new_castling_right board in
                   let new_record, new_half_moves = adapt_record new_zobrist move depth board_record half_moves in
@@ -193,18 +194,23 @@ let rec pvs board white_to_move last_move castling_rights board_record half_move
                     end
                   end;
                   unmake board move;
-                  incr counter;
-                  move_loop t
-                |_ -> ()
+                  incr counter
+                done
               in if hash_move <> Null then begin
-                move_loop [hash_move];
+                move_loop [|hash_move|] [|0|] (ref 1);
                 if !no_cut then begin
+                  let legal_moves, number_of_legal_moves = legal_moves board white_to_move last_move castling_rights king_position in_check in
+                  let ordering_array = Array.make !number_of_legal_moves 0 in
                   steelpulse := 1;
-                  move_loop (List.filter (fun c -> c <> hash_move) (move_ordering board white_to_move (legal_moves board white_to_move last_move castling_rights king_position in_check) ply))
+                  move_ordering board white_to_move legal_moves number_of_legal_moves ply hash_move ordering_array;
+                  move_loop legal_moves ordering_array number_of_legal_moves
                 end
               end
               else begin
-                move_loop (move_ordering board white_to_move (legal_moves board white_to_move last_move castling_rights king_position in_check) ply)
+                let legal_moves, number_of_legal_moves = legal_moves board white_to_move last_move castling_rights king_position in_check in
+                let ordering_array = Array.make !number_of_legal_moves 0 in
+                move_ordering board white_to_move legal_moves number_of_legal_moves ply hash_move ordering_array;
+                move_loop legal_moves ordering_array number_of_legal_moves
               end;
               if !counter = 0 then begin
                 if ispv then begin
@@ -256,7 +262,46 @@ let rec pvs board white_to_move last_move castling_rights board_record half_move
   end
 
 let english_pieces_lowercase = [|""; "p"; "n"; "b"; "r"; "q"; "k"|]
-
+let move_ordering2 board white_to_move player_moves ply =
+  let score move =
+    (*let _ =
+    if g move then begin
+      if false then
+        new_see board move
+      else
+        see_forced board move white_to_move
+    end
+    else
+      0
+    in*)
+    (*if g move then begin
+      let a = see_forced board move white_to_move in
+      let b = new_see board move in
+      if a <> b then begin
+        print_board board;
+        print_endline (coord.(from move) ^ coord.(to_ move));
+        print_endline (string_of_int a ^ " " ^ string_of_int b)
+      end
+    end;*)
+    if isquiet move then begin
+      if killer_moves.(2 * ply) = move then begin
+        2000000
+      end
+      else if killer_moves.(2 * ply + 1) = move then begin
+        1000000
+      end
+      else begin
+        history_moves.(4096 * aux_history white_to_move + 64 * from move + to_ move)
+      end
+    end
+    else begin
+      let see_score = see_forced board move white_to_move in
+      if see_score >= 0 then
+        3000000 + see_score
+      else
+        see_score
+    end
+  in List.map snd (merge_sort (List.map (fun move -> (score move, move)) player_moves))
 (*Fonction traduisant un move en sa notation UCI*)
 let uci_of_mouvement move = match move with
   |Castling {sort} ->
@@ -353,11 +398,11 @@ let root_search board white_to_move last_move castling_rights board_record half_
     move_loop [first_move];
     if !no_cut then begin
       steelpulse := 1;
-      move_loop (List.filter (fun c -> c <> first_move) (move_ordering board white_to_move player_moves 0))
+      move_loop (List.filter (fun c -> c <> first_move) (move_ordering2 board white_to_move player_moves 0))
     end
   end
   else begin
-    move_loop (move_ordering board white_to_move player_moves 0)
+    move_loop (move_ordering2 board white_to_move player_moves 0)
   end;
   if not (!out_of_time || !node_counter >= !node_limit) then begin
     store transposition_table zobrist_position Pv depth !best_score !best_move (*static_eval*) !go_counter

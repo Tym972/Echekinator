@@ -9,92 +9,132 @@ let smaller_attacker board square white_to_move =
   let tab64_square = tab64.(square) in
   let piece = board.(square) in
   let player_sign = if white_to_move then 1 else (-1) in
-  let i = ref 0 in
+  let counter = ref 0 in
   let bishop_iterations = Array.make 4 true in
-  while (!smaller_possible && !i < 4) do
-    let direction = bishop_vect.(!i) in
+
+  (*Searching for a pawn, or a bishop/queen/king in contact*)
+  while (!smaller_possible && !counter < 4) do
+    let direction = bishop_vect.(!counter) in
     let attacker_square = tab120.(tab64_square + direction) in
     if attacker_square <> (-1) then begin
       let attacker = board.(attacker_square) * player_sign in
+
+      (*We found a piece in contact*)
       if attacker <> 0 then begin
-        bishop_iterations.(!i) <-  false;
+        bishop_iterations.(!counter) <- false;
+
+        (*If this piece is an opposing pawn, it is neccessarily the smallest attacker*)
         if (attacker = (-1) && direction * player_sign < 0) then begin
           smaller_possible := false;
           move := Normal {piece = attacker * player_sign; from = attacker_square; to_ = square; capture = piece}
         end
+
+        (*Else if it is a bishop, a queen or a king, smaller than what we already have, we just update the smaller tracker*)
         else if ((attacker <= (-3) && attacker <> (-4)) && attacker > !smaller) then begin
           smaller := attacker;
           move := Normal {piece = attacker * player_sign; from = attacker_square; to_ = square; capture = piece};
         end
+
       end
     end;
-    incr i
+    incr counter
   done;
+
+  (*Searching for a knight*)
   if !smaller_possible then begin
-    let i = ref 0 in
-    while (!smaller_possible && !i < 8) do
-      let direction = knight_vect.(!i) in
+    counter := 0;
+    while (!smaller_possible && !counter < 8) do
+      let direction = knight_vect.(!counter) in
       if tab120.(tab64_square + direction) <> (-1) then begin
         let attacker_square = tab120.(tab64_square + direction) in
+
+        (*We found a knight attacker, it is neccessarily the smallest*)
         if board.(attacker_square) = (-2) * player_sign then begin
           smaller_possible := false;
           move := Normal {piece = (-2) * player_sign; from = attacker_square; to_ = square; capture = piece}
         end
+
       end;
-      incr i
+      incr counter
     done;
+
+    (*We found a bishop attacker, it is neccessarily the smallest*)
     if !smaller = (-3) then begin
       smaller_possible := false
     end
+
   end;
-  i := 0;
-  while (!smaller_possible && !i < 4) do 
-    let direction = bishop_vect.(!i) in
-    let iterate = ref (bishop_iterations.(!i) && tab120.(tab64_square + direction) <> (-1)) in
-    let distance = ref 2 in
-    while (!iterate && tab120.(tab64_square + (!distance * direction)) <> (-1)) do
-      let attacker_square = tab120.(tab64_square + (!distance * direction)) in
-      let attacker = board.(attacker_square) * player_sign in
-      if attacker = 0 then begin
-        incr distance
-      end
-      else if attacker > 0 then begin
-        iterate :=  false
-      end
-      else begin
-        if attacker = (-3) then begin
-          smaller_possible := false;
-          move := Normal {piece = attacker * player_sign; from = attacker_square; to_ = square; capture = piece}
+
+  (*Searching for a bishop or a queen, distance >= 2*)
+  if !smaller_possible then begin
+    counter := 0;
+    while (!smaller_possible && !counter < 4) do 
+      let direction = bishop_vect.(!counter) in
+      let iterate = ref (bishop_iterations.(!counter) && tab120.(tab64_square + direction) <> (-1)) in
+      let distance = ref 2 in
+      while (!iterate && tab120.(tab64_square + (!distance * direction)) <> (-1)) do
+        let attacker_square = tab120.(tab64_square + (!distance * direction)) in
+        let attacker = board.(attacker_square) * player_sign in
+        if attacker = 0 then begin
+          incr distance
         end
-        else if attacker = (-5) then begin
-          smaller := attacker;
-          move := Normal {piece = attacker * player_sign; from = attacker_square; to_ = square; capture = piece}
-        end;
-        iterate :=  false
-      end
-    done;
-    incr i
-  done;
+        else if attacker > 0 then begin
+          iterate :=  false
+        end
+        else begin
+
+          (*We found a bishop attacker, it's neccessarily the smallest*)
+          if attacker = (-3) then begin
+            smaller_possible := false;
+            move := Normal {piece = attacker * player_sign; from = attacker_square; to_ = square; capture = piece}
+          end
+
+          (*We found a queen attacker, we just update the smaller tracker*)
+          else if attacker = (-5) then begin
+            smaller := attacker;
+            move := Normal {piece = attacker * player_sign; from = attacker_square; to_ = square; capture = piece}
+          end;
+
+          iterate :=  false
+        end
+      done;
+      incr counter
+    done
+  end;
+
+  (*Searching for a rook or a queen*)
   if !smaller_possible  then begin
-    let i = ref 0 in
-    while (!smaller_possible && !i < 4) do
-      let direction = rook_vect.(!i) in
+    counter := 0;
+    while (!smaller_possible && !counter < 4) do
+      let direction = rook_vect.(!counter) in
       let iterate = ref (tab120.(tab64_square + direction) <> (-1)) in
       if !iterate then begin
         let attacker_square = tab120.(tab64_square + direction) in
         let attacker = board.(attacker_square) * player_sign in
+
+        (*We found a piece in contact*)
         if attacker <> 0 then begin
           iterate :=  false;
+
+          (*If this piece is an opposing rook, king or queen, smaller than what we already have*)
           if attacker <= (-4) && attacker > !smaller then begin
+
+            (*We found a rook attacker, it's neccessarily the smallest*)
             if attacker = (-4) then begin
               smaller_possible := false
             end
+
+            (*Else if it's a queen or a king, we just update the smaller tracker*)
             else begin
               smaller := attacker
             end;
+
             move := Normal {piece = attacker * player_sign; from = attacker_square; to_ = square; capture = piece}
           end
+
         end;
+
+        (*We continue the search in this direction*)
         if !smaller_possible then begin
           let distance = ref 2 in
           while (!iterate && tab120.(tab64_square + (!distance * direction)) <> (-1)) do
@@ -107,20 +147,25 @@ let smaller_attacker board square white_to_move =
               iterate :=  false
             end
             else begin
+
+              (*We found a rook attacker, it's neccessarily the smallest*)
               if attacker = (-4) then begin
                 smaller_possible := false;
                 move := Normal {piece = attacker * player_sign; from = attacker_square; to_ = square; capture = piece}
               end
+
+              (*We found a queen attacker, we just update the smaller tracker*)
               else if attacker = (-5) then begin
                 smaller := attacker;
                 move := Normal {piece = attacker * player_sign; from = attacker_square; to_ = square; capture = piece}
               end;
+
               iterate :=  false
             end
           done
         end
       end;
-      incr i
+      incr counter
     done
   end;
   !move
@@ -140,29 +185,6 @@ let see_forced board move white_to_move =
   let note = tabvalue.(abs (capture move)) - see board (to_ move) white_to_move in
   unmake board move;
   note
-
-(*Tri les coups selon leur potentiel SEE en supprimant ceux dont cette évaluation est négative*)
-let tri_see liste board white_to_move =
-  begin
-    let rec association liste_coups =
-      match liste_coups with
-      |[] -> []
-      (*|Promotion {from = _; to_; promotion; capture} as move :: t ->
-        make board move;
-        let note = tabvalue.(abs promotion) + tabvalue.(abs capture) - see board to_ white_to_move in
-        unmake board move;
-        if note >= 0 then
-          (note, move) :: association t else association t*)
-      |move :: t ->
-        make board move;
-        let note = tabvalue.(abs (capture move)) - see board (to_ move) white_to_move in
-        unmake board move;
-        if note >= 0 then
-          (note, move) :: association t
-        else
-          association t
-    in List.map snd (merge_sort (association liste))
-  end
 
 let get_attackers board square tab64_square first_attacker first_capture first_attacker_square =
   let white_attackers = ref [] in
@@ -367,34 +389,82 @@ let aux_history white_to_move =
 
 let g move = match move with |Normal _ -> true |_ -> false
 
-let move_ordering board white_to_move player_moves ply =
-  let score move =
-    (*let copper = if g move then see_forced board move else 0 in*)
+let move_ordering board white_to_move player_moves number_of_moves ply hash_move ordering_array =
+  let hash_move_index = ref (-1) in
+  let score move move_index =
+    (*let _ =
+    if g move then begin
+      if false then
+        new_see board move
+      else
+        see_forced board move white_to_move
+    end
+    else
+      0
+    in*)
     (*if g move then begin
-      let _ = see_forced board move in ();
-      (*let _ = new_see board move in ();*)
-      (*if a <> b then begin
+      let a = see_forced board move white_to_move in
+      let b = new_see board move in
+      if a <> b then begin
         print_board board;
         print_endline (coord.(from move) ^ coord.(to_ move));
         print_endline (string_of_int a ^ " " ^ string_of_int b)
-      end*)
+      end
     end;*)
-    if isquiet move then begin
+    if move = hash_move then begin
+      hash_move_index := move_index;
+    end
+    else if isquiet move then begin
       if killer_moves.(2 * ply) = move then begin
-        2000000
+        ordering_array.(move_index) <- 2000000
       end
       else if killer_moves.(2 * ply + 1) = move then begin
-        1000000
+        ordering_array.(move_index) <- 1000000
       end
       else begin
-        history_moves.(4096 * aux_history white_to_move + 64 * from move + to_ move)
+        ordering_array.(move_index) <- history_moves.(4096 * aux_history white_to_move + 64 * from move + to_ move)
       end
     end
     else begin
       let see_score = see_forced board move white_to_move in
       if see_score >= 0 then
-        3000000 + see_score
+        ordering_array.(move_index) <- 3000000 + see_score
       else
-        see_score
+        ordering_array.(move_index) <- see_score
     end
-  in List.map snd (merge_sort (List.map (fun move -> (score move, move)) player_moves))
+  in for i = 0 to !number_of_moves - 1 do
+    score player_moves.(i) i
+  done;
+  if !hash_move_index <> (-1) then begin
+    ordering_array.(!hash_move_index) <- ordering_array.(!number_of_moves - 1);
+    remove_move !hash_move_index player_moves number_of_moves
+  end
+
+let move_picker moves ordering_array number_of_moves =
+  let max_index = ref 0 in
+  let max_value = ref (-infinity) in
+  for i = 0 to !number_of_moves - 1 do
+    if ordering_array.(i) > !max_value then begin
+      max_value := ordering_array.(i);
+      max_index := i
+    end
+  done;
+  let move = moves.(!max_index) in
+  ordering_array.(!max_index) <- ordering_array.(!number_of_moves - 1);
+  remove_move !max_index moves number_of_moves;
+  move
+
+  (*Tri les coups selon leur potentiel SEE en supprimant ceux dont cette évaluation est négative*)
+let tri_see liste board white_to_move =
+  begin
+    let rec association liste_coups =
+      match liste_coups with
+      |[] -> []
+      |move :: t ->
+        let note = see_forced board move white_to_move in
+        if note >= 0 then
+          (note, move) :: association t
+        else
+          association t
+    in List.map snd (merge_sort (association liste))
+  end

@@ -99,8 +99,10 @@ let fen board white_to_move last_move (white_short, white_long, black_short, bla
     if black_short then fen := !fen ^ castlings_representations.(2);
     if black_long then fen := !fen ^ castlings_representations.(3)
   end;
-  let pep = enpassant board white_to_move last_move in
-  fen := !fen ^ " " ^ (try coord.(to_ (List.hd pep)) ^ " " with _ -> "- ");
+  let moves = Array.make 2 Null in
+  let number_of_moves = ref 0 in
+  enpassant board white_to_move last_move moves number_of_moves;
+  fen := !fen ^ " " ^ (if !number_of_moves > 0 then coord.(to_ (moves.(0))) ^ " " else "- ");
   fen := !fen ^ (string_of_int half_moves ^ " ");
   fen := !fen ^ string_of_int (1 + (List.length moves_record)/ 2);
   !fen

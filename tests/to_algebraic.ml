@@ -117,6 +117,28 @@ let algebraic_of_move move board player_legal_moves = match move with
   |Promotion {from = from; to_ = to_; promotion = promotion; capture = _} -> algebraic_of_promotion from to_ promotion
   |_ -> ""
 
+
+(*Fonction renvoyant le statut de la partie (2 si elle est en cours, 0 si il y a pat, 1 si les blancs l'emportent, -1 si les noirs l'emportent)*)
+let win board white_to_move last_move king_position in_check =
+  let winner = ref 2 in
+  if white_to_move then begin
+    if (legal_moves board white_to_move last_move (false, false, false, false) king_position in_check) = [] then begin
+      if threatened board (index_array board 6) true then
+        winner := -1
+      else
+        winner := 0
+    end
+  end
+  else begin
+    if (legal_moves board white_to_move last_move (false, false, false, false) king_position in_check) = [] then begin
+      if threatened board (index_array board (-6)) false then
+        winner := 1
+      else
+        winner := 0
+    end
+  end;
+  !winner
+
 (*Fonction traduisant un relevé de coups en type Mouvement en sa notation algébrique*)
 let san_of_move_list list start_position initial_last_move initial_castling_right =
   let board = Array.copy start_position in

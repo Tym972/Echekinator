@@ -4,13 +4,15 @@ open Board
 open Generator
 open Move_ordering
 
-let rec detecte_extension liste_coups = match liste_coups with
-  |[] -> []
-  |Normal {piece; from; to_; capture} :: t when capture <> 0 -> Normal {piece; from; to_; capture} :: detecte_extension t
-  |Promotion x :: t -> Promotion x :: detecte_extension t
-  |Enpassant x :: t -> Enpassant x :: detecte_extension t
-  |_ :: t -> detecte_extension t
-
+let detecte_extension moves number_of_moves =
+  let list = ref [] in
+  for i = 0 to number_of_moves - 1 do
+    if not (isquiet moves.(i)) then begin
+      list := moves.(i) :: !list
+    end
+  done;
+  !list
+  
 let rec adapte_delta liste_coups = match liste_coups with
   |[] -> 0
   |Promotion _ :: _  -> 8000
@@ -61,8 +63,8 @@ let rec quiescence_search board white_to_move alpha beta evaluation cap depth =
 
 (*Fonction permettant d'évaluer un board à la depth 0*)
 let quiescence_treatment_depth_0 ply evaluation board white_to_move last_move castling_rights half_moves alpha beta king_position in_check =
-  let legal_moves = legal_moves board white_to_move last_move castling_rights king_position in_check
-  in if legal_moves = [] then begin
+  let legal_moves, number_of_legal_moves = legal_moves board white_to_move last_move castling_rights king_position in_check
+  in if !number_of_legal_moves = 0 then begin
     if in_check then begin
       (ply - 99999)
     end
@@ -74,7 +76,7 @@ let quiescence_treatment_depth_0 ply evaluation board white_to_move last_move ca
     0
   end
   else begin
-    let cap = detecte_extension legal_moves in
+    let cap = detecte_extension legal_moves !number_of_legal_moves in
     if cap = [] then begin
       quiescence_search board white_to_move alpha beta evaluation cap 0
     end

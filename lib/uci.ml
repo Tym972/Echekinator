@@ -47,7 +47,8 @@ let make_list move_list board last_move white_to_move castling_rights king_posit
   let rec func move_list  control = match move_list with
     |[] -> ()
     |move :: t when !control ->
-      if List.mem move (legal_moves board !white_to_move !last_move !castling_rights !king_position !in_check) then begin
+      let legal_moves, number_of_legal_moves = (legal_moves board !white_to_move !last_move !castling_rights !king_position !in_check) in
+      if move_array_mem move legal_moves !number_of_legal_moves then begin
         let new_castling_rights = castling_modification move !castling_rights in
         zobrist_position := new_zobrist move !last_move !zobrist_position !castling_rights new_castling_rights board;
         make board move;
@@ -207,14 +208,13 @@ let rec algoperft board white_to_move last_move castling_rights zobrist_position
     else begin
       let king_position = index_array board (king white_to_move) in
       let in_check = threatened board king_position white_to_move in
-      let legal_moves = ref (legal_moves board white_to_move last_move castling_rights king_position in_check) in
+      let moves, number_of_moves = legal_moves board white_to_move last_move castling_rights king_position in_check in
       let nodes = ref 0 in
-      while !legal_moves <> [] do
-        let move = List.hd !legal_moves in
+      for i = 0 to !number_of_moves - 1 do
+        let move = moves.(i) in
         let new_castling_rights = castling_modification move castling_rights in
         let new_zobrist = if depth > 1 then (new_zobrist move last_move zobrist_position castling_rights new_castling_rights board) else 0 in
         make board move;
-        legal_moves := List.tl !legal_moves;
         let perft = (algoperft board (not white_to_move) move new_castling_rights new_zobrist (depth - 1) (ply + 1) table_perft) in
         nodes := !nodes + perft;
         if ply = 0 then begin
@@ -228,7 +228,7 @@ let rec algoperft board white_to_move last_move castling_rights zobrist_position
   end
 
 (*Answer to the command "go"*)
-let go instructions board white_to_move last_move castling_rights board_record half_moves zobrist_position  king_position in_check evaluation start_time =
+let go instructions board white_to_move last_move castling_rights board_record half_moves zobrist_position king_position in_check evaluation start_time =
   out_of_time := false;
   node_counter := 0;
   for i = 0 to (2 * max_depth) - 1 do
@@ -242,7 +242,7 @@ let go instructions board white_to_move last_move castling_rights board_record h
       print_endline ("\n" ^ "Nodes searched : " ^ (string_of_int (algoperft board white_to_move last_move castling_rights zobrist_position depth 0 table_perft)));
     |_ ->
       let commands = ["searchmoves"; "ponder"; "wtime"; "btime"; "winc"; "binc"; "movestogo"; "depth"; "nodes"; "mate"; "movetime"; "infinite"] in
-      let searchmoves = ref (legal_moves board white_to_move last_move castling_rights king_position in_check) in
+      let searchmoves = ref (let dj,inno = legal_moves board white_to_move last_move castling_rights king_position in_check in Array.to_list (Array.sub dj 0 !inno)) in
       if !searchmoves = [] then begin
         let result = if in_check then "mate" else "cp" in
         print_endline (Printf.sprintf "info depth 0 score %s 0" result);
@@ -263,7 +263,7 @@ let go instructions board white_to_move last_move castling_rights board_record h
           let control = ref true in
           let rec func list = match list with
             |h::t when !control ->
-              let move = tolerance board h white_to_move !searchmoves in
+              let move = tolerance board h white_to_move (Array.of_list !searchmoves) (List.length !searchmoves) in
               if List.mem move !searchmoves then begin
                 new_list := move :: !new_list
               end
@@ -406,7 +406,7 @@ let checkers board white_to_move =
   let rec aux list = match list with
     |[] -> ""
     |move :: t -> if to_ move = position_roi then coord.(from move) ^ " " ^ aux t else aux t
-  in let moves,_ = (pseudo_legal_moves board (not white_to_move) (index_array board (king (not white_to_move))))
+  in let moves,_ = (*pseudo_legal_moves board (not white_to_move) (index_array board (king (not white_to_move)))*) [],[]
   in aux moves
 
 let display board white_to_move last_move castling_rights moves_record zobrist_position half_moves =

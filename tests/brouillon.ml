@@ -15,6 +15,15 @@ open Libs.Quiescence
 open Libs.Move_ordering
 
 (*
+
+let moves = Array.make 256 Null
+
+
+  
+
+  *)
+
+(*
 let new_vector move =
   match move with
     |Normal {piece; from; to_; capture} -> begin
