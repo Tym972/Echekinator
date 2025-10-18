@@ -149,7 +149,8 @@ let setoption instructions =
 let ucinewgame board white_to_move last_move castling_rights king_position in_check moves_record zobrist_position board_record half_moves start_position initial_white_to_move initial_last_move initial_castling_right initial_king_position initial_in_check initial_moves_record initial_zobrist_position initial_board_record initial_half_moves =
   reset_hash ();
   reset board white_to_move last_move castling_rights king_position in_check moves_record zobrist_position board_record half_moves chessboard true Null (true, true, true, true) !from_white_king false [] (zobrist chessboard true Null (true, true, true, true)) 0;
-  reset start_position initial_white_to_move initial_last_move initial_castling_right initial_king_position initial_in_check initial_moves_record initial_zobrist_position initial_board_record initial_half_moves chessboard true Null (true, true, true, true) !from_white_king false [] (zobrist chessboard true Null (true, true, true, true)) 0
+  reset start_position initial_white_to_move initial_last_move initial_castling_right initial_king_position initial_in_check initial_moves_record initial_zobrist_position initial_board_record initial_half_moves chessboard true Null (true, true, true, true) !from_white_king false [] (zobrist chessboard true Null (true, true, true, true)) 0;
+  position_aspects.(0) <- (!white_to_move, !last_move, !castling_rights, !board_record, !half_moves, !zobrist_position)
 
 (*Answer to the command "command"*)
 let position instructions board white_to_move last_move castling_rights king_position in_check moves_record zobrist_position board_record half_moves start_position initial_white_to_move initial_last_move initial_castling_right initial_king_position initial_in_check initial_moves_record initial_zobrist_position initial_board_record initial_half_moves =
@@ -171,7 +172,8 @@ let position instructions board white_to_move last_move castling_rights king_pos
       if ((List.length instructions) > !index_moves && List.nth instructions !index_moves = "moves") then begin
         let reverse_historique = move_list_of_san (String.concat " " (pop instructions (!index_moves + 1))) !initial_white_to_move !initial_last_move !initial_castling_right board in
         make_list reverse_historique board last_move white_to_move castling_rights king_position in_check moves_record zobrist_position board_record half_moves
-      end
+      end;
+      position_aspects.(0) <- (!white_to_move, !last_move, !castling_rights, !board_record, !half_moves, !zobrist_position)
     end
   |_ -> ()
 
@@ -196,11 +198,12 @@ let score score var_mate =
     end
   end
 
-let rec algoperft board white_to_move last_move castling_rights zobrist_position depth ply table_perft =
+let rec algoperft board depth ply table_perft =
   if depth = 0 then begin
     1
   end
   else begin
+    let white_to_move, last_move, castling_rights, _, _, zobrist_position = position_aspects.(ply) in
     let old_key, number, hash_depth = table_perft.(zobrist_position mod transposition_size) in
     if depth = hash_depth && zobrist_position = old_key then begin
       number
@@ -215,7 +218,8 @@ let rec algoperft board white_to_move last_move castling_rights zobrist_position
         let new_castling_rights = castling_modification move castling_rights in
         let new_zobrist = if depth > 1 then (new_zobrist move last_move zobrist_position castling_rights new_castling_rights board) else 0 in
         make board move;
-        let perft = (algoperft board (not white_to_move) move new_castling_rights new_zobrist (depth - 1) (ply + 1) table_perft) in
+        position_aspects.(ply + 1) <- (not white_to_move, move, new_castling_rights, [], 0, new_zobrist);
+        let perft = (algoperft board (depth - 1) (ply + 1) table_perft) in
         nodes := !nodes + perft;
         if ply = 0 then begin
           print_endline (uci_of_mouvement move ^ ": " ^ string_of_int perft)
@@ -228,7 +232,7 @@ let rec algoperft board white_to_move last_move castling_rights zobrist_position
   end
 
 (*Answer to the command "go"*)
-let go instructions board white_to_move last_move castling_rights board_record half_moves zobrist_position king_position in_check evaluation start_time =
+let go instructions board white_to_move last_move castling_rights zobrist_position king_position in_check evaluation start_time =
   out_of_time := false;
   node_counter := 0;
   for i = 0 to (2 * max_depth) - 1 do
@@ -239,7 +243,7 @@ let go instructions board white_to_move last_move castling_rights board_record h
     |_ :: "perft" :: depth :: _ when is_integer_string depth ->
       let depth = int_of_string (List.nth instructions 2) in
       let table_perft = Array.make transposition_size (0, 0, (-1)) in
-      print_endline ("\n" ^ "Nodes searched : " ^ (string_of_int (algoperft board white_to_move last_move castling_rights zobrist_position depth 0 table_perft)));
+      print_endline ("\n" ^ "Nodes searched : " ^ (string_of_int (algoperft board depth 0 table_perft)));
     |_ ->
       let commands = ["searchmoves"; "ponder"; "wtime"; "btime"; "winc"; "binc"; "movestogo"; "depth"; "nodes"; "mate"; "movetime"; "infinite"] in
       let searchmoves = ref (let dj,inno = legal_moves board white_to_move last_move castling_rights king_position in_check in Array.to_list (Array.sub dj 0 !inno)) in
@@ -341,7 +345,7 @@ let go instructions board white_to_move last_move castling_rights board_record h
               done;
               !acc
             in let new_score =
-              let score = ref (root_search board white_to_move last_move castling_rights board_record half_moves zobrist_position  in_check !var_depth alpha_table.(multi) beta_table.(multi) evaluation first_move !searchmoves_copy short_pv_table multi) in
+              let score = ref (root_search in_check !var_depth alpha_table.(multi) beta_table.(multi) evaluation first_move !searchmoves_copy short_pv_table multi) in
               while not (!out_of_time || !node_counter > !node_limit || (!score > alpha_table.(multi) && !score < beta_table.(multi))) do
                 if !score <= alpha_table.(multi) then begin
                   alpha_table.(multi) <- (-infinity)
@@ -349,7 +353,7 @@ let go instructions board white_to_move last_move castling_rights board_record h
                 else if !score >= beta_table.(multi) then begin
                   beta_table.(multi) <- infinity
                 end;
-                score := root_search board white_to_move last_move castling_rights board_record half_moves zobrist_position  in_check !var_depth alpha_table.(multi) beta_table.(multi) evaluation first_move !searchmoves_copy short_pv_table multi;
+                score := root_search in_check !var_depth alpha_table.(multi) beta_table.(multi) evaluation first_move !searchmoves_copy short_pv_table multi;
               done;
               !score
             in if new_score > (-infinity) then begin
@@ -417,7 +421,6 @@ let display board white_to_move last_move castling_rights moves_record zobrist_p
 
 (*Fonction lançant le programme*)
 let echekinator () =
-  let board = Array.copy chessboard in
   let start_position = Array.copy chessboard in
   let white_to_move = ref true in
   let initial_white_to_move = ref true in
@@ -437,6 +440,7 @@ let echekinator () =
   let initial_board_record = ref [!zobrist_position] in
   let half_moves = ref 0 in
   let initial_half_moves = ref 0 in
+  position_aspects.(0) <- (!white_to_move, !last_move, !castling_rights, !board_record, !half_moves, !zobrist_position);
   let evaluation =
     if not (List.length !moves_record > 30 || tours_connectees board !white_to_move) then
       eval1_q
@@ -457,7 +461,7 @@ let echekinator () =
       |"position" -> position command_line board white_to_move last_move castling_rights king_position in_check moves_record zobrist_position board_record half_moves start_position initial_white_to_move initial_last_move initial_castling_right initial_king_position initial_in_check initial_moves_record initial_zobrist_position initial_board_record initial_half_moves
       |"go" ->
         let start_time = Sys.time () in
-        let _ = Thread.create (fun () -> go command_line (Array.copy board) !white_to_move !last_move !castling_rights !board_record !half_moves !zobrist_position  !king_position !in_check evaluation start_time) () in ()
+        let _ = Thread.create (fun () -> go command_line (Array.copy board) !white_to_move !last_move !castling_rights !zobrist_position  !king_position !in_check evaluation start_time) () in ()
       |"quit" -> exit := true
       |"stop" -> out_of_time := true
       |"d" -> display board !white_to_move !last_move !castling_rights !moves_record !zobrist_position !half_moves

@@ -33,7 +33,7 @@ let adapt_record zobrist_position move depth board_record half_moves =
 (*open Evaluation*)
 
 
-let rec pvs board white_to_move last_move castling_rights board_record half_moves zobrist_position depth ply alpha beta evaluation ispv =
+let rec pvs depth ply alpha beta evaluation ispv =
 
   (*Check search limit*)
   if !out_of_time || !node_counter >= !node_limit then begin
@@ -45,6 +45,7 @@ let rec pvs board white_to_move last_move castling_rights board_record half_move
 
   else begin
     incr node_counter;
+    let white_to_move, last_move, castling_rights, board_record, half_moves, zobrist_position = position_aspects.(ply) in
     let king_position = index_array board (king white_to_move) in
     let in_check = threatened board king_position white_to_move in
     
@@ -90,7 +91,7 @@ let rec pvs board white_to_move last_move castling_rights board_record half_move
         in*)
 
         (*Use TT informations*)
-        if hash_depth <> (-1) && not ispv then begin
+        if hash_depth <> empty_depth && not ispv then begin
           hash_treatment hash_node_type hash_depth hash_value hash_move depth alpha0 beta0 best_score best_move no_cut ply
         end;
 
@@ -117,7 +118,8 @@ let rec pvs board white_to_move last_move castling_rights board_record half_move
                 end
                 else if static_eval >= !beta0 then begin
                   let new_zobrist = new_zobrist Null last_move zobrist_position castling_rights castling_rights board in
-                  let score = - pvs board (not white_to_move) Null castling_rights board_record half_moves new_zobrist (depth - 3) (ply + 1) (-beta) (- beta + 1) evaluation false
+                  position_aspects.(ply + 1) <- (not white_to_move, Null, castling_rights, board_record, half_moves, new_zobrist);
+                  let score = - pvs (depth - 3) (ply + 1) (-beta) (- beta + 1) evaluation false
                   in if score >= !beta0 then begin
                     best_score := score;
                     no_cut := false;
@@ -137,9 +139,10 @@ let rec pvs board white_to_move last_move castling_rights board_record half_move
                   let new_zobrist = new_zobrist move last_move zobrist_position castling_rights new_castling_right board in
                   let new_record, new_half_moves = adapt_record new_zobrist move depth board_record half_moves in
                   make board move;
+                  position_aspects.(ply + 1) <- (not white_to_move, move, new_castling_right, new_record, new_half_moves, new_zobrist);
                   let score =
                     if !counter = 0 then begin
-                      - pvs board (not white_to_move) move new_castling_right new_record new_half_moves new_zobrist (depth - 1) (ply + 1) (- !beta0) (- !alpha0) evaluation ispv
+                      - pvs (depth - 1) (ply + 1) (- !beta0) (- !alpha0) evaluation ispv
                     end
                     else begin
                       let score_lmr =
@@ -155,14 +158,14 @@ let rec pvs board white_to_move last_move castling_rights board_record half_move
                             end)
                             (depth - 1)
                         in if not (in_check || depth < 3 || reduction = 0) then begin
-                          - pvs board (not white_to_move) move new_castling_right new_record new_half_moves new_zobrist (depth - 1 - reduction) (ply + 1) (- !alpha0 - 1) (- !alpha0) evaluation false
+                          - pvs (depth - 1 - reduction) (ply + 1) (- !alpha0 - 1) (- !alpha0) evaluation false
                         end
                         else
                           !alpha0 + 1
                       in if score_lmr > !alpha0 then begin
-                        let score_0 = - pvs board (not white_to_move) move new_castling_right new_record new_half_moves new_zobrist (depth - 1) (ply + 1) (- !alpha0 - 1) (- !alpha0) evaluation false
+                        let score_0 = - pvs (depth - 1) (ply + 1) (- !alpha0 - 1) (- !alpha0) evaluation false
                         in if (score_0 > !alpha0 && ispv) then begin 
-                          - pvs board (not white_to_move) move new_castling_right new_record new_half_moves new_zobrist (depth - 1) (ply + 1) (- !beta0) (- !alpha0) evaluation ispv
+                          - pvs (depth - 1) (ply + 1) (- !beta0) (- !alpha0) evaluation ispv
                         end
                         else begin
                           score_0
@@ -319,8 +322,9 @@ let pv_finder depth =
   done;
   !pv
 
-let root_search board white_to_move last_move castling_rights board_record half_moves zobrist_position in_check depth alpha beta evaluation first_move player_moves short_pv_table multi =
+let root_search in_check depth alpha beta evaluation first_move player_moves short_pv_table multi =
   incr node_counter;
+  let white_to_move, last_move, castling_rights, board_record, half_moves, zobrist_position = position_aspects.(0) in
   let no_cut = ref true in
   let alpha0 = ref alpha in
   let beta0 = ref beta in
@@ -335,9 +339,10 @@ let root_search board white_to_move last_move castling_rights board_record half_
       let new_zobrist = new_zobrist move last_move zobrist_position castling_rights new_castling_right board in
       let new_record, new_half_moves = adapt_record new_zobrist move depth board_record half_moves in
       make board move;
+      position_aspects.(1) <- (not white_to_move, move, new_castling_right, new_record, new_half_moves, new_zobrist);
       let score =
         if !counter = 0 then begin
-          - pvs board (not white_to_move) move new_castling_right new_record new_half_moves new_zobrist (depth - 1) 1 (- !beta0) (- !alpha0) evaluation true
+          - pvs (depth - 1) 1 (- !beta0) (- !alpha0) evaluation true
         end
         else begin
           let score_lmr =
@@ -353,14 +358,14 @@ let root_search board white_to_move last_move castling_rights board_record half_
                 end)
                 (depth - 1)
             in if not (in_check || depth < 3 || reduction = 0) then begin
-              - pvs board (not white_to_move) move new_castling_right new_record new_half_moves new_zobrist (depth - 1 - reduction) 1 (- !alpha0 - 1) (- !alpha0) evaluation false
+              - pvs (depth - 1 - reduction) 1 (- !alpha0 - 1) (- !alpha0) evaluation false
             end
             else
               !alpha0 + 1
           in if score_lmr > !alpha0 then begin
-            let score_0 = - pvs board (not white_to_move) move new_castling_right new_record new_half_moves new_zobrist (depth - 1) 1 (- !alpha0 - 1) (- !alpha0) evaluation false
+            let score_0 = - pvs (depth - 1) 1 (- !alpha0 - 1) (- !alpha0) evaluation false
             in if (score_0 > !alpha0) then begin 
-              - pvs board (not white_to_move) move new_castling_right new_record new_half_moves new_zobrist (depth - 1) 1 (- !beta0) (- !alpha0) evaluation true
+              - pvs (depth - 1) 1 (- !beta0) (- !alpha0) evaluation true
             end
             else begin
               score_0

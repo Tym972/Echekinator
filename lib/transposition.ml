@@ -8,8 +8,9 @@ type node =
 type entry = int * node * int * int * move * int
 
 let transposition_size = 10000000
+let empty_depth = (-300)
 
-let transposition_table = Array.make transposition_size (0, All, (-1), 0, Null(*, (-infinity)*), 0)
+let transposition_table = Array.make transposition_size (0, All, empty_depth, 0, Null(*, (-infinity)*), 0)
 
 (*PV node : Exact value, Cut Node : Lower Bound, All Node : Upper Bound*)
 let hash_treatment (hash_node_type : node) (hash_depth : int) (hash_value : int) (hash_move : move) depth alpha beta best_score best_move no_cut ply =
@@ -46,7 +47,7 @@ let hash_treatment (hash_node_type : node) (hash_depth : int) (hash_value : int)
 (*Fonction vidant la TT*)
 let clear table =
   for i = 0 to transposition_size - 1 do
-    table.(i) <- (0, All, (-1), 0, Null(*, (-infinity)*), 0)
+    table.(i) <- (0, All, empty_depth, 0, Null(*, (-infinity)*), 0)
   done;
   transposition_counter := 0
 
@@ -58,7 +59,7 @@ let score_node node_type = match node_type with
 let store tt key node_type depth value move (*static_eval*) generation =
   let index = key mod transposition_size in
   let old_key, old_node_type, old_depth, old_value, old_best_move(*, old_static_eval*), old_generation = tt.(index) in
-  if old_depth = (-1) then begin
+  if old_depth = empty_depth then begin
     tt.(index) <- (key, node_type, depth, value, move(*, static_eval*), generation);
     incr transposition_counter
   end
@@ -80,4 +81,4 @@ let probe tt key =
   if key = old_key then
     old_node_type, old_depth, old_value, old_best_move(*, old_static_eval*)
   else
-    (All, (-1), 0, Null(*, (-infinity)*))
+    (All, empty_depth, 0, Null(*, (-infinity)*))
