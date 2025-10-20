@@ -246,8 +246,8 @@ let go instructions board white_to_move last_move castling_rights zobrist_positi
       print_endline ("\n" ^ "Nodes searched : " ^ (string_of_int (algoperft board depth 0 table_perft)));
     |_ ->
       let commands = ["searchmoves"; "ponder"; "wtime"; "btime"; "winc"; "binc"; "movestogo"; "depth"; "nodes"; "mate"; "movetime"; "infinite"] in
-      let searchmoves = ref (let dj,inno = legal_moves board white_to_move last_move castling_rights king_position in_check in Array.to_list (Array.sub dj 0 !inno)) in
-      if !searchmoves = [] then begin
+      let legal_moves, number_of_legal_moves = legal_moves board white_to_move last_move castling_rights king_position in_check in
+      if !number_of_legal_moves = 0 then begin
         let result = if in_check then "mate" else "cp" in
         print_endline (Printf.sprintf "info depth 0 score %s 0" result);
         print_endline "bestmove (none)"
@@ -262,14 +262,14 @@ let go instructions board white_to_move last_move castling_rights zobrist_positi
         let depth = ref max_depth in
         let mate = ref (-1) in
         let movetime = ref (-1.) in
-        let aux_searchmoves list  =
-          let new_list = ref [] in
+        let aux_searchmoves list =
+          number_of_legal_moves := 0;
           let control = ref true in
           let rec func list = match list with
             |h::t when !control ->
-              let move = tolerance board h white_to_move (Array.of_list !searchmoves) (List.length !searchmoves) in
-              if List.mem move !searchmoves then begin
-                new_list := move :: !new_list
+              let move = tolerance board h white_to_move legal_moves !number_of_legal_moves in
+              if move_array_mem move legal_moves !number_of_legal_moves then begin
+                legal_moves.(!number_of_legal_moves) <- move
               end
               else if List.mem h commands then begin
                 control := false
@@ -277,8 +277,7 @@ let go instructions board white_to_move last_move castling_rights zobrist_positi
               func t
             |_ -> ()
           in func list;
-          searchmoves := !new_list;
-          if !searchmoves = [] then begin
+          if !number_of_legal_moves = 0 then begin
             out_of_time := true
           end
         in let rec aux instruction = match instruction with
@@ -319,7 +318,7 @@ let go instructions board white_to_move last_move castling_rights zobrist_positi
           let _ = Thread.create (fun () -> monitor_time !search_time out_of_time) () in ()
         end;
         pv_table.(0) <- (let _, _, _, move(*, _*) = probe transposition_table zobrist_position in move);
-        let number_of_pv = min !multipv (List.length !searchmoves) in
+        let number_of_pv = min !multipv !number_of_legal_moves in
         let print_score_table = Array.make number_of_pv "cp 0" in
         let short_pv_table = Array.make number_of_pv [] in
         let alpha_table = Array.make number_of_pv (-infinity) in
@@ -331,21 +330,22 @@ let go instructions board white_to_move last_move castling_rights zobrist_positi
         let info = ref [] in
         while not !out_of_time && !var_depth < !depth && !node_counter + 1 < !node_limit && !var_mate > !mate do
           incr var_depth;
-          let searchmoves_copy = ref !searchmoves in
+          let legal_moves_copy = (Array.copy legal_moves) in
+          let number_of_legal_moves_copy = (ref !number_of_legal_moves) in
           for multi = 0 to (number_of_pv - 1) do
             let first_move =
               let acc = ref Null in
               let counter = ref 0 in
               while !acc = Null && !counter < number_of_pv do
                 let candidate = try List.hd short_pv_table.(!counter) with _ -> Null in
-                if List.mem candidate !searchmoves_copy then begin
+                if move_array_mem candidate legal_moves_copy !number_of_legal_moves_copy then begin
                   acc := candidate
                 end;
                 incr counter
               done;
               !acc
             in let new_score =
-              let score = ref (root_search in_check !var_depth alpha_table.(multi) beta_table.(multi) evaluation first_move !searchmoves_copy short_pv_table multi) in
+              let score = ref (root_search in_check !var_depth alpha_table.(multi) beta_table.(multi) evaluation first_move (Array.copy legal_moves_copy) (ref !number_of_legal_moves_copy) short_pv_table multi) in
               while not (!out_of_time || !node_counter > !node_limit || (!score > alpha_table.(multi) && !score < beta_table.(multi))) do
                 if !score <= alpha_table.(multi) then begin
                   alpha_table.(multi) <- (-infinity)
@@ -353,7 +353,7 @@ let go instructions board white_to_move last_move castling_rights zobrist_positi
                 else if !score >= beta_table.(multi) then begin
                   beta_table.(multi) <- infinity
                 end;
-                score := root_search in_check !var_depth alpha_table.(multi) beta_table.(multi) evaluation first_move !searchmoves_copy short_pv_table multi;
+                score := root_search in_check !var_depth alpha_table.(multi) beta_table.(multi) evaluation first_move (Array.copy legal_moves_copy) (ref !number_of_legal_moves_copy) short_pv_table multi;
               done;
               !score
             in if new_score > (-infinity) then begin
@@ -374,7 +374,11 @@ let go instructions board white_to_move last_move castling_rights zobrist_positi
               print_score_table.(multi) <- score new_score var_mate ^ bound;
               info_table.(multi) <- !var_depth, new_score, multi;
               if number_of_pv > multi + 1 then begin
-                searchmoves_copy := List.filter (fun move -> move <> pv_table.(0)) !searchmoves_copy
+                for index = 0 to !number_of_legal_moves_copy - 1 do
+                  if pv_table.(0) = legal_moves_copy.(index) then begin
+                    remove_move index legal_moves_copy number_of_legal_moves_copy
+                  end
+                done
               end
             end
           done;

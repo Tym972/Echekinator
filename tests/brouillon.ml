@@ -14,6 +14,98 @@ open Libs.Transposition
 open Libs.Quiescence
 open Libs.Move_ordering
 
+let rec quiescence_search depth ply alpha beta evaluation ispv =
+
+  (*Check search limit*)
+  if !out_of_time || !node_counter >= !node_limit then begin
+    0
+  end
+
+  else begin
+    let white_to_move, last_move, castling_rights, board_record, half_moves, zobrist_position = position_aspects.(ply) in
+    let king_position = index_array board (king white_to_move) in
+    let in_check = threatened board king_position white_to_move in
+    let best_move = ref Null in
+    let hash_node_type, hash_depth, hash_value, hash_move(*, hash_static_eval*) = probe transposition_table zobrist_position in
+    let no_cut = ref true in
+    let best_score = ref (-infinity) in
+    let alpha0 = ref alpha in
+    let beta0 = ref beta in
+    (*Use TT informations*)
+    if hash_depth <> empty_depth && not ispv then begin
+      hash_treatment hash_node_type hash_depth hash_value hash_move depth alpha0 beta0 best_score best_move no_cut ply
+    end;
+    if !no_cut then begin
+
+      (*Static eval*)
+      best_score := evaluation board white_to_move;
+
+      (*Stand pat*)
+      if !best_score >= beta then begin
+        no_cut := false
+      end
+
+      else begin
+        if !best_score > !alpha0 then begin
+          alpha0 := !best_score
+        end;
+
+        let counter = ref 0 in
+        let move_loop move =
+          let new_castling_right = castling_modification move castling_rights in
+          let new_zobrist = new_zobrist move last_move zobrist_position castling_rights new_castling_right board in
+          let new_record, new_half_moves = adapt_record new_zobrist move depth board_record half_moves in
+          make board move;
+          position_aspects.(ply + 1) <- (not white_to_move, move, new_castling_right, new_record, new_half_moves, new_zobrist);
+          let score = - quiescence_search (depth - 1) (ply + 1) (- !beta0) (- !alpha0) evaluation ispv
+          in if score > !best_score then begin
+            best_score := score;
+            if score > !alpha0 then begin
+              best_move := move;
+            end;
+            if score > !alpha0 then begin
+              alpha0 := score;
+            end;
+            if score >= !beta0 then begin
+              no_cut := false;
+            end
+          end;
+          unmake board move;
+          incr counter
+        in ()
+
+      end
+    end;
+
+    (*Storing in TT*)
+    if not (!out_of_time || !node_counter >= !node_limit) then begin
+      let node_type =
+        if !best_score <= alpha then begin
+          All
+        end
+        else if !best_score >= beta then begin
+          Cut
+        end
+        else begin
+          Pv
+        end
+        in let stored_value =
+          if abs !best_score < 99000 then begin
+            !best_score
+          end
+          else begin
+            if !best_score >= 0 then begin
+              !best_score + ply
+            end
+            else begin
+              !best_score - ply
+            end
+          end
+        in store transposition_table zobrist_position node_type depth stored_value !best_move (*hash_static_eval*) !go_counter
+      end;
+   !best_score
+  end
+
 (*
 
 let moves = Array.make 256 Null
