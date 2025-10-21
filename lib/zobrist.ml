@@ -136,3 +136,20 @@ let repetition liste_releve_plateau n = match liste_releve_plateau with
       |[] | [_] -> false
       |_::j::t -> (h = j && (k + 1 = n || aux t (k + 1))) || aux t k
     in aux q 1
+
+
+let adapt_record zobrist_position move depth board_record half_moves =
+  if is_irreversible move then begin
+    if depth < 8 then begin
+      [], 0
+    end
+    else begin
+      [zobrist_position], 0
+    end
+  end
+  else if half_moves + depth < 7 then begin
+    [], half_moves + 1
+  end
+  else begin 
+    zobrist_position :: board_record, half_moves + 1
+  end

@@ -455,14 +455,14 @@ let move_picker moves ordering_array number_of_moves =
   move
 
   (*Tri les coups selon leur potentiel SEE en supprimant ceux dont cette évaluation est négative*)
-let tri_see liste board white_to_move =
+let tri_see liste board white_to_move hash_move =
   begin
     let rec association liste_coups =
       match liste_coups with
       |[] -> []
       |move :: t ->
         let note = see_forced board move white_to_move in
-        if note >= 0 then
+        if note >= 0 && move <> hash_move then
           (note, move) :: association t
         else
           association t

@@ -7,22 +7,6 @@ open Move_ordering
 open Transposition
 open Quiescence
 
-let adapt_record zobrist_position move depth board_record half_moves =
-  if is_irreversible move then begin
-    if depth < 8 then begin
-      [], 0
-    end
-    else begin
-      [zobrist_position], 0
-    end
-  end
-  else if half_moves + depth < 7 then begin
-    [], half_moves + 1
-  end
-  else begin 
-    zobrist_position :: board_record, half_moves + 1
-  end
-
 (*let verif board move = match move with
   |Normal {piece; from; to_; capture} -> board.(from) = piece && board.(to_) = capture
   |Enpassant {from; to_} -> board.(from) = (if from < 32 then 1 else -1)  && board.(to_) = 0
@@ -41,6 +25,11 @@ let rec pvs depth ply alpha beta evaluation ispv =
       pv_length.(ply) <- 0
     end;
     0
+  end
+
+  (*Quiescense search*)
+  else if depth = 0 then begin
+    quiescence_search depth ply alpha beta evaluation ispv 
   end
 
   else begin
@@ -96,146 +85,137 @@ let rec pvs depth ply alpha beta evaluation ispv =
         end;
 
         if !no_cut then begin
-
-          (*Quiescense search*)
-          if depth = 0 then begin
-            best_score := quiescence_treatment_depth_0 ply evaluation board white_to_move last_move castling_rights half_moves !alpha0 !beta0 king_position in_check;
-          end
-
-          else begin
-
-            (*Static evalutation pruning and null move pruning*)
-            if not (in_check || ispv || !beta0 < (-90000)) then begin
-              let static_eval = evaluation board white_to_move in
-              (*let _ = evaluate () in*)
-              if not !zugzwang then begin
-                if depth < 3 then begin
-                  let eval_margin = 150 * depth in
-                  if static_eval - eval_margin >= !beta0 then begin
-                    best_score := static_eval - eval_margin;
-                    no_cut := false
-                  end
-                end
-                else if static_eval >= !beta0 then begin
-                  let new_zobrist = new_zobrist Null last_move zobrist_position castling_rights castling_rights board in
-                  position_aspects.(ply + 1) <- (not white_to_move, Null, castling_rights, board_record, half_moves, new_zobrist);
-                  let score = - pvs (depth - 3) (ply + 1) (- !beta0) (- !beta0 + 1) evaluation false
-                  in if score >= !beta0 then begin
-                    if score > 90000 then begin
-                      best_score := beta
-                    end
-                    else begin
-                      best_score := score
-                    end;
-                    no_cut := false;
-                  end
+          (*Static evalutation pruning and null move pruning*)
+          if not (in_check || ispv || !beta0 < (-90000)) then begin
+            let static_eval = evaluation board white_to_move in
+            (*let _ = evaluate () in*)
+            if not !zugzwang then begin
+              if depth < 3 then begin
+                let eval_margin = 150 * depth in
+                if static_eval - eval_margin >= !beta0 then begin
+                  best_score := static_eval - eval_margin;
+                  no_cut := false
                 end
               end
-            end;
-
-            (*Move loop*)
-            if !no_cut then begin
-              let counter = ref 0 in
-              let steelpulse = ref 0 in
-              let move_loop move =
-                let new_castling_right = castling_modification move castling_rights in
-                let new_zobrist = new_zobrist move last_move zobrist_position castling_rights new_castling_right board in
-                let new_record, new_half_moves = adapt_record new_zobrist move depth board_record half_moves in
-                make board move;
-                position_aspects.(ply + 1) <- (not white_to_move, move, new_castling_right, new_record, new_half_moves, new_zobrist);
-                let score =
-                  if !counter = 0 then begin
-                    - pvs (depth - 1) (ply + 1) (- !beta0) (- !alpha0) evaluation ispv
+              else if static_eval >= !beta0 then begin
+                let new_zobrist = new_zobrist Null last_move zobrist_position castling_rights castling_rights board in
+                position_aspects.(ply + 1) <- (not white_to_move, Null, castling_rights, board_record, half_moves, new_zobrist);
+                let score = - pvs (depth - 3) (ply + 1) (- !beta0) (- !beta0 + 1) evaluation false
+                in if score >= !beta0 then begin
+                  if score > 90000 then begin
+                    best_score := beta
                   end
                   else begin
-                    let score_lmr =
-                      let reduction =
-                        let float_depth = float_of_int depth in
-                        let float_counter = float_of_int (!counter - !steelpulse) in
-                        min
-                          (int_of_float begin
-                            if isquiet move then
-                              1.35 +. log (float_depth) *. log (float_counter) /. 2.75
-                            else
-                              0.20 +. log (float_depth) *. log (float_counter) /. 3.35
-                          end)
-                          (depth - 1)
-                      in if not (in_check || depth < 3 || reduction = 0) then begin
-                        - pvs (depth - 1 - reduction) (ply + 1) (- !alpha0 - 1) (- !alpha0) evaluation false
-                      end
-                      else
-                        !alpha0 + 1
-                    in if score_lmr > !alpha0 then begin
-                      let score_0 = - pvs (depth - 1) (ply + 1) (- !alpha0 - 1) (- !alpha0) evaluation false
-                      in if (score_0 > !alpha0 && ispv) then begin 
-                        - pvs (depth - 1) (ply + 1) (- !beta0) (- !alpha0) evaluation ispv
-                      end
-                      else begin
-                        score_0
-                      end
-                    end
-                    else
-                      score_lmr
-                  end
-                in if score > !best_score then begin
-                  best_score := score;
-                  if score > !alpha0 then begin
-                    best_move := move;
-                    if ispv then begin
-                      pv_table.(ply * (2 * max_pv_length + 1 - ply) / 2) <- !best_move;
-                      for i = 1 to pv_length.(ply + 1) do
-                        pv_table.(ply * (2 * max_pv_length + 1 - ply) / 2 + i) <- pv_table.((ply + 1) * (2 * max_pv_length - ply) / 2 + i - 1)
-                      done;
-                      pv_length.(ply) <- pv_length.(ply + 1) + 1
-                    end
+                    best_score := score
                   end;
-                  if score > !alpha0 then begin
-                    alpha0 := score;
-                  end;
-                  if score >= !beta0 then begin
-                    no_cut := false;
-                    if isquiet !best_move then begin
-                      history_moves.(4096 * aux_history white_to_move + 64 * from !best_move + to_ !best_move) <- depth * depth;
-                      killer_moves.(2 * ply + 1) <- killer_moves.(2 * ply);
-                      killer_moves.(2 * ply) <- !best_move;
-                    end
-                  end
-                end;
-                unmake board move;
-                incr counter
-              in if hash_move <> Null then begin
-                move_loop hash_move;
-                if !no_cut then begin
-                  let legal_moves, number_of_legal_moves = legal_moves board white_to_move last_move castling_rights king_position in_check in
-                  let ordering_array = Array.make !number_of_legal_moves 0 in
-                  steelpulse := 1;
-                  move_ordering board white_to_move legal_moves number_of_legal_moves ply hash_move ordering_array;
-                  while !no_cut && !number_of_legal_moves > 0 do
-                    move_loop (move_picker legal_moves ordering_array number_of_legal_moves)
-                  done;
+                  no_cut := false;
                 end
               end
-              else begin
+            end
+          end;
+
+          (*Move loop*)
+          if !no_cut then begin
+            let counter = ref 0 in
+            let steelpulse = ref 0 in
+            let move_loop move =
+              let new_castling_right = castling_modification move castling_rights in
+              let new_zobrist = new_zobrist move last_move zobrist_position castling_rights new_castling_right board in
+              let new_record, new_half_moves = adapt_record new_zobrist move depth board_record half_moves in
+              make board move;
+              position_aspects.(ply + 1) <- (not white_to_move, move, new_castling_right, new_record, new_half_moves, new_zobrist);
+              let score =
+                if !counter = 0 then begin
+                  - pvs (depth - 1) (ply + 1) (- !beta0) (- !alpha0) evaluation ispv
+                end
+                else begin
+                  let score_lmr =
+                    let reduction =
+                      let float_depth = float_of_int depth in
+                      let float_counter = float_of_int (!counter - !steelpulse) in
+                      min
+                        (int_of_float begin
+                          if isquiet move then
+                            1.35 +. log (float_depth) *. log (float_counter) /. 2.75
+                          else
+                            0.20 +. log (float_depth) *. log (float_counter) /. 3.35
+                        end)
+                        (depth - 1)
+                    in if not (in_check || depth < 3 || reduction = 0) then begin
+                      - pvs (depth - 1 - reduction) (ply + 1) (- !alpha0 - 1) (- !alpha0) evaluation false
+                    end
+                    else
+                      !alpha0 + 1
+                  in if score_lmr > !alpha0 then begin
+                    let score_0 = - pvs (depth - 1) (ply + 1) (- !alpha0 - 1) (- !alpha0) evaluation false
+                    in if (score_0 > !alpha0 && ispv) then begin 
+                      - pvs (depth - 1) (ply + 1) (- !beta0) (- !alpha0) evaluation ispv
+                    end
+                    else begin
+                      score_0
+                    end
+                  end
+                  else
+                    score_lmr
+                end
+              in if score > !best_score then begin
+                best_score := score;
+                if score > !alpha0 then begin
+                  best_move := move;
+                  if ispv then begin
+                    pv_table.(ply * (2 * max_pv_length + 1 - ply) / 2) <- !best_move;
+                    for i = 1 to pv_length.(ply + 1) do
+                      pv_table.(ply * (2 * max_pv_length + 1 - ply) / 2 + i) <- pv_table.((ply + 1) * (2 * max_pv_length - ply) / 2 + i - 1)
+                    done;
+                    pv_length.(ply) <- pv_length.(ply + 1) + 1
+                  end
+                end;
+                if score > !alpha0 then begin
+                  alpha0 := score;
+                end;
+                if score >= !beta0 then begin
+                  no_cut := false;
+                  if isquiet !best_move then begin
+                    history_moves.(4096 * aux_history white_to_move + 64 * from !best_move + to_ !best_move) <- depth * depth;
+                    killer_moves.(2 * ply + 1) <- killer_moves.(2 * ply);
+                    killer_moves.(2 * ply) <- !best_move;
+                  end
+                end
+              end;
+              unmake board move;
+              incr counter
+            in if hash_move <> Null then begin
+              move_loop hash_move;
+              if !no_cut then begin
                 let legal_moves, number_of_legal_moves = legal_moves board white_to_move last_move castling_rights king_position in_check in
                 let ordering_array = Array.make !number_of_legal_moves 0 in
-                move_ordering board white_to_move legal_moves number_of_legal_moves ply Null ordering_array;
+                steelpulse := 1;
+                move_ordering board white_to_move legal_moves number_of_legal_moves ply hash_move ordering_array;
                 while !no_cut && !number_of_legal_moves > 0 do
                   move_loop (move_picker legal_moves ordering_array number_of_legal_moves)
                 done;
-              end;
-              if !counter = 0 then begin
-                if ispv then begin
-                  pv_length.(ply) <- 0
-                end;
-                if in_check then begin
-                  best_score := ply - 99999
-                end 
-                else begin
-                  best_score := 0
-                end
               end
+            end
+            else begin
+              let legal_moves, number_of_legal_moves = legal_moves board white_to_move last_move castling_rights king_position in_check in
+              let ordering_array = Array.make !number_of_legal_moves 0 in
+              move_ordering board white_to_move legal_moves number_of_legal_moves ply Null ordering_array;
+              while !no_cut && !number_of_legal_moves > 0 do
+                move_loop (move_picker legal_moves ordering_array number_of_legal_moves)
+              done;
             end;
-          end
+            if !counter = 0 then begin
+              if ispv then begin
+                pv_length.(ply) <- 0
+              end;
+              if in_check then begin
+                best_score := ply - 99999
+              end 
+              else begin
+                best_score := 0
+              end
+            end
+          end;
         end;
 
         (*Storing in TT*)
