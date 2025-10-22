@@ -6,21 +6,8 @@ open Move_ordering
 open Transposition
 open Zobrist
 
-let detecte_extension moves number_of_moves =
-  let list = ref [] in
-  for i = 0 to number_of_moves - 1 do
-    if not (isquiet moves.(i)) then begin
-      list := moves.(i) :: !list
-    end
-  done;
-  !list
-  
-let rec adapte_delta liste_coups = match liste_coups with
-  |[] -> 0
-  |Promotion _ :: _  -> 8000
-  |_ :: t -> adapte_delta t
-
-let compteur_quiescent = ref 0
+let is_loss score = score < (-90000)
+let is_win score = score > 90000
 
 (*open Evaluation*)
 
@@ -28,7 +15,7 @@ let compteur_quiescent = ref 0
 let rec quiescence_search depth ply alpha beta evaluation ispv =
 
   (*Check search limit*)
-  if !out_of_time || !node_counter >= !node_limit then begin
+  if !out_of_time then begin
     0
   end
 
@@ -56,14 +43,13 @@ let rec quiescence_search depth ply alpha beta evaluation ispv =
       if !no_cut then begin
 
         (*Static eval*)
-        best_score := evaluation board white_to_move;
+        if not in_check then begin
+          best_score := evaluation board white_to_move;
+        end;
 
         (*Stand pat*)
-        if !best_score >= beta then begin
-          no_cut := false
-        end
-
-        else begin
+        if !best_score < beta then  begin
+          
           if !best_score > !alpha0 then begin
             alpha0 := !best_score
           end;
@@ -90,35 +76,51 @@ let rec quiescence_search depth ply alpha beta evaluation ispv =
             end;
             unmake board move;
             incr counter
-          in if hash_move <> Null && not (isquiet hash_move) then begin
-            move_loop hash_move;
-            if !no_cut then begin
-              (*let legal_moves, number_of_legal_moves = legal_moves board white_to_move last_move castling_rights king_position in_check in
-              let ordering_array = Array.make !number_of_legal_moves 0 in
-              move_ordering board white_to_move legal_moves number_of_legal_moves ply hash_move ordering_array;
-              while !no_cut && !number_of_legal_moves > 0 do
-                move_loop (move_picker legal_moves ordering_array number_of_legal_moves)
-              done;*)
+          in if in_check then begin
+            if hash_move <> Null then begin
+              move_loop hash_move;
+              if !no_cut then begin
+                let legal_moves, number_of_legal_moves = legal_moves board white_to_move last_move castling_rights king_position in_check in
+                let i = ref 0 in
+                while !no_cut && !i < !number_of_legal_moves do
+                  move_loop legal_moves.(!i);
+                  incr i
+                done
+              end
+            end
+            else begin
+              let legal_moves, number_of_legal_moves = legal_moves board white_to_move last_move castling_rights king_position in_check in
+                let i = ref 0 in
+                while !no_cut && !i < !number_of_legal_moves do
+                  move_loop legal_moves.(!i);
+                  incr i
+                done
+            end
+          end
+          else begin
+            if hash_move <> Null && not (isquiet hash_move) then begin
+              move_loop hash_move;
+              if !no_cut then begin
+                let captures = ref (tri_see (captures board white_to_move last_move) board white_to_move hash_move) in
+                while !no_cut && !captures <> [] do
+                  move_loop (List.hd !captures);
+                  captures := List.tl !captures
+                done
+              end
+            end
+            else begin
               let captures = ref (tri_see (captures board white_to_move last_move) board white_to_move hash_move) in
               while !no_cut && !captures <> [] do
                 move_loop (List.hd !captures);
                 captures := List.tl !captures
               done
             end
-          end
-          else begin
-            (*let legal_moves, number_of_legal_moves = legal_moves board white_to_move last_move castling_rights king_position in_check in
-            let ordering_array = Array.make !number_of_legal_moves 0 in
-            move_ordering board white_to_move legal_moves number_of_legal_moves ply Null ordering_array;
-            while !no_cut && !number_of_legal_moves > 0 do
-              move_loop (move_picker legal_moves ordering_array number_of_legal_moves)
-            done;*)
-            let captures = ref (tri_see (captures board white_to_move last_move) board white_to_move hash_move) in
-            while !no_cut && !captures <> [] do
-              move_loop (List.hd !captures);
-              captures := List.tl !captures
-            done
           end;
+
+          (*Check for mate*)
+          if in_check && !best_score = (-infinity) then begin
+            best_score := ply - 99999
+          end
 
         end
       end;

@@ -106,15 +106,7 @@ let eval2_q board white_to_move =
 let eval3_q board white_to_move =
   let material, position = eval_materiel3 board tab_finale white_to_move in
   treatment white_to_move (material + 2 * (doubled board)) (position / 5)
-
-let traitement2 white_to_move material position =
-  if white_to_move then begin
-    100. *. material +. position
-  end
-  else begin
-    -. (100. *. material +. position)
-  end
-
+  
 (*Fonction indiquant si les deux tours d'un player son connectées*)
 let tours_connectees board player = 
   let b = ref false in

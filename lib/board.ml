@@ -197,7 +197,7 @@ let merge_sort l =
   in tri_f l
 
 (*Big integer*)
-let infinity = 999999999
+let infinity = 999999
 
 (*Max depth reached by the search*)
 let max_depth = 255

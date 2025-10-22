@@ -85,8 +85,9 @@ let rec pvs depth ply alpha beta evaluation ispv =
         end;
 
         if !no_cut then begin
+          
           (*Static evalutation pruning and null move pruning*)
-          if not (in_check || ispv || !beta0 < (-90000)) then begin
+          if not (in_check || ispv || is_loss !beta0) then begin
             let static_eval = evaluation board white_to_move in
             (*let _ = evaluate () in*)
             if not !zugzwang then begin
@@ -102,7 +103,7 @@ let rec pvs depth ply alpha beta evaluation ispv =
                 position_aspects.(ply + 1) <- (not white_to_move, Null, castling_rights, board_record, half_moves, new_zobrist);
                 let score = - pvs (depth - 3) (ply + 1) (- !beta0) (- !beta0 + 1) evaluation false
                 in if score >= !beta0 then begin
-                  if score > 90000 then begin
+                  if is_win score then begin
                     best_score := beta
                   end
                   else begin
@@ -193,7 +194,7 @@ let rec pvs depth ply alpha beta evaluation ispv =
                 move_ordering board white_to_move legal_moves number_of_legal_moves ply hash_move ordering_array;
                 while !no_cut && !number_of_legal_moves > 0 do
                   move_loop (move_picker legal_moves ordering_array number_of_legal_moves)
-                done;
+                done
               end
             end
             else begin
@@ -202,7 +203,7 @@ let rec pvs depth ply alpha beta evaluation ispv =
               move_ordering board white_to_move legal_moves number_of_legal_moves ply Null ordering_array;
               while !no_cut && !number_of_legal_moves > 0 do
                 move_loop (move_picker legal_moves ordering_array number_of_legal_moves)
-              done;
+              done
             end;
             if !counter = 0 then begin
               if ispv then begin

@@ -7,7 +7,7 @@ type node =
 
 type entry = int * node * int * int * move * int
 
-let transposition_size = 10000000
+let transposition_size = 1000000
 let empty_depth = (-300)
 
 let transposition_table = Array.make transposition_size (0, All, empty_depth, 0, Null(*, (-infinity)*), 0)
