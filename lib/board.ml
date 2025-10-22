@@ -196,9 +196,6 @@ let merge_sort l =
     |_ -> let lg, ld = split l in merge (tri_f lg) (tri_f ld)
   in tri_f l
 
-(*Big integer*)
-let infinity = 999999
-
 (*Max depth reached by the search*)
 let max_depth = 255
 
@@ -218,7 +215,7 @@ let out_of_time = ref false
 let node_counter = ref 0
 
 (*Node limit*)
-let node_limit = ref infinity
+let node_limit = ref max_int
 
 (*TT entries tracker*)
 let transposition_counter = ref 0

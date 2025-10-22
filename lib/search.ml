@@ -67,7 +67,7 @@ let rec pvs depth ply alpha beta evaluation ispv =
         let best_move = ref Null in
         let hash_node_type, hash_depth, hash_value, hash_move(*, hash_static_eval*) = probe transposition_table zobrist_position in
         let no_cut = ref true in
-        let best_score = ref (-infinity) in
+        let best_score = ref (- max_int) in
 
         (*let static_eval =
           if hash_static_eval > (-infinity) then begin
@@ -278,7 +278,7 @@ let root_search in_check depth alpha beta evaluation first_move legal_moves numb
   let no_cut = ref true in
   let alpha0 = ref alpha in
   let beta0 = ref beta in
-  let best_score = ref (-infinity) in
+  let best_score = ref (- max_int) in
   let best_move = ref Null in
   (*let static_eval = evaluation board white_to_move in*)
   let counter = ref 0 in

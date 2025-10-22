@@ -442,7 +442,7 @@ let move_ordering board white_to_move player_moves number_of_moves ply hash_move
 
 let move_picker moves ordering_array number_of_moves =
   let max_index = ref 0 in
-  let max_value = ref (-infinity) in
+  let max_value = ref (- max_int) in
   for i = 0 to !number_of_moves - 1 do
     if ordering_array.(i) > !max_value then begin
       max_value := ordering_array.(i);

@@ -33,7 +33,7 @@ let rec quiescence_search depth ply alpha beta evaluation ispv =
       let best_move = ref Null in
       let hash_node_type, hash_depth, hash_value, hash_move(*, hash_static_eval*) = probe transposition_table zobrist_position in
       let no_cut = ref true in
-      let best_score = ref (-infinity) in
+      let best_score = ref (- max_int) in
       let alpha0 = ref alpha in
       let beta0 = ref beta in
       (*Use TT informations*)
@@ -118,7 +118,7 @@ let rec quiescence_search depth ply alpha beta evaluation ispv =
           end;
 
           (*Check for mate*)
-          if in_check && !best_score = (-infinity) then begin
+          if in_check && !best_score = (- max_int) then begin
             best_score := ply - 99999
           end
 
