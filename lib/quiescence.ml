@@ -5,6 +5,7 @@ open Generator
 open Move_ordering
 open Transposition
 open Zobrist
+open Evaluation
 
 let is_loss score = score < (-90000)
 let is_win score = score > 90000
@@ -12,7 +13,7 @@ let is_win score = score > 90000
 (*open Evaluation*)
 
 (*Fonction implémentant la recherche quiescente*)
-let rec quiescence_search depth ply alpha beta evaluation ispv =
+let rec quiescence_search depth ply alpha beta ispv =
 
   (*Check search limit*)
   if !out_of_time then begin
@@ -44,7 +45,7 @@ let rec quiescence_search depth ply alpha beta evaluation ispv =
 
         (*Static eval*)
         if not in_check then begin
-          best_score := evaluation board white_to_move;
+          best_score := hce board white_to_move;
         end;
 
         (*Stand pat*)
@@ -61,7 +62,7 @@ let rec quiescence_search depth ply alpha beta evaluation ispv =
             let new_record, new_half_moves = adapt_record new_zobrist move depth board_record half_moves in
             make board move;
             position_aspects.(ply + 1) <- (not white_to_move, move, new_castling_right, new_record, new_half_moves, new_zobrist);
-            let score = - quiescence_search (depth - 1) (ply + 1) (- !beta0) (- !alpha0) evaluation ispv
+            let score = - quiescence_search (depth - 1) (ply + 1) (- !beta0) (- !alpha0) ispv
             in if score > !best_score then begin
               best_score := score;
               if score > !alpha0 then begin

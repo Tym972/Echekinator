@@ -6,6 +6,7 @@ open Zobrist
 open Move_ordering
 open Transposition
 open Quiescence
+open Evaluation
 
 (*let verif board move = match move with
   |Normal {piece; from; to_; capture} -> board.(from) = piece && board.(to_) = capture
@@ -17,7 +18,7 @@ open Quiescence
 (*open Evaluation*)
 
 
-let rec pvs depth ply alpha beta evaluation ispv =
+let rec pvs depth ply alpha beta ispv =
 
   (*Check search limit*)
   if !out_of_time || !node_counter >= !node_limit then begin
@@ -29,7 +30,7 @@ let rec pvs depth ply alpha beta evaluation ispv =
 
   (*Quiescense search*)
   else if depth = 0 then begin
-    quiescence_search depth ply alpha beta evaluation ispv 
+    quiescence_search depth ply alpha beta ispv 
   end
 
   else begin
@@ -88,11 +89,11 @@ let rec pvs depth ply alpha beta evaluation ispv =
           
           (*Static evalutation pruning and null move pruning*)
           if not (in_check || ispv || is_loss !beta0) then begin
-            let static_eval = evaluation board white_to_move in
+            let static_eval = hce board white_to_move in
             (*let _ = evaluate () in*)
-            if not !zugzwang then begin
+            if (*not !zugzwang*)true then begin
               if depth < 3 then begin
-                let eval_margin = 150 * depth in
+                let eval_margin = 15 * depth in
                 if static_eval - eval_margin >= !beta0 then begin
                   best_score := static_eval - eval_margin;
                   no_cut := false
@@ -101,7 +102,7 @@ let rec pvs depth ply alpha beta evaluation ispv =
               else if static_eval >= !beta0 then begin
                 let new_zobrist = new_zobrist Null last_move zobrist_position castling_rights castling_rights board in
                 position_aspects.(ply + 1) <- (not white_to_move, Null, castling_rights, board_record, half_moves, new_zobrist);
-                let score = - pvs (depth - 3) (ply + 1) (- !beta0) (- !beta0 + 1) evaluation false
+                let score = - pvs (depth - 3) (ply + 1) (- !beta0) (- !beta0 + 1) false
                 in if score >= !beta0 then begin
                   if is_win score then begin
                     best_score := beta
@@ -126,7 +127,7 @@ let rec pvs depth ply alpha beta evaluation ispv =
               position_aspects.(ply + 1) <- (not white_to_move, move, new_castling_right, new_record, new_half_moves, new_zobrist);
               let score =
                 if !counter = 0 then begin
-                  - pvs (depth - 1) (ply + 1) (- !beta0) (- !alpha0) evaluation ispv
+                  - pvs (depth - 1) (ply + 1) (- !beta0) (- !alpha0) ispv
                 end
                 else begin
                   let score_lmr =
@@ -142,14 +143,14 @@ let rec pvs depth ply alpha beta evaluation ispv =
                         end)
                         (depth - 1)
                     in if not (in_check || depth < 3 || reduction = 0) then begin
-                      - pvs (depth - 1 - reduction) (ply + 1) (- !alpha0 - 1) (- !alpha0) evaluation false
+                      - pvs (depth - 1 - reduction) (ply + 1) (- !alpha0 - 1) (- !alpha0) false
                     end
                     else
                       !alpha0 + 1
                   in if score_lmr > !alpha0 then begin
-                    let score_0 = - pvs (depth - 1) (ply + 1) (- !alpha0 - 1) (- !alpha0) evaluation false
+                    let score_0 = - pvs (depth - 1) (ply + 1) (- !alpha0 - 1) (- !alpha0) false
                     in if (score_0 > !alpha0 && ispv) then begin 
-                      - pvs (depth - 1) (ply + 1) (- !beta0) (- !alpha0) evaluation ispv
+                      - pvs (depth - 1) (ply + 1) (- !beta0) (- !alpha0) ispv
                     end
                     else begin
                       score_0
@@ -270,7 +271,7 @@ let pv_finder depth =
   done;
   !pv
 
-let root_search in_check depth alpha beta evaluation first_move legal_moves number_of_legal_moves short_pv_table multi =
+let root_search in_check depth alpha beta first_move legal_moves number_of_legal_moves short_pv_table multi =
   incr node_counter;
   let white_to_move, last_move, castling_rights, board_record, half_moves, zobrist_position = position_aspects.(0) in
   let no_cut = ref true in
@@ -288,7 +289,7 @@ let root_search in_check depth alpha beta evaluation first_move legal_moves numb
     position_aspects.(1) <- (not white_to_move, move, new_castling_right, new_record, new_half_moves, new_zobrist);
     let score =
       if !counter = 0 then begin
-        - pvs (depth - 1) 1 (- !beta0) (- !alpha0) evaluation true
+        - pvs (depth - 1) 1 (- !beta0) (- !alpha0) true
       end
       else begin
         let score_lmr =
@@ -304,14 +305,14 @@ let root_search in_check depth alpha beta evaluation first_move legal_moves numb
               end)
               (depth - 1)
           in if not (in_check || depth < 3 || reduction = 0) then begin
-            - pvs (depth - 1 - reduction) 1 (- !alpha0 - 1) (- !alpha0) evaluation false
+            - pvs (depth - 1 - reduction) 1 (- !alpha0 - 1) (- !alpha0) false
           end
           else
             !alpha0 + 1
         in if score_lmr > !alpha0 then begin
-          let score_0 = - pvs (depth - 1) 1 (- !alpha0 - 1) (- !alpha0) evaluation false
+          let score_0 = - pvs (depth - 1) 1 (- !alpha0 - 1) (- !alpha0) false
           in if (score_0 > !alpha0) then begin 
-            - pvs (depth - 1) 1 (- !beta0) (- !alpha0) evaluation true
+            - pvs (depth - 1) 1 (- !beta0) (- !alpha0) true
           end
           else begin
             score_0

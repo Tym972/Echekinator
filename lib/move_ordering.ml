@@ -1,6 +1,5 @@
 open Board
 open Generator
-open Evaluation
 
 let smaller_attacker board square white_to_move =
   let move = ref Null in
@@ -169,6 +168,9 @@ let smaller_attacker board square white_to_move =
     done
   end;
   !move
+
+(*Valeur des pièces pour le tri*)
+let tabvalue = [|0; 10; 32; 33; 51; 88; 950|]
 
 let rec see board square white_to_move =
   let value = ref 0 in
