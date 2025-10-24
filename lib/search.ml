@@ -118,7 +118,6 @@ let rec pvs depth ply alpha beta evaluation ispv =
           (*Move loop*)
           if !no_cut then begin
             let counter = ref 0 in
-            let steelpulse = ref 0 in
             let move_loop move =
               let new_castling_right = castling_modification move castling_rights in
               let new_zobrist = new_zobrist move last_move zobrist_position castling_rights new_castling_right board in
@@ -133,7 +132,7 @@ let rec pvs depth ply alpha beta evaluation ispv =
                   let score_lmr =
                     let reduction =
                       let float_depth = float_of_int depth in
-                      let float_counter = float_of_int (!counter - !steelpulse) in
+                      let float_counter = float_of_int (!counter - 1) in
                       min
                         (int_of_float begin
                           if isquiet move then
@@ -190,7 +189,6 @@ let rec pvs depth ply alpha beta evaluation ispv =
               if !no_cut then begin
                 let legal_moves, number_of_legal_moves = legal_moves board white_to_move last_move castling_rights king_position in_check in
                 let ordering_array = Array.make !number_of_legal_moves 0 in
-                steelpulse := 1;
                 move_ordering board white_to_move legal_moves number_of_legal_moves ply hash_move ordering_array;
                 while !no_cut && !number_of_legal_moves > 0 do
                   move_loop (move_picker legal_moves ordering_array number_of_legal_moves)
@@ -282,7 +280,6 @@ let root_search in_check depth alpha beta evaluation first_move legal_moves numb
   let best_move = ref Null in
   (*let static_eval = evaluation board white_to_move in*)
   let counter = ref 0 in
-  let steelpulse = ref (if first_move = Null then 0 else 1) in
   let move_loop move = 
     let new_castling_right = castling_modification move castling_rights in
     let new_zobrist = new_zobrist move last_move zobrist_position castling_rights new_castling_right board in
@@ -297,7 +294,7 @@ let root_search in_check depth alpha beta evaluation first_move legal_moves numb
         let score_lmr =
           let reduction =
             let float_depth = float_of_int depth in
-            let float_counter = float_of_int (!counter - !steelpulse) in
+            let float_counter = float_of_int (!counter - 1) in
             min
               (int_of_float begin
                 if isquiet move then
@@ -352,7 +349,6 @@ let root_search in_check depth alpha beta evaluation first_move legal_moves numb
     move_loop first_move;
     if !no_cut then begin
       let ordering_array = Array.make !number_of_legal_moves 0 in
-      steelpulse := 1;
       move_ordering board white_to_move legal_moves number_of_legal_moves 0 first_move ordering_array;
       let moves = ref (merge_sort (List.init !number_of_legal_moves (fun i -> (ordering_array.(i), legal_moves.(i))))) in
       while !no_cut && !moves <> [] do
