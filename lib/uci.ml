@@ -186,7 +186,7 @@ let monitor_time time control =
 (*Fonction mettant en forme le score retourné*)
 let score score var_mate =
   if abs score < 99000 then begin
-    Printf.sprintf "cp %i" (int_of_float (float_of_int (score) /. 10.))
+    Printf.sprintf "cp %i" score
   end
   else begin
     if score mod 2 = 0 then begin
@@ -463,8 +463,8 @@ let echekinator () =
       |"stop" -> out_of_time := true
       |"d" -> display board !white_to_move !last_move !castling_rights !moves_record !zobrist_position !half_moves
       |"eval" ->
-        let eval = (float_of_int (hce board !white_to_move)) /. 100. in
-        print_endline ("HCE Evaluation : " ^ (if eval > 0. then "+" else "") ^ string_of_float eval)
+        let eval = (float_of_int (hce board true)) /. 100. in
+        print_endline ("HCE Evaluation : " ^ (if eval > 0. then "+" else "") ^ string_of_float eval ^ " (white side)")
       |"ponderhit" -> let _ = Thread.create (fun () -> monitor_time !search_time out_of_time) () in ()
       |_ -> print_endline (Printf.sprintf "Unknown command: '%s'. Type help for more information." command)
   done

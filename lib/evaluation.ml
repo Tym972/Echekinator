@@ -240,8 +240,30 @@ let eg_king_table = [|
     -53; -34; -21; -11; -28; -14; -24; -43
 |]
 
-let mg_table = [|mg_pawn_table; mg_knight_table; mg_bishop_table; mg_rook_table; mg_queen_table; mg_king_table|]
-let eg_table = [|eg_pawn_table; eg_knight_table; eg_bishop_table; eg_rook_table; eg_queen_table; eg_king_table|]
+let mg_tables = [|mg_pawn_table; mg_knight_table; mg_bishop_table; mg_rook_table; mg_queen_table; mg_king_table|]
+let eg_tables = [|eg_pawn_table; eg_knight_table; eg_bishop_table; eg_rook_table; eg_queen_table; eg_king_table|]
+
+let mg_table = Array.make 768 0
+let eg_table = Array.make 768 0
+
+let flip square =
+  let rank = square / 8 in
+  let file = square mod 8 in
+  (7 - rank) * 8 + file
+
+let () =
+  for piece = 1 to 6 do
+    for square = 0 to 63 do
+      mg_table.(12 * square + (piece - 1)) <- mg_value.(piece - 1) + mg_tables.(piece - 1).(square);
+      eg_table.(12 * square + (piece - 1)) <- eg_value.(piece - 1) + eg_tables.(piece - 1).(square);
+    done;
+  done;
+  for piece = (-1) downto (-6) do
+    for square = 0 to 63 do
+      mg_table.(12 * square + (5 - piece)) <- mg_value.(- piece - 1) + mg_tables.(- piece - 1).(flip square);
+      eg_table.(12 * square + (5 - piece)) <- eg_value.(- piece - 1) + eg_tables.(- piece - 1).(flip square);
+    done;
+  done
 
 let hce board white_to_move =
   let mg = [|0; 0|] in
@@ -250,13 +272,13 @@ let hce board white_to_move =
   for square = 0 to 63 do
     let piece = board.(square) in
     if piece > 0 then begin
-      mg.(0) <- mg.(0) + mg_value.(piece - 1) + mg_table.(piece - 1).(square);
-      eg.(0) <- eg.(0) + eg_value.(piece - 1) + eg_table.(piece - 1).(square);
+      mg.(0) <- mg.(0) + mg_table.(12 * square + (piece - 1));
+      eg.(0) <- eg.(0) + eg_table.(12 * square + (piece - 1));
       incr gamephase
     end
     else if piece < 0 then begin
-      mg.(1) <- mg.(1) + mg_value.(- piece - 1 ) + mg_table.(- piece - 1).(63 - square);
-      eg.(1) <- eg.(1) + eg_value.(- piece - 1) + eg_table.(- piece - 1).(63 - square);
+      mg.(1) <- mg.(1) + mg_table.(12 * square + (5 - piece));
+      eg.(1) <- eg.(1) + eg_table.(12 * square + (5 - piece));
       incr gamephase
     end;
   done;

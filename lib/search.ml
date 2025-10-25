@@ -19,7 +19,8 @@ open Evaluation
 
 
 let rec pvs depth ply alpha beta ispv =
-
+  incr node_counter;
+  
   (*Check search limit*)
   if !out_of_time || !node_counter >= !node_limit then begin
     if ispv then begin
@@ -34,7 +35,6 @@ let rec pvs depth ply alpha beta ispv =
   end
 
   else begin
-    incr node_counter;
     let white_to_move, last_move, castling_rights, board_record, half_moves, zobrist_position = position_aspects.(ply) in
     let king_position = index_array board (king white_to_move) in
     let in_check = threatened board king_position white_to_move in

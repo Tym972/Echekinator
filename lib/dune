@@ -11,7 +11,6 @@
   quiescence
   search
   evaluation
-  piece_square_tables
   uci)
  (libraries
   str
