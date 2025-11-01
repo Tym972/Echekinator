@@ -228,3 +228,6 @@ let zugzwang = ref true
 let (position_aspects : (bool * move * (bool * bool * bool * bool) * int list * int * int) array) = Array.make (max_depth + 40) (true, Null, (true, true, true, true), [], 0, 0)
 
 let board = Array.copy chessboard
+
+let start_time = ref 0.
+let search_time = ref 0.

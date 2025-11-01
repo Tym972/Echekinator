@@ -17,9 +17,14 @@ open Evaluation
 
 (*open Evaluation*)
 
-
 let rec pvs depth ply alpha beta ispv =
+  
   incr node_counter;
+  if !node_counter mod 1000 = 0 then begin
+    if Sys.time () -. !start_time >= !search_time then begin
+      out_of_time := true
+    end
+  end;
   
   (*Check search limit*)
   if !out_of_time || !node_counter >= !node_limit then begin

@@ -84,11 +84,8 @@ let uci () =
     ^ "option name UCI_Chess960 type check default false" ^ "\n"
     ^ "uciok")
 
-(*Time allocated for a search*)  
-let search_time = ref 0.
-
 (*Number of moves expected to play*)
-let horizon = ref 40.
+let horizon = ref 25.
 
 (*Variable indication if Pondering is allowed*)
 let ponder = ref false
@@ -130,14 +127,7 @@ let setoption instructions =
       end
     |_ -> ()
   in match (List.tl instructions) with
-    |"name" :: "Ponder" :: _ ->
-      type_check instructions ponder;
-      if !ponder then begin
-        horizon := 25.
-      end
-      else begin
-        horizon := 40.
-      end
+    |"name" :: "Ponder" :: _ -> type_check instructions ponder
     |"name" :: "UCI_Chess960" :: _ -> type_check instructions chess_960
     |"name" :: "Clear" :: "Hash" :: _ -> reset_hash ()
     |"name" :: "MultiPV" :: _ -> type_spin instructions multipv min_multipv max_multipv
@@ -177,11 +167,6 @@ let position instructions board white_to_move last_move castling_rights king_pos
       end
     |_ -> ()
   end
-
-(*Fonction utilisée pour terminer la recherche après le temps alloué*)
-let monitor_time time control =
-  Thread.delay ((time /. 1000.) -. 0.01);
-  control := true
 
 (*Fonction mettant en forme le score retourné*)
 let score score var_mate =
@@ -233,7 +218,7 @@ let rec algoperft board depth ply table_perft =
   end
 
 (*Answer to the command "go"*)
-let go instructions board white_to_move last_move castling_rights zobrist_position king_position in_check start_time =
+let go instructions board white_to_move last_move castling_rights zobrist_position king_position in_check =
   out_of_time := false;
   node_counter := 0;
   for i = 0 to (2 * max_depth) - 1 do
@@ -305,18 +290,18 @@ let go instructions board white_to_move last_move castling_rights zobrist_positi
         in aux instructions; 
         search_time :=
           if !movetime > 0. then begin
-            !movetime
+            !movetime /. 1000.
           end
           else begin
             if white_to_move then begin
-              (if !wtime > !winc then !wtime +. !winc else !wtime) /. (min !movestogo !horizon)
+              ((if !wtime > !winc then !wtime +. !winc else !wtime) /. (min !movestogo !horizon)) /. 1000.
             end
             else begin
-              (if !btime > !binc then !btime +. !binc else !btime) /. (min !movestogo !horizon)
+              ((if !btime > !binc then !btime +. !binc else !btime) /. (min !movestogo !horizon)) /. 1000.
             end
           end;
         if not !is_pondering then begin
-          let _ = Thread.create (fun () -> monitor_time !search_time out_of_time) () in ()
+          start_time := Sys.time ();
         end;
         pv_table.(0) <- (let _, _, _, move(*, _*) = probe transposition_table zobrist_position in move);
         let number_of_pv = min !multipv !number_of_legal_moves in
@@ -384,7 +369,7 @@ let go instructions board white_to_move last_move castling_rights zobrist_positi
             end
           done;
           info := merge_sort (Array.to_list info_table);
-          let exec_time = Sys.time () -. start_time in
+          let exec_time = Sys.time () -. !start_time in
           let nps = int_of_float (float_of_int !node_counter /. exec_time) in
           let hashfull = int_of_float (1000. *. (float_of_int !transposition_counter /. (float_of_int transposition_size))) in
           let time =  (int_of_float (1000. *. exec_time)) in
@@ -457,14 +442,15 @@ let echekinator () =
       |"ucinewgame" -> ucinewgame board white_to_move last_move castling_rights king_position in_check moves_record zobrist_position board_record half_moves start_position initial_white_to_move initial_last_move initial_castling_right initial_king_position initial_in_check initial_moves_record initial_zobrist_position initial_board_record initial_half_moves
       |"position" -> position command_line board white_to_move last_move castling_rights king_position in_check moves_record zobrist_position board_record half_moves start_position initial_white_to_move initial_last_move initial_castling_right initial_king_position initial_in_check initial_moves_record initial_zobrist_position initial_board_record initial_half_moves
       |"go" ->
-        let start_time = Sys.time () in
-        let _ = Thread.create (fun () -> go command_line (Array.copy board) !white_to_move !last_move !castling_rights !zobrist_position  !king_position !in_check start_time) () in ()
+        start_time := Sys.time ();
+        let _ = Thread.create (fun () -> go command_line (Array.copy board) !white_to_move !last_move !castling_rights !zobrist_position  !king_position !in_check) () in ()
       |"quit" -> exit := true
       |"stop" -> out_of_time := true
       |"d" -> display board !white_to_move !last_move !castling_rights !moves_record !zobrist_position !half_moves
       |"eval" ->
         let eval = (float_of_int (hce board true)) /. 100. in
         print_endline ("HCE Evaluation : " ^ (if eval > 0. then "+" else "") ^ string_of_float eval ^ " (white side)")
-      |"ponderhit" -> let _ = Thread.create (fun () -> monitor_time !search_time out_of_time) () in ()
+      |"ponderhit" ->
+        start_time := Sys.time ();
       |_ -> print_endline (Printf.sprintf "Unknown command: '%s'. Type help for more information." command)
   done
