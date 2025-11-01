@@ -230,4 +230,4 @@ let (position_aspects : (bool * move * (bool * bool * bool * bool) * int list * 
 let board = Array.copy chessboard
 
 let start_time = ref 0.
-let search_time = ref 0.
+let search_time = ref max_float

@@ -84,9 +84,6 @@ let uci () =
     ^ "option name UCI_Chess960 type check default false" ^ "\n"
     ^ "uciok")
 
-(*Number of moves expected to play*)
-let horizon = ref 25.
-
 (*Variable indication if Pondering is allowed*)
 let ponder = ref false
 
@@ -227,7 +224,7 @@ let go instructions board white_to_move last_move castling_rights zobrist_positi
   incr go_counter;
   match instructions with
     |_ :: "perft" :: depth :: _ when is_integer_string depth ->
-      let depth = int_of_string (List.nth instructions 2) in
+      let depth = int_of_string depth in
       let table_perft = Array.make transposition_size (0, 0, (-1)) in
       print_endline ("\n" ^ "Nodes searched : " ^ (string_of_int (algoperft board depth 0 table_perft)));
     |_ ->
@@ -249,13 +246,15 @@ let go instructions board white_to_move last_move castling_rights zobrist_positi
         let mate = ref (-1) in
         let movetime = ref (-1.) in
         let aux_searchmoves list =
-          number_of_legal_moves := 0;
+          let index = ref 0 in
+          let new_moves = Array.make !number_of_legal_moves Null in
           let control = ref true in
           let rec func list = match list with
-            |h::t when !control ->
+            |h::t when !control -> print_endline h;
               let move = tolerance board h white_to_move legal_moves !number_of_legal_moves in
               if move_array_mem move legal_moves !number_of_legal_moves then begin
-                legal_moves.(!number_of_legal_moves) <- move
+                new_moves.(!index) <- move;
+                incr index;
               end
               else if List.mem h commands then begin
                 control := false
@@ -263,43 +262,47 @@ let go instructions board white_to_move last_move castling_rights zobrist_positi
               func t
             |_ -> ()
           in func list;
-          if !number_of_legal_moves = 0 then begin
+          if !index = 0 then begin
             out_of_time := true
+          end
+          else begin
+            number_of_legal_moves := !index;
+            for i = 0 to !index - 1 do
+              legal_moves.(i) <- new_moves.(i)
+            done
           end
         in let rec aux instruction = match instruction with
           |h :: g :: t ->
             begin match h with
               |"searchmoves" -> aux_searchmoves (g :: t)
-              |"ponder" -> begin is_pondering := true end
-              |"wtime" -> begin try wtime := (float_of_string g) with _ -> () end
-              |"btime" -> begin try btime := (float_of_string g) with _ -> () end
-              |"winc" -> begin try winc := (float_of_string g) with _ -> () end
-              |"binc" -> begin try binc := (float_of_string g) with _ -> () end
-              |"movestogo" -> begin try movestogo := (float_of_string g) with _ -> () end
-              |"depth" -> begin try depth := (int_of_string g) with _ -> () end
-              |"nodes" -> begin try node_limit := (int_of_string g) with _ -> () end
-              |"mate" -> begin try mate := (int_of_string g) with _ -> () end
-              |"movetime" -> begin
-                try
-                  movetime := (float_of_string g)
-                with _ -> () end
+              |"ponder" -> is_pondering := true
+              |"wtime" -> wtime := (float_of_string g)
+              |"btime" -> btime := (float_of_string g)
+              |"winc" -> winc := (float_of_string g)
+              |"binc" -> binc := (float_of_string g)
+              |"movestogo" -> movestogo := (float_of_string g)
+              |"depth" -> depth := (int_of_string g)
+              |"nodes" -> node_limit := (int_of_string g)
+              |"mate" -> mate := (int_of_string g)
+              |"movetime" -> movetime := (float_of_string g)
               |_ -> ()
-          end;
-          aux (g :: t)
+            end;
+            aux (g :: t)
           |_ -> ()
-        in aux instructions; 
-        search_time :=
+        in aux instructions;
+        let soft_bound, hard_bound =
           if !movetime > 0. then begin
-            !movetime /. 1000.
+            !movetime /. 1000., !movetime /. 1000.
           end
           else begin
             if white_to_move then begin
-              ((if !wtime > !winc then !wtime +. !winc else !wtime) /. (min !movestogo !horizon)) /. 1000.
+              ((!wtime /. (min !movestogo 25.)) +. !winc /. 2.) /. 1000., ((!wtime /. (min !movestogo 20.)) +. !winc /. 2.) /. 1000.
             end
             else begin
-              ((if !btime > !binc then !btime +. !binc else !btime) /. (min !movestogo !horizon)) /. 1000.
+              ((!btime /. (min !movestogo 25.)) +. !binc /. 2.) /. 1000., ((!btime /. (min !movestogo 20.)) +. !binc /. 2.) /. 1000.
             end
-          end;
+          end in
+        search_time := hard_bound;
         if not !is_pondering then begin
           start_time := Sys.time ();
         end;
@@ -314,7 +317,7 @@ let go instructions board white_to_move last_move castling_rights zobrist_positi
         let var_depth = ref 0 in 
         let var_mate = ref max_int in
         let info = ref [] in
-        while not !out_of_time && !var_depth < !depth && !node_counter + 1 < !node_limit && !var_mate > !mate do
+        while (Sys.time () -. !start_time < soft_bound) && !var_depth < !depth && !node_counter + 1 < !node_limit && !var_mate > !mate do
           incr var_depth;
           let legal_moves_copy = (Array.copy legal_moves) in
           let number_of_legal_moves_copy = (ref !number_of_legal_moves) in
