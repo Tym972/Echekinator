@@ -14,6 +14,20 @@ open Libs.Transposition
 open Libs.Quiescence
 open Libs.Move_ordering
 
+let bullet_format games file =
+
+  let result = "0" in
+  let moves = [] in
+  let initial_fen = "" in
+  let rec func moves = match moves with
+    |[] -> ()
+    |h::t ->
+      
+      ();
+      func t
+  in func moves
+
+
 let update_acc move = match move with
   |Normal {piece; from; to_; capture} -> begin
     if piece > 0 then begin

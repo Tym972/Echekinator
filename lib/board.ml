@@ -146,6 +146,9 @@ let king player_is_white = if player_is_white then 6 else (-6)
 (*Function returning the representation of the player's queen in the chessboard*)
 let queen player_is_white = if player_is_white then 5 else (-5)
 
+(*Function returning the representation of the player's rook in the chessboard*)
+let rook player_is_white = if player_is_white then 4 else (-4)
+
 (*Function returning the representation of the player's knight in the chessboard*)
 let knight player_is_white = if player_is_white then 2 else (-2)
 
@@ -154,9 +157,6 @@ let bishop player_is_white = if player_is_white then 3 else (-3)
 
 (*Function returning the representation of the player's pawn in the chessboard*)
 let pawn player_is_white = if player_is_white then 1 else (-1)
-
-(*Function returning the representation of the player's rook in the chessboard*)
-let rook player_is_white = if player_is_white then 4 else (-4)
 
 (*Fonction indiquant si un move est irrémédiable (poussée de pion ou capture)*)
 let is_irreversible move = match move with
@@ -229,5 +229,5 @@ let (position_aspects : (bool * move * (bool * bool * bool * bool) * int list * 
 
 let board = Array.copy chessboard
 
-let start_time = ref 0.
+let start_time = ref max_float
 let search_time = ref max_float
