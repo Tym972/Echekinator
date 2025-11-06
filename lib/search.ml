@@ -98,7 +98,7 @@ let rec pvs depth ply alpha beta ispv =
             (*let _ = evaluate () in*)
             if (*not !zugzwang*)true then begin
               if depth < 3 then begin
-                let eval_margin = 15 * depth in
+                let eval_margin = 100 * depth in
                 if static_eval - eval_margin >= !beta0 then begin
                   best_score := static_eval - eval_margin;
                   no_cut := false
