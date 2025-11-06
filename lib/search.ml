@@ -15,6 +15,19 @@ open Evaluation
   |Promotion {from; to_; capture; promotion} -> board.(from) = (if promotion > 0 then 1 else -1) && board.(to_) = capture
   |Null -> false*)
 
+let zugzwang board white_to_move =
+  let player_sign = if white_to_move then 1 else (-1) in
+  let only_pawns = ref true in
+  let square = ref 0 in
+  while !only_pawns && !square < 64 do
+    let piece = player_sign * board.(!square) in
+    if piece > 0 && piece <> 1 && piece <> 6 then begin
+      only_pawns := false
+    end;
+    incr square
+  done;
+  !only_pawns
+
 (*open Evaluation*)
 
 let rec pvs depth ply alpha beta ispv =
@@ -93,30 +106,28 @@ let rec pvs depth ply alpha beta ispv =
         if !no_cut then begin
           
           (*Static evalutation pruning and null move pruning*)
-          if not (in_check || ispv || is_loss !beta0) then begin
+          if not (in_check || ispv || is_loss !beta0 || zugzwang board white_to_move) then begin
             let static_eval = hce board white_to_move in
             (*let _ = evaluate () in*)
-            if (*not !zugzwang*)true then begin
-              if depth < 3 then begin
-                let eval_margin = 100 * depth in
-                if static_eval - eval_margin >= !beta0 then begin
-                  best_score := static_eval - eval_margin;
-                  no_cut := false
-                end
+            if depth < 3 then begin
+              let eval_margin = 100 * depth in
+              if static_eval - eval_margin >= !beta0 then begin
+                best_score := static_eval - eval_margin;
+                no_cut := false
               end
-              else if static_eval >= !beta0 then begin
-                let new_zobrist = new_zobrist Null last_move zobrist_position castling_rights castling_rights board in
-                position_aspects.(ply + 1) <- (not white_to_move, Null, castling_rights, board_record, half_moves, new_zobrist);
-                let score = - pvs (depth - 3) (ply + 1) (- !beta0) (- !beta0 + 1) false
-                in if score >= !beta0 then begin
-                  if is_win score then begin
-                    best_score := beta
-                  end
-                  else begin
-                    best_score := score
-                  end;
-                  no_cut := false;
+            end
+            else if static_eval >= !beta0 then begin
+              let new_zobrist = new_zobrist Null last_move zobrist_position castling_rights castling_rights board in
+              position_aspects.(ply + 1) <- (not white_to_move, Null, castling_rights, board_record, half_moves, new_zobrist);
+              let score = - pvs (depth - 3) (ply + 1) (- !beta0) (- !beta0 + 1) false
+              in if score >= !beta0 then begin
+                if is_win score then begin
+                  best_score := beta
                 end
+                else begin
+                  best_score := score
+                end;
+                no_cut := false;
               end
             end
           end;

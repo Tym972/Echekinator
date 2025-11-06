@@ -9,11 +9,11 @@
 - Supports **Bullet** (2000+ rating) and **Blitz** (1900+ rating) formats
 - Plays **Chess960** (Fischer Random Chess)
 
-## 📊 Current Ratings (as of October 13, 2025)
+## 📊 Current Lichess Ratings (as of November 6, 2025)
 | Format  | Rating |
 |---------|--------|
-| Bullet  | 2080   |
-| Blitz   | 2035   |
-|  960    | 1510   |
+| Bullet  | 2205   |
+| Blitz   | 2106   |
+|  960    | 1549   |
 
 All credits go to Tym972, the creator of Echekinator.
