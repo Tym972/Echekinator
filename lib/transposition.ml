@@ -12,15 +12,18 @@ let empty_depth = (-300)
 
 let transposition_table = Array.make transposition_size (0, All, empty_depth, 0, Null(*, (-infinity)*), 0)
 
+let is_loss score = score < (-90000)
+let is_win score = score > 90000
+
 (*PV node : Exact value, Cut Node : Lower Bound, All Node : Upper Bound*)
 let hash_treatment (hash_node_type : node) (hash_depth : int) (hash_value : int) (hash_move : move) depth alpha beta best_score best_move no_cut ply =
   if depth <= hash_depth then begin
     let adjusted_value =
-      if abs hash_value > 99000 then begin
-        if hash_value >= 0 then
-          hash_value - ply
-        else
-          hash_value + ply
+      if is_win hash_value then begin
+        hash_value - ply
+      end
+      else if is_loss hash_value then begin
+        hash_value + ply
       end
       else begin
         hash_value

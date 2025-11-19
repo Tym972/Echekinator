@@ -15,7 +15,8 @@
  zobrist
  see
  brouillon
- trad)
+ trad
+ nnue)
  (modules
  ouvertures_test
  reduction
@@ -39,7 +40,8 @@
  strategie2
  to_algebraic
  oldevaluations
- bitboards)
+ bitboards
+ nnue)
  (libraries 
  unix
  threads

@@ -133,17 +133,17 @@ let setoption instructions =
     |_ -> ()
 
 (*Answer to the command "ucinewgame"*)
-let ucinewgame board white_to_move last_move castling_rights king_position in_check moves_record zobrist_position board_record half_moves start_position initial_white_to_move initial_last_move initial_castling_right initial_king_position initial_in_check initial_moves_record initial_zobrist_position initial_board_record initial_half_moves =
+let ucinewgame board white_to_move last_move castling_rights king_position in_check moves_record zobrist_position board_record half_moves start_position initial_white_to_move initial_last_move initial_castling_rights initial_king_position initial_in_check initial_moves_record initial_zobrist_position initial_board_record initial_half_moves =
   reset_hash ();
   reset board white_to_move last_move castling_rights king_position in_check moves_record zobrist_position board_record half_moves chessboard true Null (true, true, true, true) !from_white_king false [] (zobrist chessboard true Null (true, true, true, true)) 0;
-  reset start_position initial_white_to_move initial_last_move initial_castling_right initial_king_position initial_in_check initial_moves_record initial_zobrist_position initial_board_record initial_half_moves chessboard true Null (true, true, true, true) !from_white_king false [] (zobrist chessboard true Null (true, true, true, true)) 0;
+  reset start_position initial_white_to_move initial_last_move initial_castling_rights initial_king_position initial_in_check initial_moves_record initial_zobrist_position initial_board_record initial_half_moves chessboard true Null (true, true, true, true) !from_white_king false [] (zobrist chessboard true Null (true, true, true, true)) 0;
   position_aspects.(0) <- (!white_to_move, !last_move, !castling_rights, !board_record, !half_moves, !zobrist_position)
 
 (*Answer to the command "command"*)
-let position instructions board white_to_move last_move castling_rights king_position in_check moves_record zobrist_position board_record half_moves start_position initial_white_to_move initial_last_move initial_castling_right initial_king_position initial_in_check initial_moves_record initial_zobrist_position initial_board_record initial_half_moves =
+let position instructions board white_to_move last_move castling_rights king_position in_check moves_record zobrist_position board_record half_moves start_position initial_white_to_move initial_last_move initial_castling_rights initial_king_position initial_in_check initial_moves_record initial_zobrist_position initial_board_record initial_half_moves =
   begin match instructions with
     |"position" :: str :: _ when List.mem str ["fen"; "startpos"] -> begin
-        reset start_position initial_white_to_move initial_last_move initial_castling_right initial_king_position initial_in_check initial_moves_record initial_zobrist_position initial_board_record initial_half_moves chessboard true Null (true, true, true, true) !from_white_king false [] (zobrist chessboard true Null (true, true, true, true)) 0;
+        reset start_position initial_white_to_move initial_last_move initial_castling_rights initial_king_position initial_in_check initial_moves_record initial_zobrist_position initial_board_record initial_half_moves chessboard true Null (true, true, true, true) !from_white_king false [] (zobrist chessboard true Null (true, true, true, true)) 0;
         let index_moves = ref 2 in
         let rec aux_fen list  = match list with
         |h::t when h <> "moves" ->
@@ -153,11 +153,11 @@ let position instructions board white_to_move last_move castling_rights king_pos
           end
         |_ -> ""
         in if str = "fen" then begin
-          position_of_fen (aux_fen (pop instructions 2)) start_position initial_white_to_move initial_last_move initial_castling_right initial_king_position initial_in_check initial_moves_record initial_zobrist_position initial_board_record initial_half_moves;
+          position_of_fen (aux_fen (pop instructions 2)) start_position initial_white_to_move initial_last_move initial_castling_rights initial_king_position initial_in_check initial_moves_record initial_zobrist_position initial_board_record initial_half_moves;
         end;
-          reset board white_to_move last_move castling_rights king_position in_check moves_record zobrist_position board_record half_moves start_position !initial_white_to_move !initial_last_move !initial_castling_right !initial_king_position !initial_in_check !initial_moves_record !initial_zobrist_position !initial_half_moves;
+          reset board white_to_move last_move castling_rights king_position in_check moves_record zobrist_position board_record half_moves start_position !initial_white_to_move !initial_last_move !initial_castling_rights !initial_king_position !initial_in_check !initial_moves_record !initial_zobrist_position !initial_half_moves;
         if ((List.length instructions) > !index_moves && List.nth instructions !index_moves = "moves") then begin
-          let reverse_historique = move_list_of_san (String.concat " " (pop instructions (!index_moves + 1))) !initial_white_to_move !initial_last_move !initial_castling_right board in
+          let reverse_historique = move_list_of_algebric_list (algebric_list_of_san (String.concat " " (pop instructions (!index_moves + 1)))) !initial_white_to_move !initial_last_move !initial_castling_rights board in
           make_list reverse_historique board last_move white_to_move castling_rights king_position in_check moves_record zobrist_position board_record half_moves
         end;
         position_aspects.(0) <- (!white_to_move, !last_move, !castling_rights, !board_record, !half_moves, !zobrist_position)
@@ -420,7 +420,7 @@ let echekinator () =
   let last_move = ref Null in
   let initial_last_move = ref Null in
   let castling_rights = ref (true, true, true, true) in
-  let initial_castling_right = ref (true, true, true, true) in
+  let initial_castling_rights = ref (true, true, true, true) in
   let king_position = ref !from_white_king in
   let initial_king_position = ref !from_white_king in
   let in_check = ref false in
@@ -442,8 +442,8 @@ let echekinator () =
       |"uci" -> uci ()
       |"isready" -> print_endline "readyok"
       |"setoption" -> setoption command_line
-      |"ucinewgame" -> ucinewgame board white_to_move last_move castling_rights king_position in_check moves_record zobrist_position board_record half_moves start_position initial_white_to_move initial_last_move initial_castling_right initial_king_position initial_in_check initial_moves_record initial_zobrist_position initial_board_record initial_half_moves
-      |"position" -> position command_line board white_to_move last_move castling_rights king_position in_check moves_record zobrist_position board_record half_moves start_position initial_white_to_move initial_last_move initial_castling_right initial_king_position initial_in_check initial_moves_record initial_zobrist_position initial_board_record initial_half_moves
+      |"ucinewgame" -> ucinewgame board white_to_move last_move castling_rights king_position in_check moves_record zobrist_position board_record half_moves start_position initial_white_to_move initial_last_move initial_castling_rights initial_king_position initial_in_check initial_moves_record initial_zobrist_position initial_board_record initial_half_moves
+      |"position" -> position command_line board white_to_move last_move castling_rights king_position in_check moves_record zobrist_position board_record half_moves start_position initial_white_to_move initial_last_move initial_castling_rights initial_king_position initial_in_check initial_moves_record initial_zobrist_position initial_board_record initial_half_moves
       |"go" ->
         start_time := max_float;
         let _ = Thread.create (fun () -> go command_line (Array.copy board) !white_to_move !last_move !castling_rights !zobrist_position  !king_position !in_check) () in ()

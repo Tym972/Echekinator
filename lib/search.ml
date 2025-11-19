@@ -99,7 +99,7 @@ let rec pvs depth ply alpha beta ispv =
         in*)
 
         (*Use TT informations*)
-        if hash_depth <> empty_depth && not ispv then begin
+        if not ispv then begin
           hash_treatment hash_node_type hash_depth hash_value hash_move depth alpha0 beta0 best_score best_move no_cut ply
         end;
 
@@ -250,16 +250,14 @@ let rec pvs depth ply alpha beta ispv =
               Pv
             end
           in let stored_value =
-            if abs !best_score < 99000 then begin
-              !best_score
+            if is_win !best_score then begin
+              !best_score + ply
+            end
+            else if is_loss !best_score then begin
+              !best_score - ply
             end
             else begin
-              if !best_score >= 0 then begin
-                !best_score + ply
-              end
-              else begin
-                !best_score - ply
-              end
+              !best_score
             end
           in store transposition_table zobrist_position node_type depth stored_value !best_move (*hash_static_eval*) !go_counter
         end;

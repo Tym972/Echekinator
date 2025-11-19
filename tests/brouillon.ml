@@ -1,137 +1,3 @@
-(*open Libs.Plateau
-open Libs.Traduction1
-open Libs.Generateur
-open Config*)
-
-let () = ()
-
-open Libs.Board
-open Libs.Evaluation
-open Libs.Search
-open Libs.Generator
-open Libs.Zobrist
-open Libs.Transposition
-open Libs.Quiescence
-open Libs.Move_ordering
-
-let bullet_format games file =
-
-  let result = "0" in
-  let moves = [] in
-  let initial_fen = "" in
-  let rec func moves = match moves with
-    |[] -> ()
-    |h::t ->
-      
-      ();
-      func t
-  in func moves
-
-
-let update_acc move = match move with
-  |Normal {piece; from; to_; capture} -> begin
-    if piece > 0 then begin
-      let idx_to = 12 * to_ + (piece - 1) in
-      let idx_from = 12 * from + (piece - 1) in
-      if capture = 0 then begin
-        for i = 0 to n - 1 do
-          accumulator.(i) <- accumulator.(i) +. hidden_weights.(i * 768 + idx_to) -. hidden_weights.(i * 768 + idx_from)
-        done
-      end
-      else begin
-        let idx_capture = (12 * to_ + (5 - capture)) in
-        for i = 0 to n - 1 do
-          accumulator.(i) <- accumulator.(i) +. hidden_weights.(i * 768 + idx_to) -. hidden_weights.(i * 768 + idx_from) -. hidden_weights.(i * 768 + idx_capture)
-        done
-      end
-    end
-    else begin
-      let idx_to = 12 * to_ + (5 - piece) in
-      let idx_from = 12 * from + (5 - piece) in
-      if capture = 0 then begin
-        for i = 0 to n - 1 do
-          accumulator.(i) <- accumulator.(i) +. hidden_weights.(i * 768 + idx_to) -. hidden_weights.(i * 768 + idx_from)
-        done
-      end
-      else begin
-        let idx_capture = (12 * to_ + (capture - 1)) in
-        for i = 0 to n - 1 do
-          accumulator.(i) <- accumulator.(i) +. hidden_weights.(i * 768 + idx_to) -. hidden_weights.(i * 768 + idx_from) -. hidden_weights.(i * 768 + idx_capture)
-        done 
-      end
-    end
-  end
-  |Castling {sort} -> begin
-    match sort with
-    |1 ->
-      for i = 0 to n - 1 do
-        accumulator.(i) <- accumulator.(i) +. hidden_weights.(i * 768 + 749) +. hidden_weights.(i * 768 + 735) -. hidden_weights.(i * 768 + !zobrist_from_white_king) -. hidden_weights.(i * 768 + !zobrist_from_short_white_rook)
-      done
-    |2 ->
-      for i = 0 to n - 1 do
-        accumulator.(i) <- accumulator.(i) +. hidden_weights.(i * 768 + 701) +. hidden_weights.(i * 768 + 711) -. hidden_weights.(i * 768 + !zobrist_from_white_king) -. hidden_weights.(i * 768 + !zobrist_from_long_white_rook)
-      done
-    |3 ->
-      for i = 0 to n - 1 do
-        accumulator.(i) <- accumulator.(i) +. hidden_weights.(i * 768 + 83) +. hidden_weights.(i * 768 + 69) -. hidden_weights.(i * 768 + !zobrist_from_black_king) -. hidden_weights.(i * 768 + !zobrist_from_short_black_rook)
-      done
-    |_ ->
-      for i = 0 to n - 1 do
-        accumulator.(i) <- accumulator.(i) +. hidden_weights.(i * 768 + 35) +. hidden_weights.(i * 768 + 45) -. hidden_weights.(i * 768 + !zobrist_from_black_king) -. hidden_weights.(i * 768 + !zobrist_from_long_black_rook)
-      done
-  end
-  |Enpassant {from; to_} -> begin
-    if from < 32 then begin
-      let idx_to = 12 * to_ in
-      let idx_from = 12 * from in
-      let idx_capture = 12 * (to_ + 8) + 6 in
-      for i = 0 to n - 1 do
-        accumulator.(i) <- accumulator.(i) +. hidden_weights.(i * 768 + idx_to) -. hidden_weights.(i * 768 + idx_from) -. hidden_weights.(i * 768 + idx_capture)
-      done
-    end
-    else begin
-      let idx_to = 12 * to_ + 6 in
-      let idx_from = 12 * from + 6 in
-      let idx_capture = 12 * (to_ - 8) in
-      for i = 0 to n - 1 do
-        accumulator.(i) <- accumulator.(i) +. hidden_weights.(i * 768 + idx_to) -. hidden_weights.(i * 768 + idx_from) -. hidden_weights.(i * 768 + idx_capture)
-      done
-    end
-  end
-  |Promotion {from; to_; promotion; capture} -> begin
-    if to_ < 8 then begin
-      let idx_to = 12 * to_ + (promotion - 1) in
-      let idx_from = 12 * from in
-      if capture = 0 then begin
-        for i = 0 to n - 1 do
-          accumulator.(i) <- accumulator.(i) +. hidden_weights.(i * 768 + idx_to) -. hidden_weights.(i * 768 + idx_from)
-        done
-      end
-      else begin
-        let idx_capture = (12 * to_ + (5 - capture)) in
-        for i = 0 to n - 1 do
-          accumulator.(i) <- accumulator.(i) +. hidden_weights.(i * 768 + idx_to) -. hidden_weights.(i * 768 + idx_from) -. hidden_weights.(i * 768 + idx_capture)
-        done
-      end
-    end
-    else begin
-      let idx_to = 12 * to_ + (5 - promotion) in
-      let idx_from = 12 * from + 6 in
-      if capture = 0 then begin 
-        for i = 0 to n - 1 do
-          accumulator.(i) <- accumulator.(i) +. hidden_weights.(i * 768 + idx_to) -. hidden_weights.(i * 768 + idx_from)
-        done
-      end
-      else begin
-        let idx_capture = 12 * to_ + (capture - 1) in
-        for i = 0 to n - 1 do
-          accumulator.(i) <- accumulator.(i) +. hidden_weights.(i * 768 + idx_to) -. hidden_weights.(i * 768 + idx_from) -. hidden_weights.(i * 768 + idx_capture)
-        done
-      end
-    end
-  end
-  |Null -> ()
-
 
 
 (*
@@ -625,7 +491,7 @@ let new_see board square (*attacker*) (*capture*) =
   done;
   gain.(0)*)
 
-let f tb tn board =
+(*let f tb tn board =
   let material = ref 0 in
   let position = ref 0 in
   let white_pieces = [|0; 0; 0; 0; 0; 0; 0|] in
@@ -661,9 +527,9 @@ let f tb tn board =
   in if score_draw then
     0, 0
   else
-    !material, !position
+    !material, !position*)
 
-let eval_materiel3 board (tb, tn) white_to_move =
+(*let eval_materiel3 board (tb, tn) white_to_move =
   let material = ref 0 in
   let position = ref 0 in
   let white_pieces = [|0; 0; 0; 0; 0; 0; 0|] in
@@ -709,7 +575,7 @@ let eval_materiel3 board (tb, tn) white_to_move =
   (*if score_draw then
     0, 0
   else*)
-    !material, !position
+    !material, !position*)
 (*Draw Fide
 - K vs K
 - K + Minor vs K

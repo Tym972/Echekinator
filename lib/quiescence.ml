@@ -7,9 +7,6 @@ open Transposition
 open Zobrist
 open Evaluation
 
-let is_loss score = score < (-90000)
-let is_win score = score > 90000
-
 (*open Evaluation*)
 
 (*Fonction implémentant la recherche quiescente*)
@@ -38,7 +35,7 @@ let rec quiescence_search depth ply alpha beta ispv =
       let alpha0 = ref alpha in
       let beta0 = ref beta in
       (*Use TT informations*)
-      if hash_depth <> empty_depth && not ispv then begin
+      if not ispv then begin
         hash_treatment hash_node_type hash_depth hash_value hash_move depth alpha0 beta0 best_score best_move no_cut ply
       end;
       if !no_cut then begin
@@ -49,7 +46,7 @@ let rec quiescence_search depth ply alpha beta ispv =
         end;
 
         (*Stand pat*)
-        if !best_score < beta then  begin
+        if !best_score < beta then begin
           
           if !best_score > !alpha0 then begin
             alpha0 := !best_score
@@ -77,50 +74,48 @@ let rec quiescence_search depth ply alpha beta ispv =
             end;
             unmake board move;
             incr counter
+
           in if in_check then begin
-            if hash_move <> Null then begin
-              move_loop hash_move;
-              if !no_cut then begin
-                let legal_moves, number_of_legal_moves = legal_moves board white_to_move last_move castling_rights king_position in_check in
-                let i = ref 0 in
-                while !no_cut && !i < !number_of_legal_moves do
-                  move_loop legal_moves.(!i);
-                  incr i
-                done
-              end
-            end
-            else begin
+            let move_loop_in_check () =
               let legal_moves, number_of_legal_moves = legal_moves board white_to_move last_move castling_rights king_position in_check in
-                let i = ref 0 in
-                while !no_cut && !i < !number_of_legal_moves do
-                  move_loop legal_moves.(!i);
-                  incr i
-                done
-            end
-          end
-          else begin
-            if hash_move <> Null && not (isquiet hash_move) then begin
+              let i = ref 0 in
+              while !no_cut && !i < !number_of_legal_moves do
+                move_loop legal_moves.(!i);
+                incr i
+              done
+            in if hash_move <> Null then begin
               move_loop hash_move;
               if !no_cut then begin
-                let captures = ref (tri_see (captures board white_to_move last_move) board white_to_move hash_move) in
-                while !no_cut && !captures <> [] do
-                  move_loop (List.hd !captures);
-                  captures := List.tl !captures
-                done
+                move_loop_in_check ()
               end
             end
             else begin
+              move_loop_in_check ()
+            end;
+
+            (*Check for mate*)
+            if !best_score = (- max_int) then begin
+              best_score := ply - 99999
+            end
+
+          end
+
+          else begin
+            let move_loop_normal () =
               let captures = ref (tri_see (captures board white_to_move last_move) board white_to_move hash_move) in
               while !no_cut && !captures <> [] do
                 move_loop (List.hd !captures);
                 captures := List.tl !captures
               done
+            in if hash_move <> Null && not (isquiet hash_move) then begin
+              move_loop hash_move;
+              if !no_cut then begin
+                move_loop_normal ()
+              end
             end
-          end;
-
-          (*Check for mate*)
-          if in_check && !best_score = (- max_int) then begin
-            best_score := ply - 99999
+            else begin
+              move_loop_normal ()
+            end
           end
 
         end
@@ -139,16 +134,14 @@ let rec quiescence_search depth ply alpha beta ispv =
             Pv
           end
           in let stored_value =
-            if abs !best_score < 99000 then begin
-              !best_score
+            if is_win !best_score then begin
+              !best_score + ply
+            end
+            else if is_loss !best_score then begin
+              !best_score - ply
             end
             else begin
-              if !best_score >= 0 then begin
-                !best_score + ply
-              end
-              else begin
-                !best_score - ply
-              end
+              !best_score
             end
           in store transposition_table zobrist_position node_type depth stored_value !best_move (*hash_static_eval*) !go_counter
         end;
