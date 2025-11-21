@@ -7,7 +7,11 @@ open Libs.Traduction
 open Libs.Evaluation
 open Libs.Quiescence
 
-let is_quiet_position board white_to_move in_check score =
+let j = ref 0
+
+let nodes_to_search = 50000
+
+let is_quiet_position board white_to_move in_check provisional_score =
   let quiet = ref true in
   let m1 = 60 in
   let m2 = 70 in
@@ -16,15 +20,34 @@ let is_quiet_position board white_to_move in_check score =
   end
   else begin
     let static_eval = hce board white_to_move in
-    if abs (static_eval - quiescence_search 0 0 (-max_int) max_int true ) > m1 || abs (static_eval - score) > m2 then begin
+    if abs (static_eval - quiescence_search 0 0 (-max_int) max_int true ) > m1 then begin
       quiet := false
     end
+    else begin
+      let score =
+        if provisional_score > (-max_int) then begin
+          provisional_score
+        end
+        else begin
+          (*position fen
+          go nodes nodes_to_search
+          flush stdout
+          let score = in
+          *)
+          972
+        end
+      in if abs (static_eval - score) > m2 then begin
+        quiet := false
+      end
+    end;
   end;
+  if !quiet then
+    incr j;
   !quiet
 
 let func_scores eval_string white_to_move =
   if eval_string.[1] = 'M' then begin
-    0
+    10000 * (if eval_string.[0] = '-' then -1 else 1) * (if white_to_move then 1 else -1)
   end
   else begin
     if white_to_move then begin
@@ -34,6 +57,21 @@ let func_scores eval_string white_to_move =
       int_of_float (-. 100. *. float_of_string (eval_string))
     end
   end
+
+(*let exploit_position white_to_move last_move castling_rights king_position in_check zobrist_position board_record half_moves =
+  let legal_moves, number_of_legal_moves = legal_moves board white_to_move last_move castling_rights king_position in_check in
+  for i = 0 to !number_of_legal_moves - 1 do
+    let move = legal_moves.(i) in
+
+    make board move;
+    
+    if is_quiet_position board !white_to_move !in_check (-max_int) then begin
+      let a = Printf.sprintf "%s | %i | %s" initial_fen score result in
+      print_endline a
+    end;
+
+    unmake board move
+  done*)
 
 let select_position moves_string evals initial_fen result =
   let white_to_move = ref true in
@@ -48,7 +86,11 @@ let select_position moves_string evals initial_fen result =
   position_of_fen initial_fen board white_to_move last_move castling_rights king_position in_check moves_record zobrist_position board_record half_moves;
   position_aspects.(0) <- (!white_to_move, !last_move, !castling_rights, !board_record, !half_moves, !zobrist_position);
   let moves = move_list_of_algebric_list (List.map remove moves_string) !white_to_move !last_move !castling_rights board in
-  let a = Printf.sprintf "%s | %s | %s" initial_fen (List.hd evals) result in print_endline a;
+  let score = func_scores (List.hd evals) !white_to_move in
+  if is_quiet_position board !white_to_move !in_check score then begin
+    let a = Printf.sprintf "%s | %i | %s" initial_fen score result in
+    print_endline a
+  end;
   let rec func move_list eval_list = match move_list, eval_list with
     |move :: other_moves, eval_string :: other_evals ->
       let new_castling_rights = castling_modification move !castling_rights in
@@ -58,12 +100,16 @@ let select_position moves_string evals initial_fen result =
       castling_rights := new_castling_rights;
       last_move := move;
       white_to_move := not !white_to_move;
+      position_aspects.(0) <- (!white_to_move, !last_move, !castling_rights, !board_record, !half_moves, !zobrist_position);
       king_position := index_array board (king !white_to_move);
       in_check := threatened board !king_position !white_to_move;
       moves_record := move :: !moves_record;
       let fen_position = fen board !white_to_move !last_move !castling_rights !moves_record !half_moves in
-      let eval = func_scores eval_string !white_to_move in
-      let b = Printf.sprintf "%s | %i | %s" fen_position eval result in print_endline b;
+      let score = func_scores eval_string !white_to_move in
+      if is_quiet_position board !white_to_move !in_check score then begin
+        let b = Printf.sprintf "%s | %i | %s" fen_position score result in
+        print_endline b
+      end;
       func other_moves other_evals
     |_ -> ()
   in func moves (List.tl evals)
@@ -159,7 +205,7 @@ let process_pgn_file filename =
   in
   read_games ()
 
-let () = process_pgn_file "/home/tym972/Echekinator/Results/Pgn_fastchess.pgn"
+let () = process_pgn_file "/home/tym972/Echekinator/Results/Pgn_fastchess.pgn"; print_endline (string_of_int !j)
 
 let update_acc move = match move with
   |Normal {piece; from; to_; capture} -> begin
@@ -266,4 +312,4 @@ let update_acc move = match move with
   |Null -> ()
 
 
-let _ = is_quiet_position, update_acc, func_scores
+let _ = is_quiet_position, update_acc, func_scores, nodes_to_search

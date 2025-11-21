@@ -216,6 +216,7 @@ let rec algoperft board depth ply table_perft =
 
 (*Answer to the command "go"*)
 let go instructions board white_to_move last_move castling_rights zobrist_position king_position in_check =
+  start_time := max_float;
   out_of_time := false;
   node_counter := 0;
   for i = 0 to (2 * max_depth) - 1 do
@@ -435,18 +436,27 @@ let echekinator () =
   let initial_half_moves = ref 0 in
   position_aspects.(0) <- (!white_to_move, !last_move, !castling_rights, !board_record, !half_moves, !zobrist_position);
   let exit = ref false in
-  while not !exit do
+  let hot_command = ref false in
+  let process instruction =
+    while !hot_command do
+      ()
+    done;
+    hot_command := true;
+    instruction ();
+    hot_command := false
+  in while not !exit do
     let command_line = word_detection (lire_entree "" true) in
     let command = try List.hd command_line with _ -> "" in
     match command with
       |"uci" -> uci ()
       |"isready" -> print_endline "readyok"
-      |"setoption" -> setoption command_line
-      |"ucinewgame" -> ucinewgame board white_to_move last_move castling_rights king_position in_check moves_record zobrist_position board_record half_moves start_position initial_white_to_move initial_last_move initial_castling_rights initial_king_position initial_in_check initial_moves_record initial_zobrist_position initial_board_record initial_half_moves
-      |"position" -> position command_line board white_to_move last_move castling_rights king_position in_check moves_record zobrist_position board_record half_moves start_position initial_white_to_move initial_last_move initial_castling_rights initial_king_position initial_in_check initial_moves_record initial_zobrist_position initial_board_record initial_half_moves
+      |"setoption" -> process (fun () -> setoption command_line)
+      |"ucinewgame" -> process (fun () -> ucinewgame board white_to_move last_move castling_rights king_position in_check moves_record zobrist_position board_record half_moves start_position initial_white_to_move initial_last_move initial_castling_rights initial_king_position initial_in_check initial_moves_record initial_zobrist_position initial_board_record initial_half_moves)
+      |"position" -> process (fun () -> position command_line board white_to_move last_move castling_rights king_position in_check moves_record zobrist_position board_record half_moves start_position initial_white_to_move initial_last_move initial_castling_rights initial_king_position initial_in_check initial_moves_record initial_zobrist_position initial_board_record initial_half_moves)
       |"go" ->
-        start_time := max_float;
-        let _ = Thread.create (fun () -> go command_line (Array.copy board) !white_to_move !last_move !castling_rights !zobrist_position  !king_position !in_check) () in ()
+        let _ = Thread.create
+          (fun () -> process (fun () -> go command_line board !white_to_move !last_move !castling_rights !zobrist_position !king_position !in_check)) ()
+        in ()
       |"quit" -> exit := true
       |"stop" -> out_of_time := true
       |"d" -> display board !white_to_move !last_move !castling_rights !moves_record !zobrist_position !half_moves

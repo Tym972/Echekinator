@@ -290,3 +290,21 @@ let hce board white_to_move =
     score
   else  
     - score
+
+let value = [| 100; 300; 300; 500; 900; 0|]
+
+let simple_eval board white_to_move =
+  let score = ref 0 in
+  for square = 0 to 63 do
+    let piece = board.(square) in
+    if piece > 0 then begin
+      score := !score + value.(piece - 1)
+    end
+    else if piece < 0 then begin
+      score := !score - value.(- piece - 1)
+    end;
+  done;
+  if white_to_move then
+    !score
+  else  
+    - !score
