@@ -13,7 +13,7 @@ open Evaluation
 let rec quiescence_search depth ply alpha beta ispv =
 
   (*Check search limit*)
-  if !out_of_time then begin
+  if !stop_search then begin
     0
   end
 
@@ -29,11 +29,12 @@ let rec quiescence_search depth ply alpha beta ispv =
 
     else begin
       let best_move = ref Null in
-      let hash_node_type, hash_depth, hash_value, hash_move(*, hash_static_eval*) = probe transposition_table zobrist_position in
+      let hash_node_type, hash_depth, hash_value, hash_move(*, hash_static_eval*) = probe !transposition_table zobrist_position in
       let no_cut = ref true in
       let best_score = ref (- max_int) in
       let alpha0 = ref alpha in
       let beta0 = ref beta in
+
       (*Use TT informations*)
       if not ispv then begin
         hash_treatment hash_node_type hash_depth hash_value hash_move depth alpha0 beta0 best_score best_move no_cut ply
@@ -45,7 +46,7 @@ let rec quiescence_search depth ply alpha beta ispv =
           best_score := hce board white_to_move;
         end;
 
-        (*Stand pat*)
+        (*Stand pat verification then move loop*)
         if !best_score < beta then begin
           
           if !best_score > !alpha0 then begin
@@ -63,18 +64,19 @@ let rec quiescence_search depth ply alpha beta ispv =
             in if score > !best_score then begin
               best_score := score;
               if score > !alpha0 then begin
-                best_move := move;
+                best_move := move
               end;
               if score > !alpha0 then begin
-                alpha0 := score;
+                alpha0 := score
               end;
               if score >= !beta0 then begin
-                no_cut := false;
+                no_cut := false
               end
             end;
             unmake board move;
             incr counter
 
+          (*If in check search for all moves*)
           in if in_check then begin
             let move_loop_in_check () =
               let legal_moves, number_of_legal_moves = legal_moves board white_to_move last_move castling_rights king_position in_check in
@@ -100,6 +102,7 @@ let rec quiescence_search depth ply alpha beta ispv =
 
           end
 
+          (*Else only search for captures and promotions*)
           else begin
             let move_loop_normal () =
               let captures = ref (tri_see (captures board white_to_move last_move) board white_to_move hash_move) in
@@ -122,7 +125,7 @@ let rec quiescence_search depth ply alpha beta ispv =
       end;
 
       (*Storing in TT*)
-      if not (!out_of_time || !node_counter >= !node_limit) then begin
+      if not (!stop_search || !node_counter >= !node_limit) then begin
         let node_type =
           if !best_score <= alpha then begin
             All
@@ -133,18 +136,18 @@ let rec quiescence_search depth ply alpha beta ispv =
           else begin
             Pv
           end
-          in let stored_value =
-            if is_win !best_score then begin
-              !best_score + ply
-            end
-            else if is_loss !best_score then begin
-              !best_score - ply
-            end
-            else begin
-              !best_score
-            end
-          in store transposition_table zobrist_position node_type depth stored_value !best_move (*hash_static_eval*) !go_counter
-        end;
+        in let stored_value =
+          if is_win !best_score then begin
+            !best_score + ply
+          end
+          else if is_loss !best_score then begin
+            !best_score - ply
+          end
+          else begin
+            !best_score
+          end
+        in store !transposition_table zobrist_position node_type depth stored_value !best_move (*hash_static_eval*) !go_counter
+      end;
     !best_score
     end
   end

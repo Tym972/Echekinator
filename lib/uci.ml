@@ -87,15 +87,15 @@ let uci () =
 (*Variable indication if Pondering is allowed*)
 let ponder = ref false
 
-(*A implémenter*)
+(*Variables MultiPV*)
 let multipv = ref 1
 let min_multipv = 1
 let max_multipv = 256
 
-(*A implémenter*)
-let mb_trasposition_size = ref 16
-let min_mb_trasposition_size = 1
-let max_mb_tansposition_size = 33554432
+(*Variables for Hash size in MB*)
+let hash_size = ref 16
+let min_hash_size = 1
+let max_hash_size = 33554432
 
 (*A implémenter*)
 let threads_number = ref 1
@@ -103,7 +103,7 @@ let min_threads_number = 1
 let max_threads_number = 1024
 
 let reset_hash () =
-  clear transposition_table;
+  clear !transposition_table;
   go_counter := 0;
   for i = 0 to 8191 do
     history_moves.(i) <- 0
@@ -128,7 +128,10 @@ let setoption instructions =
     |"name" :: "UCI_Chess960" :: _ -> type_check instructions chess_960
     |"name" :: "Clear" :: "Hash" :: _ -> reset_hash ()
     |"name" :: "MultiPV" :: _ -> type_spin instructions multipv min_multipv max_multipv
-    |"name" :: "Hash" :: _ -> type_spin instructions mb_trasposition_size min_mb_trasposition_size max_mb_tansposition_size 
+    |"name" :: "Hash" :: _ ->
+      type_spin instructions hash_size min_hash_size max_hash_size;
+      slots := (!hash_size * 1024 * 1024) / entry_size;
+      transposition_table := Array.make !slots empty_entry;
     |"name" :: "Threads" :: _ -> type_spin instructions threads_number min_threads_number max_threads_number
     |_ -> ()
 
@@ -187,7 +190,7 @@ let rec algoperft board depth ply table_perft =
   end
   else begin
     let white_to_move, last_move, castling_rights, _, _, zobrist_position = position_aspects.(ply) in
-    let old_key, number, hash_depth = table_perft.(zobrist_position mod transposition_size) in
+    let old_key, number, hash_depth = table_perft.(zobrist_position mod !slots) in
     if depth = hash_depth && zobrist_position = old_key then begin
       number
     end
@@ -209,7 +212,7 @@ let rec algoperft board depth ply table_perft =
         end;
         unmake board move
       done;
-       table_perft.(zobrist_position mod transposition_size) <- (zobrist_position, !nodes, depth);
+       table_perft.(zobrist_position mod !slots) <- (zobrist_position, !nodes, depth);
       !nodes
     end
   end
@@ -217,7 +220,7 @@ let rec algoperft board depth ply table_perft =
 (*Answer to the command "go"*)
 let go instructions board white_to_move last_move castling_rights zobrist_position king_position in_check =
   start_time := max_float;
-  out_of_time := false;
+  stop_search := false;
   node_counter := 0;
   for i = 0 to (2 * max_depth) - 1 do
     killer_moves.(i) <- Null
@@ -226,7 +229,7 @@ let go instructions board white_to_move last_move castling_rights zobrist_positi
   match instructions with
     |_ :: "perft" :: depth :: _ when is_integer_string depth ->
       let depth = int_of_string depth in
-      let table_perft = Array.make transposition_size (0, 0, (-1)) in
+      let table_perft = Array.make !slots (0, 0, (-1)) in
       print_endline ("\n" ^ "Nodes searched : " ^ (string_of_int (algoperft board depth 0 table_perft)));
     |_ ->
       let commands = ["searchmoves"; "ponder"; "wtime"; "btime"; "winc"; "binc"; "movestogo"; "depth"; "nodes"; "mate"; "movetime"; "infinite"] in
@@ -264,7 +267,7 @@ let go instructions board white_to_move last_move castling_rights zobrist_positi
             |_ -> ()
           in func list;
           if !index = 0 then begin
-            out_of_time := true
+            stop_search := true
           end
           else begin
             number_of_legal_moves := !index;
@@ -307,7 +310,7 @@ let go instructions board white_to_move last_move castling_rights zobrist_positi
         if not !is_pondering then begin
           start_time := Sys.time ();
         end;
-        pv_table.(0) <- (let _, _, _, move(*, _*) = probe transposition_table zobrist_position in move);
+        pv_table.(0) <- (let _, _, _, move(*, _*) = probe !transposition_table zobrist_position in move);
         let number_of_pv = min !multipv !number_of_legal_moves in
         let print_score_table = Array.make number_of_pv "cp 0" in
         let short_pv_table = Array.make number_of_pv [] in
@@ -336,7 +339,7 @@ let go instructions board white_to_move last_move castling_rights zobrist_positi
               !acc
             in let new_score =
               let score = ref (root_search in_check !var_depth alpha_table.(multi) beta_table.(multi) first_move (Array.copy legal_moves_copy) (ref !number_of_legal_moves_copy) short_pv_table multi) in
-              while not (!out_of_time || !node_counter > !node_limit || (!score > alpha_table.(multi) && !score < beta_table.(multi))) do
+              while not (!stop_search || !node_counter > !node_limit || (!score > alpha_table.(multi) && !score < beta_table.(multi))) do
                 if !score <= alpha_table.(multi) then begin
                   alpha_table.(multi) <- (-max_int)
                 end
@@ -375,7 +378,7 @@ let go instructions board white_to_move last_move castling_rights zobrist_positi
           info := merge_sort (Array.to_list info_table);
           let exec_time = Sys.time () -. !start_time in
           let nps = int_of_float (float_of_int !node_counter /. exec_time) in
-          let hashfull = int_of_float (1000. *. (float_of_int !transposition_counter /. (float_of_int transposition_size))) in
+          let hashfull = int_of_float (1000. *. (float_of_int !transposition_counter /. (float_of_int !slots))) in
           let time =  (int_of_float (1000. *. exec_time)) in
           let rec aux_info list n = match list with
             |[] -> ()
@@ -458,7 +461,7 @@ let echekinator () =
           (fun () -> process (fun () -> go command_line board !white_to_move !last_move !castling_rights !zobrist_position !king_position !in_check)) ()
         in ()
       |"quit" -> exit := true
-      |"stop" -> out_of_time := true
+      |"stop" -> stop_search := true
       |"d" -> display board !white_to_move !last_move !castling_rights !moves_record !zobrist_position !half_moves
       |"eval" ->
         let eval = (float_of_int (hce board true)) /. 100. in

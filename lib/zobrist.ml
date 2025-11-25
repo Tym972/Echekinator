@@ -129,7 +129,7 @@ let new_zobrist move penultimate_move old_zobrist (aprb, agrb, aprn, agrn) (nprb
   !h lxor aux move
 
 (*Fonction détectant les répétitions à partir d'une liste de code zobrist*)
-let repetition liste_releve_plateau n = match liste_releve_plateau with
+let repetition board_record n = match board_record with
   |[] -> false
   |h::q ->
     let rec aux liste k = match liste with

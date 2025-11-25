@@ -6,6 +6,7 @@ open Libs.Fen
 open Libs.Traduction
 open Libs.Evaluation
 open Libs.Quiescence
+open Libs.Transposition
 
 let j = ref 0
 
@@ -205,7 +206,16 @@ let process_pgn_file filename =
   in
   read_games ()
 
-let () = process_pgn_file "/home/tym972/Echekinator/Results/Pgn_fastchess.pgn"; print_endline (string_of_int !j)
+let () =
+  if false then begin
+    process_pgn_file "/home/tym972/Echekinator/Results/Pgn_fastchess.pgn";
+    print_endline (string_of_int !j)
+  end
+  else begin
+    let size_in_words x = Obj.size (Obj.repr x)  (* nombre de mots *) in
+    let bytes = size_in_words !transposition_table.(1) * Sys.word_size / 8 in
+    print_endline (string_of_int bytes);
+  end
 
 let update_acc move = match move with
   |Normal {piece; from; to_; capture} -> begin

@@ -7,6 +7,7 @@ open Move_ordering
 open Transposition
 open Quiescence
 open Evaluation
+open Traduction
 
 (*let verif board move = match move with
   |Normal {piece; from; to_; capture} -> board.(from) = piece && board.(to_) = capture
@@ -35,12 +36,12 @@ let rec pvs depth ply alpha beta ispv =
   incr node_counter;
   if !node_counter mod 1000 = 0 then begin
     if Sys.time () -. !start_time >= !search_time then begin
-      out_of_time := true
+      stop_search := true
     end
   end;
   
   (*Check search limit*)
-  if !out_of_time || !node_counter >= !node_limit then begin
+  if !stop_search || !node_counter >= !node_limit then begin
     if ispv then begin
       pv_length.(ply) <- 0
     end;
@@ -52,6 +53,7 @@ let rec pvs depth ply alpha beta ispv =
     quiescence_search depth ply alpha beta ispv 
   end
 
+  (*Normal search*)
   else begin
     let white_to_move, last_move, castling_rights, board_record, half_moves, zobrist_position = position_aspects.(ply) in
     let king_position = index_array board (king white_to_move) in
@@ -84,7 +86,7 @@ let rec pvs depth ply alpha beta ispv =
       
       else begin
         let best_move = ref Null in
-        let hash_node_type, hash_depth, hash_value, hash_move(*, hash_static_eval*) = probe transposition_table zobrist_position in
+        let hash_node_type, hash_depth, hash_value, hash_move(*, hash_static_eval*) = probe !transposition_table zobrist_position in
         let no_cut = ref true in
         let best_score = ref (- max_int) in
 
@@ -105,14 +107,14 @@ let rec pvs depth ply alpha beta ispv =
 
         if !no_cut then begin
           
-          (*Static evalutation pruning and null move pruning*)
+          (*Reverse futility pruning and null move pruning*)
           if not (in_check || ispv || is_loss !beta0 || zugzwang board white_to_move) then begin
             let static_eval = hce board white_to_move in
             (*let _ = evaluate () in*)
             if depth < 3 then begin
-              let eval_margin = 100 * depth in
-              if static_eval - eval_margin >= !beta0 then begin
-                best_score := static_eval - eval_margin;
+              let margin = 100 * depth in
+              if static_eval - margin >= !beta0 then begin
+                best_score := static_eval - margin;
                 no_cut := false
               end
             end
@@ -127,7 +129,7 @@ let rec pvs depth ply alpha beta ispv =
                 else begin
                   best_score := score
                 end;
-                no_cut := false;
+                no_cut := false
               end
             end
           end;
@@ -188,14 +190,14 @@ let rec pvs depth ply alpha beta ispv =
                   end
                 end;
                 if score > !alpha0 then begin
-                  alpha0 := score;
+                  alpha0 := score
                 end;
                 if score >= !beta0 then begin
                   no_cut := false;
                   if isquiet !best_move then begin
                     history_moves.(4096 * aux_history white_to_move + 64 * from !best_move + to_ !best_move) <- depth * depth;
                     killer_moves.(2 * ply + 1) <- killer_moves.(2 * ply);
-                    killer_moves.(2 * ply) <- !best_move;
+                    killer_moves.(2 * ply) <- !best_move
                   end
                 end
               end;
@@ -231,11 +233,11 @@ let rec pvs depth ply alpha beta ispv =
                 best_score := 0
               end
             end
-          end;
+          end
         end;
 
         (*Storing in TT*)
-        if not (!out_of_time || !node_counter >= !node_limit) then begin
+        if not (!stop_search || !node_counter >= !node_limit) then begin
           let node_type =
             if !best_score <= alpha then begin
               if ispv then begin
@@ -259,31 +261,12 @@ let rec pvs depth ply alpha beta ispv =
             else begin
               !best_score
             end
-          in store transposition_table zobrist_position node_type depth stored_value !best_move (*hash_static_eval*) !go_counter
+          in store !transposition_table zobrist_position node_type depth stored_value !best_move (*hash_static_eval*) !go_counter
         end;
       !best_score
       end;
     end
   end
-
-let english_pieces_lowercase = [|""; "p"; "n"; "b"; "r"; "q"; "k"|]
-
-(*Fonction traduisant un move en sa notation UCI*)
-let uci_of_mouvement move = match move with
-  |Castling {sort} ->
-    let from_king, to_short, to_long, from_short_rook, from_long_rook = if sort < 3 then !from_white_king, 62, 58, !from_short_white_rook, !from_long_white_rook else !from_black_king, 6, 2, !from_short_black_rook, !from_long_black_rook in
-    let arrivee_roque, depart_tour = if sort mod 2 = 1 then to_short, from_short_rook else to_long, from_long_rook in
-    coord.(from_king) ^ coord.(if not !chess_960 then arrivee_roque else depart_tour)
-  |Promotion {from = _; to_ = _; capture = _; promotion} -> coord.(from move) ^ coord.(to_ move) ^ english_pieces_lowercase.(abs promotion)
-  |Null -> "(none)"
-  |_ -> coord.(from move) ^ coord.(to_ move)
-
-let pv_finder depth =
-  let pv = ref [] in
-  for i = 0 to (min pv_length.(0) depth) - 1 do 
-    pv := !pv @ [pv_table.(i)];
-  done;
-  !pv
 
 let root_search in_check depth alpha beta first_move legal_moves number_of_legal_moves short_pv_table multi =
   incr node_counter;
@@ -335,7 +318,7 @@ let root_search in_check depth alpha beta first_move legal_moves number_of_legal
         else
           score_lmr
       end
-    in if score > !best_score && not (!out_of_time || !node_counter >= !node_limit) then begin
+    in if score > !best_score && not (!stop_search || !node_counter >= !node_limit) then begin
       best_score := score;
       if score > !alpha0 || !counter = 0 then begin
         best_move := move;
@@ -354,7 +337,7 @@ let root_search in_check depth alpha beta first_move legal_moves number_of_legal
         if isquiet !best_move then begin
           history_moves.(4096 * aux_history white_to_move + 64 * from !best_move + to_ !best_move) <- depth * depth;
           killer_moves.(1) <- killer_moves.(0);
-          killer_moves.(0) <- !best_move;
+          killer_moves.(0) <- !best_move
         end
       end
     end;
@@ -381,7 +364,7 @@ let root_search in_check depth alpha beta first_move legal_moves number_of_legal
       moves := List.tl !moves
     done;
   end;
-  if not (!out_of_time || !node_counter >= !node_limit) then begin
-    store transposition_table zobrist_position Pv depth !best_score !best_move (*static_eval*) !go_counter
+  if not (!stop_search || !node_counter >= !node_limit) then begin
+    store !transposition_table zobrist_position Pv depth !best_score !best_move (*static_eval*) !go_counter
   end;
   !best_score

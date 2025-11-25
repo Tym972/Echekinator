@@ -271,13 +271,12 @@ let uci_of_mouvement move = match move with
     let arrivee_roque, depart_tour = if sort mod 2 = 1 then to_short, from_short_rook else to_long, from_long_rook in
     coord.(from_king) ^ coord.(if not !chess_960 then arrivee_roque else depart_tour)
   |Promotion {from = _; to_ = _; capture = _; promotion} -> coord.(from move) ^ coord.(to_ move) ^ english_pieces_lowercase.(abs promotion)
-  |Null -> "0000"
+  |Null -> "(none)"
   |_ -> coord.(from move) ^ coord.(to_ move)
 
-(**)
 let pv_finder depth =
-  let pv = ref "" in
+  let pv = ref [] in
   for i = 0 to (min pv_length.(0) depth) - 1 do 
-    pv := !pv ^ (uci_of_mouvement pv_table.(i)) ^ " ";
+    pv := !pv @ [pv_table.(i)]
   done;
   !pv
