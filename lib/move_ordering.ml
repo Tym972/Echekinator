@@ -188,7 +188,7 @@ let see_forced board move white_to_move =
   unmake board move;
   note
 
-let get_attackers board square tab64_square first_attacker first_capture first_attacker_square =
+(*let get_attackers board square tab64_square first_attacker first_capture first_attacker_square =
   let white_attackers = ref [] in
   let black_attackers = ref [] in
   let first_attacker_direction = ref 0 in
@@ -371,7 +371,7 @@ let new_see board move =
   for i = (!index - 2) downto 1 do
     gain.(i - 1) <- - (max (-gain.(i - 1)) gain.(i))
   done;
-  gain.(0)
+  gain.(0)*)
 
 (*Fonction triant une liste de coups selon la logique Most Valuable Victim - Least Valuable Agressor*)
 let mvvlva move = match move with
@@ -389,7 +389,7 @@ let history_moves = Array.make 8192 0
 let aux_history white_to_move =
   if white_to_move then 0 else 1
 
-let g move = match move with |Normal _ -> true |_ -> false
+(*let g move = match move with |Normal _ -> true |_ -> false*)
 
 let move_ordering board white_to_move player_moves number_of_moves ply hash_move ordering_array =
   let hash_move_index = ref (-1) in

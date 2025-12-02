@@ -9,13 +9,6 @@ open Quiescence
 open Evaluation
 open Traduction
 
-(*let verif board move = match move with
-  |Normal {piece; from; to_; capture} -> board.(from) = piece && board.(to_) = capture
-  |Enpassant {from; to_} -> board.(from) = (if from < 32 then 1 else -1)  && board.(to_) = 0
-  |Castling {sort} -> if sort < 3 then board.(!from_white_king) = 6 else board.(!from_black_king) = (-6)
-  |Promotion {from; to_; capture; promotion} -> board.(from) = (if promotion > 0 then 1 else -1) && board.(to_) = capture
-  |Null -> false*)
-
 let zugzwang board white_to_move =
   let player_sign = if white_to_move then 1 else (-1) in
   let only_pawns = ref true in
@@ -31,18 +24,19 @@ let zugzwang board white_to_move =
 
 (*open Evaluation*)
 
-let rec pvs depth ply alpha beta ispv =
-  
-  incr node_counter;
-  if !node_counter mod 1000 = 0 then begin
-    if Sys.time () -. !start_time >= !search_time then begin
-      stop_search := true
+let rec pvs position thread depth ply alpha beta ispv =
+  let main_thread = thread = 0 in
+
+ node_counter.(thread) <- node_counter.(thread) + 1;
+  if node_counter.(0) mod 1000 = 0 then begin
+    if Mtime.Span.compare (Mtime_clock.count !start_time) !search_time >= 0 then begin
+      stop_search.(0) <- true
     end
   end;
   
   (*Check search limit*)
-  if !stop_search || !node_counter >= !node_limit then begin
-    if ispv then begin
+  if stop_search.(thread) || total_node_counter () >= !node_limit then begin
+    if main_thread && ispv then begin
       pv_length.(ply) <- 0
     end;
     0
@@ -50,14 +44,13 @@ let rec pvs depth ply alpha beta ispv =
 
   (*Quiescense search*)
   else if depth = 0 then begin
-    quiescence_search depth ply alpha beta ispv 
+    quiescence_search position thread depth ply alpha beta ispv 
   end
 
   (*Normal search*)
   else begin
-    let white_to_move, last_move, castling_rights, board_record, half_moves, zobrist_position = position_aspects.(ply) in
-    let king_position = index_array board (king white_to_move) in
-    let in_check = threatened board king_position white_to_move in
+    let king_position = index_array position.board (king position.white_to_move) in
+    let in_check = threatened position.board king_position position.white_to_move in
     
     (*let bg = Array.copy accumulator in Array.blit bg 0 accumulator 0 n;*)
     (*vector board;
@@ -68,8 +61,8 @@ let rec pvs depth ply alpha beta ispv =
     end; *)
 
     (*Check repetion or fifty moves rule*)
-    if repetition board_record 3 || (half_moves = 100 && (not in_check || (let _, number_of_moves = legal_moves board white_to_move last_move castling_rights king_position in_check in !number_of_moves <> 0))) then begin
-      if ispv then begin
+    if repetition position.board_record 3 || (position.half_moves = 100 && (not in_check || (let _, number_of_moves = legal_moves position.board position.white_to_move position.last_move position.castling_rights king_position in_check in !number_of_moves <> 0))) then begin
+      if main_thread && ispv then begin
         pv_length.(ply) <- 0
       end;
       0
@@ -86,7 +79,7 @@ let rec pvs depth ply alpha beta ispv =
       
       else begin
         let best_move = ref Null in
-        let hash_node_type, hash_depth, hash_value, hash_move(*, hash_static_eval*) = probe !transposition_table zobrist_position in
+        let hash_node_type, hash_depth, hash_value, hash_move(*, hash_static_eval*) = probe !transposition_table position.zobrist_position position.board in
         let no_cut = ref true in
         let best_score = ref (- max_int) in
 
@@ -101,15 +94,15 @@ let rec pvs depth ply alpha beta ispv =
         in*)
 
         (*Use TT informations*)
-        if not ispv then begin
-          hash_treatment hash_node_type hash_depth hash_value hash_move depth alpha0 beta0 best_score best_move no_cut ply
+        if not (ispv || depth > hash_depth) then begin
+          hash_treatment hash_node_type hash_value alpha0 beta0 best_score no_cut ply
         end;
 
         if !no_cut then begin
           
           (*Reverse futility pruning and null move pruning*)
-          if not (in_check || ispv || is_loss !beta0 || zugzwang board white_to_move) then begin
-            let static_eval = hce board white_to_move in
+          if not (in_check || ispv || is_loss !beta0 || zugzwang position.board position.white_to_move) then begin
+            let static_eval = hce position.board position.white_to_move in
             (*let _ = evaluate () in*)
             if depth < 3 then begin
               let margin = 100 * depth in
@@ -119,9 +112,17 @@ let rec pvs depth ply alpha beta ispv =
               end
             end
             else if static_eval >= !beta0 then begin
-              let new_zobrist = new_zobrist Null last_move zobrist_position castling_rights castling_rights board in
-              position_aspects.(ply + 1) <- (not white_to_move, Null, castling_rights, board_record, half_moves, new_zobrist);
-              let score = - pvs (depth - 3) (ply + 1) (- !beta0) (- !beta0 + 1) false
+              let new_zobrist = new_zobrist Null position.last_move position.zobrist_position position.castling_rights position.castling_rights position.board in
+              let new_position = {
+                board = position.board;
+                white_to_move = not position.white_to_move;
+                last_move = Null;
+                castling_rights = position.castling_rights;
+                board_record = position.board_record;
+                half_moves = position.half_moves;
+                zobrist_position = new_zobrist;
+              }
+              in let score = - pvs new_position thread (depth - 3) (ply + 1) (- !beta0) (- !beta0 + 1) false
               in if score >= !beta0 then begin
                 if is_win score then begin
                   best_score := beta
@@ -138,14 +139,22 @@ let rec pvs depth ply alpha beta ispv =
           if !no_cut then begin
             let counter = ref 0 in
             let move_loop move =
-              let new_castling_right = castling_modification move castling_rights in
-              let new_zobrist = new_zobrist move last_move zobrist_position castling_rights new_castling_right board in
-              let new_record, new_half_moves = adapt_record new_zobrist move depth board_record half_moves in
-              make board move;
-              position_aspects.(ply + 1) <- (not white_to_move, move, new_castling_right, new_record, new_half_moves, new_zobrist);
-              let score =
+              let new_castling_rights = castling_modification move position.castling_rights in
+              let new_zobrist = new_zobrist move position.last_move position.zobrist_position position.castling_rights new_castling_rights position.board in
+              let new_record, new_half_moves = adapt_record new_zobrist move depth position.board_record position.half_moves in
+              make position.board move;
+              let new_position = {
+                board = position.board;
+                white_to_move = not position.white_to_move;
+                last_move = move;
+                castling_rights = new_castling_rights;
+                board_record = new_record;
+                half_moves = new_half_moves;
+                zobrist_position = new_zobrist;
+              }
+              in let score =
                 if !counter = 0 then begin
-                  - pvs (depth - 1) (ply + 1) (- !beta0) (- !alpha0) ispv
+                  - pvs new_position thread (depth - 1) (ply + 1) (- !beta0) (- !alpha0) ispv
                 end
                 else begin
                   let score_lmr =
@@ -161,14 +170,14 @@ let rec pvs depth ply alpha beta ispv =
                         end)
                         (depth - 1)
                     in if not (in_check || depth < 3 || reduction = 0) then begin
-                      - pvs (depth - 1 - reduction) (ply + 1) (- !alpha0 - 1) (- !alpha0) false
+                      - pvs new_position thread (depth - 1 - reduction) (ply + 1) (- !alpha0 - 1) (- !alpha0) false
                     end
                     else
                       !alpha0 + 1
                   in if score_lmr > !alpha0 then begin
-                    let score_0 = - pvs (depth - 1) (ply + 1) (- !alpha0 - 1) (- !alpha0) false
+                    let score_0 = - pvs new_position thread (depth - 1) (ply + 1) (- !alpha0 - 1) (- !alpha0) false
                     in if (score_0 > !alpha0 && ispv) then begin 
-                      - pvs (depth - 1) (ply + 1) (- !beta0) (- !alpha0) ispv
+                      - pvs new_position thread (depth - 1) (ply + 1) (- !beta0) (- !alpha0) ispv
                     end
                     else begin
                       score_0
@@ -181,7 +190,7 @@ let rec pvs depth ply alpha beta ispv =
                 best_score := score;
                 if score > !alpha0 then begin
                   best_move := move;
-                  if ispv then begin
+                  if main_thread && ispv then begin
                     pv_table.(ply * (2 * max_pv_length + 1 - ply) / 2) <- !best_move;
                     for i = 1 to pv_length.(ply + 1) do
                       pv_table.(ply * (2 * max_pv_length + 1 - ply) / 2 + i) <- pv_table.((ply + 1) * (2 * max_pv_length - ply) / 2 + i - 1)
@@ -194,36 +203,36 @@ let rec pvs depth ply alpha beta ispv =
                 end;
                 if score >= !beta0 then begin
                   no_cut := false;
-                  if isquiet !best_move then begin
-                    history_moves.(4096 * aux_history white_to_move + 64 * from !best_move + to_ !best_move) <- depth * depth;
+                  if isquiet move && main_thread then begin
+                    history_moves.(4096 * aux_history position.white_to_move + 64 * from move + to_ move) <- depth * depth;
                     killer_moves.(2 * ply + 1) <- killer_moves.(2 * ply);
                     killer_moves.(2 * ply) <- !best_move
                   end
                 end
               end;
-              unmake board move;
+              unmake position.board move;
               incr counter
             in if hash_move <> Null then begin
               move_loop hash_move;
               if !no_cut then begin
-                let legal_moves, number_of_legal_moves = legal_moves board white_to_move last_move castling_rights king_position in_check in
+                let legal_moves, number_of_legal_moves = legal_moves position.board position.white_to_move position.last_move position.castling_rights king_position in_check in
                 let ordering_array = Array.make !number_of_legal_moves 0 in
-                move_ordering board white_to_move legal_moves number_of_legal_moves ply hash_move ordering_array;
+                move_ordering position.board position.white_to_move legal_moves number_of_legal_moves ply hash_move ordering_array;
                 while !no_cut && !number_of_legal_moves > 0 do
                   move_loop (move_picker legal_moves ordering_array number_of_legal_moves)
                 done
               end
             end
             else begin
-              let legal_moves, number_of_legal_moves = legal_moves board white_to_move last_move castling_rights king_position in_check in
+              let legal_moves, number_of_legal_moves = legal_moves position.board position.white_to_move position.last_move position.castling_rights king_position in_check in
               let ordering_array = Array.make !number_of_legal_moves 0 in
-              move_ordering board white_to_move legal_moves number_of_legal_moves ply Null ordering_array;
+              move_ordering position.board position.white_to_move legal_moves number_of_legal_moves ply Null ordering_array;
               while !no_cut && !number_of_legal_moves > 0 do
                 move_loop (move_picker legal_moves ordering_array number_of_legal_moves)
               done
             end;
             if !counter = 0 then begin
-              if ispv then begin
+              if main_thread && ispv then begin
                 pv_length.(ply) <- 0
               end;
               if in_check then begin
@@ -237,7 +246,7 @@ let rec pvs depth ply alpha beta ispv =
         end;
 
         (*Storing in TT*)
-        if not (!stop_search || !node_counter >= !node_limit) then begin
+        if not (stop_search.(thread) || total_node_counter () >= !node_limit) then begin
           let node_type =
             if !best_score <= alpha then begin
               if ispv then begin
@@ -261,16 +270,15 @@ let rec pvs depth ply alpha beta ispv =
             else begin
               !best_score
             end
-          in store !transposition_table zobrist_position node_type depth stored_value !best_move (*hash_static_eval*) !go_counter
+          in store !transposition_table position.zobrist_position node_type depth stored_value !best_move (*hash_static_eval*) !go_counter
         end;
       !best_score
       end;
     end
   end
 
-let root_search in_check depth alpha beta first_move legal_moves number_of_legal_moves short_pv_table multi =
-  incr node_counter;
-  let white_to_move, last_move, castling_rights, board_record, half_moves, zobrist_position = position_aspects.(0) in
+let root_search position in_check depth alpha beta first_move legal_moves number_of_legal_moves short_pv_table multi =
+  node_counter.(0) <- node_counter.(0) + 1;
   let no_cut = ref true in
   let alpha0 = ref alpha in
   let beta0 = ref beta in
@@ -279,14 +287,22 @@ let root_search in_check depth alpha beta first_move legal_moves number_of_legal
   (*let static_eval = evaluation board white_to_move in*)
   let counter = ref 0 in
   let move_loop move = 
-    let new_castling_right = castling_modification move castling_rights in
-    let new_zobrist = new_zobrist move last_move zobrist_position castling_rights new_castling_right board in
-    let new_record, new_half_moves = adapt_record new_zobrist move depth board_record half_moves in
-    make board move;
-    position_aspects.(1) <- (not white_to_move, move, new_castling_right, new_record, new_half_moves, new_zobrist);
-    let score =
+    let new_castling_rights = castling_modification move position.castling_rights in
+    let new_zobrist = new_zobrist move position.last_move position.zobrist_position position.castling_rights new_castling_rights position.board in
+    let new_record, new_half_moves = adapt_record new_zobrist move depth position.board_record position.half_moves in
+    make position.board move;
+    let new_position = {
+      board = position.board;
+      white_to_move = not position.white_to_move;
+      last_move = move;
+      castling_rights = new_castling_rights;
+      board_record = new_record;
+      half_moves = new_half_moves;
+      zobrist_position = new_zobrist;
+    }
+    in let score =
       if !counter = 0 then begin
-        - pvs (depth - 1) 1 (- !beta0) (- !alpha0) true
+        - pvs new_position 0 (depth - 1) 1 (- !beta0) (- !alpha0) true
       end
       else begin
         let score_lmr =
@@ -302,14 +318,14 @@ let root_search in_check depth alpha beta first_move legal_moves number_of_legal
               end)
               (depth - 1)
           in if not (in_check || depth < 3 || reduction = 0) then begin
-            - pvs (depth - 1 - reduction) 1 (- !alpha0 - 1) (- !alpha0) false
+            - pvs new_position 0 (depth - 1 - reduction) 1 (- !alpha0 - 1) (- !alpha0) false
           end
           else
             !alpha0 + 1
         in if score_lmr > !alpha0 then begin
-          let score_0 = - pvs (depth - 1) 1 (- !alpha0 - 1) (- !alpha0) false
+          let score_0 = - pvs new_position 0 (depth - 1) 1 (- !alpha0 - 1) (- !alpha0) false
           in if (score_0 > !alpha0) then begin 
-            - pvs (depth - 1) 1 (- !beta0) (- !alpha0) true
+            - pvs new_position 0 (depth - 1) 1 (- !beta0) (- !alpha0) true
           end
           else begin
             score_0
@@ -318,7 +334,7 @@ let root_search in_check depth alpha beta first_move legal_moves number_of_legal
         else
           score_lmr
       end
-    in if score > !best_score && not (!stop_search || !node_counter >= !node_limit) then begin
+    in if score > !best_score && not (stop_search.(0) || total_node_counter () >= !node_limit) then begin
       best_score := score;
       if score > !alpha0 || !counter = 0 then begin
         best_move := move;
@@ -334,20 +350,20 @@ let root_search in_check depth alpha beta first_move legal_moves number_of_legal
       end;
       if score >= !beta0 then begin
         no_cut := false;
-        if isquiet !best_move then begin
-          history_moves.(4096 * aux_history white_to_move + 64 * from !best_move + to_ !best_move) <- depth * depth;
+        if isquiet move then begin
+          history_moves.(4096 * aux_history position.white_to_move + 64 * from move + to_ move) <- depth * depth;
           killer_moves.(1) <- killer_moves.(0);
           killer_moves.(0) <- !best_move
         end
       end
     end;
-    unmake board move;
+    unmake position.board move;
     incr counter
   in if first_move <> Null then begin
     move_loop first_move;
     if !no_cut then begin
       let ordering_array = Array.make !number_of_legal_moves 0 in
-      move_ordering board white_to_move legal_moves number_of_legal_moves 0 first_move ordering_array;
+      move_ordering position.board position.white_to_move legal_moves number_of_legal_moves 0 first_move ordering_array;
       let moves = ref (merge_sort (List.init !number_of_legal_moves (fun i -> (ordering_array.(i), legal_moves.(i))))) in
       while !no_cut && !moves <> [] do
         move_loop (snd (List.hd !moves));
@@ -357,14 +373,14 @@ let root_search in_check depth alpha beta first_move legal_moves number_of_legal
   end
   else begin
     let ordering_array = Array.make !number_of_legal_moves 0 in
-    move_ordering board white_to_move legal_moves number_of_legal_moves 0 Null ordering_array;
+    move_ordering position.board position.white_to_move legal_moves number_of_legal_moves 0 Null ordering_array;
     let moves = ref (merge_sort (List.init !number_of_legal_moves (fun i -> (ordering_array.(i), legal_moves.(i))))) in
     while !no_cut && !moves <> [] do
       move_loop (snd (List.hd !moves));
       moves := List.tl !moves
     done;
   end;
-  if not (!stop_search || !node_counter >= !node_limit) then begin
-    store !transposition_table zobrist_position Pv depth !best_score !best_move (*static_eval*) !go_counter
+  if not (stop_search.(0) || total_node_counter () >= !node_limit) then begin
+    store !transposition_table position.zobrist_position Pv depth !best_score !best_move (*static_eval*) !go_counter
   end;
   !best_score

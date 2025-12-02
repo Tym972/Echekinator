@@ -1,7 +1,7 @@
 (*Module implémentant le type Mouvement, les constantes et les fonctions de bases du programme*)
 
 (*Program version*)
-let project_name = "Echekinator"
+let project_name = "Echekinator 1.0"
 
 (*Type for chess moves*)
 type move =
@@ -89,7 +89,7 @@ let chessboard = [|
   4; 2; 3; 5; 6; 3; 2; 4
   |]
 
-(**)
+(*(**)
 let board_vector = Array.make 768 0.
 
 (**)
@@ -116,7 +116,7 @@ let hidden_bias = Array.make n 0.
 let output_weight = Array.make n 0.
 let output_bias = 0.054845188
 let accumulator = Array.make n 0.
-let hidden_layer = Array.make n 0.
+let hidden_layer = Array.make n 0.*)
 
 (*Array used in print_board*)
 let tab_print = [|"   |"; " P |"; " N |"; " B |"; " R |"; " Q |"; " K |"; " p |"; " n |"; " b |"; " r |"; " q |"; " k |"|]
@@ -208,11 +208,23 @@ let pv_table = Array.make ((max_pv_length) * (max_pv_length + 1) / 2) Null
 (**)
 let pv_length = Array.make (max_pv_length + 1) 0
 
+(*A implémenter*)
+let threads_number = ref 1
+let min_threads_number = 1
+let max_threads_number = 1024
+
 (*Variable used to forcefully stop the search*)
-let stop_search = ref false
+let stop_search = Array.make max_threads_number false
 
 (*Node counter*)
-let node_counter = ref 0
+let node_counter = Array.make max_threads_number 0
+
+let total_node_counter () =
+  let total = ref node_counter.(0) in
+  for thread = 1 to !threads_number - 1 do
+    total := !total + node_counter.(thread)
+  done;
+  !total
 
 (*Node limit*)
 let node_limit = ref max_int
@@ -225,9 +237,15 @@ let go_counter = ref 0
 
 let zugzwang = ref true
 
-let (position_aspects : (bool * move * (bool * bool * bool * bool) * int list * int * int) array) = Array.make (max_depth + 40) (true, Null, (true, true, true, true), [], 0, 0)
+type position = {
+  board : int array;
+  mutable white_to_move : bool;
+  mutable last_move : move;
+  mutable castling_rights : bool * bool * bool * bool;
+  mutable board_record : int list;
+  mutable half_moves : int;
+  mutable zobrist_position : int
+}
 
-let board = Array.copy chessboard
-
-let start_time = ref max_float
-let search_time = ref max_float
+let start_time = ref (Mtime_clock.counter ())
+let search_time = ref Mtime.Span.max_span

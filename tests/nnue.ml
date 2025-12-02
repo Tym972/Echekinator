@@ -21,7 +21,7 @@ let is_quiet_position board white_to_move in_check provisional_score =
   end
   else begin
     let static_eval = hce board white_to_move in
-    if abs (static_eval - quiescence_search 0 0 (-max_int) max_int true ) > m1 then begin
+    if abs (static_eval - quiescence_search 0 0 0 (-max_int) max_int true ) > m1 then begin
       quiet := false
     end
     else begin
@@ -84,8 +84,8 @@ let select_position moves_string evals initial_fen result =
   let zobrist_position = ref (zobrist chessboard true Null (true, true, true, true)) in
   let board_record = ref [!zobrist_position] in
   let half_moves = ref 0 in
+  let board = boards.(0) in
   position_of_fen initial_fen board white_to_move last_move castling_rights king_position in_check moves_record zobrist_position board_record half_moves;
-  position_aspects.(0) <- (!white_to_move, !last_move, !castling_rights, !board_record, !half_moves, !zobrist_position);
   let moves = move_list_of_algebric_list (List.map remove moves_string) !white_to_move !last_move !castling_rights board in
   let score = func_scores (List.hd evals) !white_to_move in
   if is_quiet_position board !white_to_move !in_check score then begin
@@ -101,7 +101,6 @@ let select_position moves_string evals initial_fen result =
       castling_rights := new_castling_rights;
       last_move := move;
       white_to_move := not !white_to_move;
-      position_aspects.(0) <- (!white_to_move, !last_move, !castling_rights, !board_record, !half_moves, !zobrist_position);
       king_position := index_array board (king !white_to_move);
       in_check := threatened board !king_position !white_to_move;
       moves_record := move :: !moves_record;
@@ -211,12 +210,59 @@ let () =
     process_pgn_file "/home/tym972/Echekinator/Results/Pgn_fastchess.pgn";
     print_endline (string_of_int !j)
   end
-  else begin
+  else if false then begin
     let size_in_words x = Obj.size (Obj.repr x)  (* nombre de mots *) in
     let bytes = size_in_words !transposition_table.(1) * Sys.word_size / 8 in
     print_endline (string_of_int bytes);
   end
+  else begin
+        (* Travail CPU lourd, purement arithmétique *)
+    let work n =
+      let r = ref 0 in
+      for i = 1 to n do
+        r := !r + (i land 1)
+      done;
+      !r
 
+    (* Mesure du temps en secondes *)
+    in let time f =
+      let t0 = Unix.gettimeofday () in
+      let r = f () in
+      (Unix.gettimeofday () -. t0), r
+
+    (* Test : 1 domain vs 2 domains *)
+    in let test_parallel () =
+      let n = 500_000_000 in
+      Printf.printf "Testing parallelism with n = %d iterations\n%!" n;
+
+      (* Test séquentiel *)
+      let t_seq, _ =
+        time (fun () ->
+          let _ = work n in
+          let _ = work n in
+          ()
+        )
+      in
+
+      Printf.printf "Sequential time: %.3f s\n%!" t_seq;
+
+      (* Test parallèle *)
+      let t_par, _ =
+        time (fun () ->
+          let d = Domain.spawn (fun () -> work n) in
+          let _ = work n in
+          Domain.join d
+        )
+      in
+
+      Printf.printf "Parallel time:   %.3f s\n%!" t_par;
+      Printf.printf "Speed-up:        %.2fx\n%!" (t_seq /. t_par);
+      ()
+    in test_parallel ()
+
+  end
+
+let accumulator,n,hidden_weights = [||],0,[||]
 let update_acc move = match move with
   |Normal {piece; from; to_; capture} -> begin
     if piece > 0 then begin

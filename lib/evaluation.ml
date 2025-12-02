@@ -1,6 +1,6 @@
 (*Module implémentant des fonctions d'évaluation*)
 
-open Board
+(*open Board
 
 let board_of_vector vector =
   let tab_piece = [|1; 2; 3; 4; 5; 6; -1; -2; -3; -4; -5; -6|] in
@@ -103,7 +103,7 @@ let () =
   done;
   for i = 0 to n - 1 do
     hidden_layer.(i) <- hid.(i)
-  done
+  done*)
 
 let mg_value = [| 82; 337; 365; 477; 1025;  0|]
 let eg_value = [| 94; 281; 297; 512;  936;  0|]
@@ -291,7 +291,7 @@ let hce board white_to_move =
   else  
     - score
 
-let value = [| 100; 300; 300; 500; 900; 0|]
+(*let value = [| 100; 300; 300; 500; 900; 0|]
 
 let simple_eval board white_to_move =
   let score = ref 0 in
@@ -307,4 +307,4 @@ let simple_eval board white_to_move =
   if white_to_move then
     !score
   else  
-    - !score
+    - !score*)

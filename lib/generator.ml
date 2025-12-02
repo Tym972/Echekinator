@@ -313,9 +313,7 @@ let pseudo_legal_moves board white_to_move king_position king_moves_index moves 
     in List.iter (fun (a, b) -> aux a b) [0, king_position - 1; king_position + 1, 63]
   end
 
-let pin_table = Array.make 64 0
-
-let pin_generator piece square board moves number_of_moves =
+let pin_generator piece square board moves number_of_moves pin_table =
   let tab64_square = tab64.(square) in
   let direction = pin_table.(square) in
   let func direction =
@@ -421,7 +419,7 @@ let pin_generator piece square board moves number_of_moves =
 
 
 (*Fonction construisant une list des déplacements classique possibles d'un joueur*)
-let pin_moves board white_to_move king_position king_moves_index pinned_pieces pinned_moves_index moves number_of_moves =
+let pin_moves board white_to_move king_position king_moves_index pinned_pieces pinned_moves_index moves number_of_moves pin_table =
   king_moves board king_position moves number_of_moves;
   king_moves_index := (0, !number_of_moves - 1);
   if white_to_move then begin
@@ -435,7 +433,7 @@ let pin_moves board white_to_move king_position king_moves_index pinned_pieces p
       end
       else begin
         let first_pinned_move_index = !number_of_moves in
-        pin_generator piece square board moves number_of_moves;
+        pin_generator piece square board moves number_of_moves pin_table;
         pinned_moves_index := (first_pinned_move_index, !number_of_moves - 1) :: !pinned_moves_index
       end
     done in List.iter (fun (a, b) -> aux a b) [63, king_position + 1; king_position - 1, 0]
@@ -451,7 +449,7 @@ let pin_moves board white_to_move king_position king_moves_index pinned_pieces p
         end
         else begin
           let first_pinned_move_index = !number_of_moves in
-          pin_generator piece square board moves number_of_moves;
+          pin_generator piece square board moves number_of_moves pin_table;
           pinned_moves_index := (first_pinned_move_index, !number_of_moves - 1) :: !pinned_moves_index
         end
       done
@@ -893,7 +891,7 @@ let unmake board move = match move with
   |Null -> ()
 
 (*Fonction permettant de jouer un move sur l'échiquier*)
-let make_acc board move = match move with
+(*let make_acc board move = match move with
   |Normal {piece; from; to_; capture} -> begin
     board.(from) <- 0;
     board.(to_) <- piece;
@@ -1152,7 +1150,7 @@ let unmake_acc board move = match move with
       end
     end
   end
-  |Null -> ()
+  |Null -> ()*)
 
 (*Fonction donnant la square de départ d'un move classique et d'une promotion*)
 let from move = match move with
@@ -1208,7 +1206,7 @@ let pin board chessman white_to_move tab64_square direction distance =
   !pinned
 
 (*Fonction donnant les cases des pièces clouées (indépendanmment de leur possibilité de mouvement) en considérant que le roi est dans la square en argument*)
-let pinned_squares board king_square white_to_move =
+let pinned_squares board king_square white_to_move pin_table =
   let list = ref [] in
   let tab64_square = tab64.(king_square) in
   let player_sign = if white_to_move then 1 else (-1) in
@@ -1242,6 +1240,7 @@ let legal_moves board white_to_move last_move (white_short, white_long, black_sh
   let number_of_moves = ref 0 in
   let king_moves_index = ref (0,0) in
   let to_remove = ref [] in
+  let pin_table = Array.make 64 0 in
   let aux move move_index king_position =
     make board move;
     if threatened board king_position white_to_move then begin
@@ -1261,7 +1260,7 @@ let legal_moves board white_to_move last_move (white_short, white_long, black_sh
   end
   else begin
     let castling_rights = if white_to_move then white_short || white_long else black_short || black_long in
-    let pinned_pieces = pinned_squares board king_position white_to_move in
+    let pinned_pieces = pinned_squares board king_position white_to_move pin_table in
     if pinned_pieces = [] then begin
       pseudo_legal_moves board white_to_move king_position king_moves_index moves number_of_moves;
       for i = fst !king_moves_index to snd !king_moves_index do
@@ -1273,7 +1272,7 @@ let legal_moves board white_to_move last_move (white_short, white_long, black_sh
     end
     else begin
       let pinned_moves_index = ref [] in
-      pin_moves board white_to_move king_position king_moves_index pinned_pieces pinned_moves_index moves number_of_moves;
+      pin_moves board white_to_move king_position king_moves_index pinned_pieces pinned_moves_index moves number_of_moves pin_table;
       for i = fst !king_moves_index to snd !king_moves_index do
         let king_move = moves.(i) in
         aux king_move i (to_ king_move)
@@ -1516,7 +1515,7 @@ let pseudo_legal_captures board white_to_move king_position =
   end;
   !move_list, king_move_list
 
-let pin_captures_generator piece square board pinned_list =
+let pin_captures_generator piece square board pinned_list pin_table =
   let tab64_square = tab64.(square) in
   let direction = pin_table.(square) in
   let func direction =
@@ -1616,7 +1615,7 @@ let pin_captures_generator piece square board pinned_list =
   |_ -> ()
 
 (*Fonction construisant une list des déplacements classique possibles d'un joueur*)
-let pin_captures board white_to_move king_position pinned_pieces =
+let pin_captures board white_to_move king_position pinned_pieces pin_table =
   let move_list = ref [] in
   let king_move_list = king_captures board king_position in
   let pinned_list = ref [] in
@@ -1630,7 +1629,7 @@ let pin_captures board white_to_move king_position pinned_pieces =
         end
       end
       else begin
-        pin_captures_generator piece square board pinned_list
+        pin_captures_generator piece square board pinned_list pin_table
       end
     done in List.iter (fun (a, b) -> aux a b) [63, king_position + 1; king_position - 1, 0]
   end
@@ -1644,7 +1643,7 @@ let pin_captures board white_to_move king_position pinned_pieces =
           end
         end
         else begin
-          pin_captures_generator piece square board pinned_list
+          pin_captures_generator piece square board pinned_list pin_table
         end
       done
     in List.iter (fun (a, b) -> aux a b) [0, king_position - 1; king_position + 1, 63]
@@ -1655,6 +1654,7 @@ let captures board white_to_move last_move =
   let move_list = ref [] in
   let player_king = king white_to_move in
   let king_position = index_array board player_king in
+  let pin_table = Array.make 64 0 in
   let aux move king_position =
     make board move;
     if not (threatened board king_position white_to_move) then begin
@@ -1674,14 +1674,14 @@ let captures board white_to_move last_move =
     !move_list
   end
   else begin
-    let pinned_pieces = pinned_squares board king_position white_to_move in
+    let pinned_pieces = pinned_squares board king_position white_to_move pin_table in
     if pinned_pieces = [] then begin
       let moves, king_moves = pseudo_legal_captures board white_to_move king_position in
       List.iter (fun king_move -> aux king_move (to_ king_move)) king_moves;
       !move_list @ moves
     end
     else begin
-      let moves, king_moves, pinned_moves = pin_captures board white_to_move king_position pinned_pieces in
+      let moves, king_moves, pinned_moves = pin_captures board white_to_move king_position pinned_pieces pin_table in
       List.iter (fun king_move -> aux king_move (to_ king_move)) king_moves;
      !move_list @ pinned_moves @ moves
     end

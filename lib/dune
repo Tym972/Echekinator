@@ -15,4 +15,5 @@
  (libraries
   str
   unix
-  threads))
+  threads
+  mtime.clock))

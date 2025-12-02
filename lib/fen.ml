@@ -54,11 +54,11 @@ let xfen_castlings board =
   castlings_representations
 
 (*Fonction représentant un board en sa notation FEN*)
-let fen board white_to_move last_move (white_short, white_long, black_short, black_long) moves_record half_moves =
+let fen position moves_record =
   let fen = ref "" in
   let empties = ref 0 in
   for i = 0 to 63 do
-    let square = board.(i) in
+    let square = position.board.(i) in
     if square = 0 then begin
       empties := !empties + 1
     end
@@ -84,16 +84,17 @@ let fen board white_to_move last_move (white_short, white_long, black_short, bla
   if !empties > 0 then begin
     fen := !fen ^ (string_of_int !empties)
   end;
-  if white_to_move then
+  if position.white_to_move then
     fen := !fen ^ " w "
   else begin
     fen := !fen ^ " b "
   end;
+  let white_short, white_long, black_short, black_long = position.castling_rights in
   if not (white_short || white_long || black_short || black_long) then begin
     fen := !fen ^ "-"
   end
   else begin
-    let castlings_representations = xfen_castlings board in
+    let castlings_representations = xfen_castlings position.board in
     if white_short then fen := !fen ^ castlings_representations.(0);
     if white_long then fen := !fen ^ castlings_representations.(1);
     if black_short then fen := !fen ^ castlings_representations.(2);
@@ -101,9 +102,9 @@ let fen board white_to_move last_move (white_short, white_long, black_short, bla
   end;
   let moves = Array.make 2 Null in
   let number_of_moves = ref 0 in
-  enpassant board white_to_move last_move moves number_of_moves;
+  enpassant position.board position.white_to_move position.last_move moves number_of_moves;
   fen := !fen ^ " " ^ (if !number_of_moves > 0 then coord.(to_ (moves.(0))) ^ " " else "- ");
-  fen := !fen ^ (string_of_int half_moves ^ " ");
+  fen := !fen ^ (string_of_int position.half_moves ^ " ");
   fen := !fen ^ string_of_int (1 + (List.length moves_record)/ 2);
   !fen
 
@@ -164,7 +165,7 @@ let hash_castling_xfen =
   ht
 
 (*Fonction vérifiant la validité des castlings d'une position XFEN*)
-let valid_castlings start_position castlings castling_right =
+let valid_castlings position castlings =
   let white_short = ref false in
   let white_long = ref false in
   let black_short = ref false in
@@ -202,7 +203,7 @@ let valid_castlings start_position castlings castling_right =
       incr square
     done
   in List.iter
-  (fun (white_to_move, rook_positions, king_position) -> board_aux start_position white_to_move rook_positions king_position)
+  (fun (white_to_move, rook_positions, king_position) -> board_aux position.board white_to_move rook_positions king_position)
   [(true, from_white_rooks, from_white_king); (false, from_black_rooks, from_black_king)];
   let index = ref 0 in
   let aux_string king_position castlings_number white_to_move index =
@@ -243,7 +244,7 @@ let valid_castlings start_position castlings castling_right =
       black_short := true
     end
   end;
-  castling_right := !white_short, !white_long, !black_short, !black_long;
+  position.castling_rights <- !white_short, !white_long, !black_short, !black_long;
   if !white_short || !black_short || !white_long || !black_long then begin
     let provisional_board = Array.make 64 0
     in let from_long_white = ref (if long_white = (-2) || not !white_long then (-2) else if long_white = 56 then (List.hd (List.rev !from_white_rooks)) else long_white) in
@@ -275,29 +276,13 @@ let valid_castlings start_position castlings castling_right =
     castling_update provisional_board
   end
 
-(*Fonction permettant de réinitialiser un board à l'état d'origine*)
-let reset board white_to_move last_move castling_right king_position in_check moves_record zobrist_position board_record half_moves start_position initial_white_to_move initial_last_move initial_castling_right initial_king_position initial_in_check initial_moves_record initial_zobrist_position initial_half_moves = 
-  for i = 0 to 63 do
-    board.(i) <- start_position.(i)
-  done;
-  castling_update start_position;
-  white_to_move := initial_white_to_move;
-  last_move := initial_last_move;
-  castling_right := initial_castling_right;
-  king_position := initial_king_position;
-  in_check := initial_in_check;
-  moves_record := initial_moves_record;
-  zobrist_position := initial_zobrist_position;
-  board_record := [initial_zobrist_position];
-  half_moves := initial_half_moves
-
 (*Fonction traduisant une position FEN en l'int array correspondant. Par défaut si non rensigné, le trait est au blancs, il n'y a plus de castlings, pas de capture en passant, aucun coup joué*)
-let position_of_fen chain start_position initial_white_to_move initial_last_move initial_castling_right initial_king_position initial_in_check initial_moves_record initial_zobrist_position initial_board_record initial_half_moves =
+let position_of_fen chain position king_position in_check moves_record =
   let split_fen = ref (word_detection chain) in
   let fen_length = List.length !split_fen in
   let pieces_position = (List.nth !split_fen 0) in
   let split_ligne = Str.split (Str.regexp "/") pieces_position in
-  board_of_fen start_position split_ligne;
+  board_of_fen position.board split_ligne;
   let complete longueur = 
     let rec aux acc longueur = match longueur with
       |5 -> aux ("1" :: acc) 6
@@ -308,31 +293,31 @@ let position_of_fen chain start_position initial_white_to_move initial_last_move
     in List.rev (aux [] longueur)
   in split_fen := !split_fen @ (complete fen_length);
   if List.nth !split_fen 1 = "w" then begin
-    initial_king_position := index_array start_position (king !initial_white_to_move);
-    initial_in_check := threatened start_position !initial_king_position !initial_white_to_move
+    king_position := index_array position.board (king true);
+    in_check := threatened position.board !king_position true
   end
   else begin
-    initial_white_to_move := false;
-    initial_king_position := index_array start_position (king !initial_white_to_move);
-    initial_in_check := threatened start_position !initial_king_position !initial_white_to_move
+    position.white_to_move <- false;
+    king_position := index_array position.board (king false);
+    in_check := threatened position.board !king_position false
   end;
-  let poussee_pep = ep_deduction start_position (List.nth !split_fen 3) !initial_white_to_move in
+  let poussee_pep = ep_deduction position.board (List.nth !split_fen 3) position.white_to_move in
   if poussee_pep <> Null then begin
-    initial_last_move := poussee_pep
+    position.last_move <- poussee_pep
   end;
-  valid_castlings start_position (List.nth !split_fen 2) initial_castling_right;
-  initial_half_moves := (try int_of_string (List.nth !split_fen 4) with _ -> 0);
-  initial_zobrist_position := zobrist start_position !initial_white_to_move !initial_last_move !initial_castling_right;
-  initial_board_record := [!initial_zobrist_position];
+  valid_castlings position (List.nth !split_fen 2);
+  position.half_moves <- (try int_of_string (List.nth !split_fen 4) with _ -> 0);
+  position.zobrist_position <- zobrist position.board position.white_to_move position.last_move position.castling_rights;
+  position.board_record <- [position.zobrist_position];
   let nombre_coup white_to_move coups_complets =
     if white_to_move then begin
       for _ = 1 to try (2 * (int_of_string (List.nth !split_fen 5) - 1)) with _ -> 0 do 
-        initial_moves_record := Null :: !initial_moves_record
+        moves_record := Null :: !moves_record
       done
     end
     else begin
       for _ = 1 to try (2 * (int_of_string coups_complets - 1) + 1) with _ -> 0 do 
-        initial_moves_record := Null :: !initial_moves_record
+        moves_record := Null :: !moves_record
       done
     end
-  in nombre_coup !initial_white_to_move (List.nth !split_fen 5)
+  in nombre_coup position.white_to_move (List.nth !split_fen 5)

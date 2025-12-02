@@ -153,3 +153,5 @@ let adapt_record zobrist_position move depth board_record half_moves =
   else begin 
     zobrist_position :: board_record, half_moves + 1
   end
+
+let zobrist_chessboard = zobrist chessboard true Null (true, true, true, true)

@@ -1,4 +1,5 @@
 open Board
+open Generator
 
 type node =
   |Pv
@@ -6,8 +7,6 @@ type node =
   |All
 
 type entry = int * node * int * int * move * int
-
-let slots = ref 1000000
 
 let empty_depth = (-300)
 
@@ -17,6 +16,13 @@ let entry_size =
   let size_in_words x = Obj.size (Obj.repr x) in
   size_in_words empty_entry * Sys.word_size / 8
 
+(*Variables for Hash size in MB*)
+let hash_size = ref 16
+let min_hash_size = 1
+let max_hash_size = 33554432
+
+let slots = ref ((!hash_size * 1024 * 1024) / entry_size)
+
 let transposition_table = ref (Array.make !slots empty_entry)
 
 let is_loss score = score < (-90000)
@@ -24,41 +30,36 @@ let is_loss score = score < (-90000)
 let is_win score = score > 90000
 
 (*PV node : Exact value, Cut Node : Lower Bound, All Node : Upper Bound*)
-let hash_treatment (hash_node_type : node) (hash_depth : int) (hash_value : int) (hash_move : move) depth alpha beta best_score best_move no_cut ply =
-  if depth <= hash_depth then begin
-    let adjusted_value =
-      if is_win hash_value then begin
-        hash_value - ply
-      end
-      else if is_loss hash_value then begin
-        hash_value + ply
-      end
-      else begin
-        hash_value
-      end
-    in match hash_node_type with
-      |Pv ->
+let hash_treatment (hash_node_type : node) (hash_value : int) alpha beta best_score no_cut ply =
+  let adjusted_value =
+    if is_win hash_value then begin
+      hash_value - ply
+    end
+    else if is_loss hash_value then begin
+      hash_value + ply
+    end
+    else begin
+      hash_value
+    end
+  in match hash_node_type with
+    |Pv ->
+      best_score := adjusted_value;
+      no_cut := false
+    |Cut ->
+      if adjusted_value >= !beta then begin
         best_score := adjusted_value;
-        best_move := hash_move;
         no_cut := false
-      |Cut ->
-        alpha := max !alpha adjusted_value;
-        if adjusted_value >= !beta then begin
-          best_score := adjusted_value;
-          no_cut := false
-        end
-      |All ->
-        beta := min !beta adjusted_value;
-        if !alpha >= adjusted_value then begin
-          best_score := adjusted_value;
-          no_cut := false
-        end 
-  end
+      end
+    |All ->
+      if !alpha >= adjusted_value then begin
+        best_score := adjusted_value;
+        no_cut := false
+      end
 
 (*Fonction vidant la TT*)
 let clear table =
   for i = 0 to !slots - 1 do
-    table.(i) <- (0, All, empty_depth, 0, Null(*, (-infinity)*), 0)
+    table.(i) <- empty_entry
   done;
   transposition_counter := 0
 
@@ -86,10 +87,17 @@ let store tt key node_type depth value move (*static_eval*) generation =
     tt.(index) <- (old_key, old_node_type, old_depth, old_value, move(*, old_static_eval*), generation)
   end
 
-let probe tt key =
+let verif board move = match move with
+  |Normal {piece; from; to_; capture} -> board.(from) = piece && board.(to_) = capture
+  |Enpassant {from; to_} -> board.(from) = (if from < 32 then 1 else -1)  && board.(to_) = 0
+  |Castling {sort} -> if sort < 3 then board.(!from_white_king) = 6 else board.(!from_black_king) = (-6)
+  |Promotion {from; to_; capture; promotion} -> board.(from) = (if promotion > 0 then 1 else -1) && board.(to_) = capture
+  |Null -> true
+
+let probe tt key board =
   let index = key mod !slots in
   let old_key, old_node_type, old_depth, old_value, old_best_move(*, old_static_eval*), _ = tt.(index) in
-  if key = old_key then
+  if key = old_key && verif board old_best_move then
     old_node_type, old_depth, old_value, old_best_move(*, old_static_eval*)
   else
     (All, empty_depth, 0, Null(*, (-infinity)*))
