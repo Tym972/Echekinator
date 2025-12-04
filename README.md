@@ -17,6 +17,7 @@ The engine currently relies on:
 - Killer moves
 - History heuristic
 - Transposition Table
+- Lazy SMP
 - UCI Protocol
 
 ## Build

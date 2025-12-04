@@ -24,10 +24,9 @@ let zugzwang board white_to_move =
 
 (*open Evaluation*)
 
-let rec pvs position thread depth ply alpha beta ispv =
+let rec pvs position ordering_tables thread depth ply alpha beta ispv =
   let main_thread = thread = 0 in
-
- node_counter.(thread) <- node_counter.(thread) + 1;
+  node_counter.(thread) <- node_counter.(thread) + 1;
   if node_counter.(0) mod 1000 = 0 then begin
     if Mtime.Span.compare (Mtime_clock.count !start_time) !search_time >= 0 then begin
       stop_search.(0) <- true
@@ -35,7 +34,7 @@ let rec pvs position thread depth ply alpha beta ispv =
   end;
   
   (*Check search limit*)
-  if stop_search.(thread) || total_node_counter () >= !node_limit then begin
+  if stop_search.(thread) || total_counter node_counter >= !node_limit then begin
     if main_thread && ispv then begin
       pv_length.(ply) <- 0
     end;
@@ -122,7 +121,7 @@ let rec pvs position thread depth ply alpha beta ispv =
                 half_moves = position.half_moves;
                 zobrist_position = new_zobrist;
               }
-              in let score = - pvs new_position thread (depth - 3) (ply + 1) (- !beta0) (- !beta0 + 1) false
+              in let score = - pvs new_position ordering_tables thread (depth - 3) (ply + 1) (- !beta0) (- !beta0 + 1) false
               in if score >= !beta0 then begin
                 if is_win score then begin
                   best_score := beta
@@ -154,7 +153,7 @@ let rec pvs position thread depth ply alpha beta ispv =
               }
               in let score =
                 if !counter = 0 then begin
-                  - pvs new_position thread (depth - 1) (ply + 1) (- !beta0) (- !alpha0) ispv
+                  - pvs new_position ordering_tables thread (depth - 1) (ply + 1) (- !beta0) (- !alpha0) ispv
                 end
                 else begin
                   let score_lmr =
@@ -170,14 +169,14 @@ let rec pvs position thread depth ply alpha beta ispv =
                         end)
                         (depth - 1)
                     in if not (in_check || depth < 3 || reduction = 0) then begin
-                      - pvs new_position thread (depth - 1 - reduction) (ply + 1) (- !alpha0 - 1) (- !alpha0) false
+                      - pvs new_position ordering_tables thread (depth - 1 - reduction) (ply + 1) (- !alpha0 - 1) (- !alpha0) false
                     end
                     else
                       !alpha0 + 1
                   in if score_lmr > !alpha0 then begin
-                    let score_0 = - pvs new_position thread (depth - 1) (ply + 1) (- !alpha0 - 1) (- !alpha0) false
+                    let score_0 = - pvs new_position ordering_tables thread (depth - 1) (ply + 1) (- !alpha0 - 1) (- !alpha0) false
                     in if (score_0 > !alpha0 && ispv) then begin 
-                      - pvs new_position thread (depth - 1) (ply + 1) (- !beta0) (- !alpha0) ispv
+                      - pvs new_position ordering_tables thread (depth - 1) (ply + 1) (- !beta0) (- !alpha0) ispv
                     end
                     else begin
                       score_0
@@ -203,10 +202,10 @@ let rec pvs position thread depth ply alpha beta ispv =
                 end;
                 if score >= !beta0 then begin
                   no_cut := false;
-                  if isquiet move && main_thread then begin
-                    history_moves.(4096 * aux_history position.white_to_move + 64 * from move + to_ move) <- depth * depth;
-                    killer_moves.(2 * ply + 1) <- killer_moves.(2 * ply);
-                    killer_moves.(2 * ply) <- !best_move
+                  if isquiet move then begin
+                    ordering_tables.history_moves.(4096 * aux_history position.white_to_move + 64 * from move + to_ move) <- depth * depth;
+                    ordering_tables.killer_moves.(2 * ply + 1) <- ordering_tables.killer_moves.(2 * ply);
+                    ordering_tables.killer_moves.(2 * ply) <- !best_move
                   end
                 end
               end;
@@ -217,7 +216,7 @@ let rec pvs position thread depth ply alpha beta ispv =
               if !no_cut then begin
                 let legal_moves, number_of_legal_moves = legal_moves position.board position.white_to_move position.last_move position.castling_rights king_position in_check in
                 let ordering_array = Array.make !number_of_legal_moves 0 in
-                move_ordering position.board position.white_to_move legal_moves number_of_legal_moves ply hash_move ordering_array;
+                move_ordering ordering_tables position.board position.white_to_move legal_moves number_of_legal_moves ply hash_move ordering_array;
                 while !no_cut && !number_of_legal_moves > 0 do
                   move_loop (move_picker legal_moves ordering_array number_of_legal_moves)
                 done
@@ -226,7 +225,7 @@ let rec pvs position thread depth ply alpha beta ispv =
             else begin
               let legal_moves, number_of_legal_moves = legal_moves position.board position.white_to_move position.last_move position.castling_rights king_position in_check in
               let ordering_array = Array.make !number_of_legal_moves 0 in
-              move_ordering position.board position.white_to_move legal_moves number_of_legal_moves ply Null ordering_array;
+              move_ordering ordering_tables position.board position.white_to_move legal_moves number_of_legal_moves ply Null ordering_array;
               while !no_cut && !number_of_legal_moves > 0 do
                 move_loop (move_picker legal_moves ordering_array number_of_legal_moves)
               done
@@ -246,10 +245,10 @@ let rec pvs position thread depth ply alpha beta ispv =
         end;
 
         (*Storing in TT*)
-        if not (stop_search.(thread) || total_node_counter () >= !node_limit) then begin
+        if not (stop_search.(thread) || total_counter node_counter >= !node_limit) then begin
           let node_type =
             if !best_score <= alpha then begin
-              if ispv then begin
+              if main_thread && ispv then begin
                 pv_length.(ply) <- 0
               end;
               All
@@ -270,15 +269,16 @@ let rec pvs position thread depth ply alpha beta ispv =
             else begin
               !best_score
             end
-          in store !transposition_table position.zobrist_position node_type depth stored_value !best_move (*hash_static_eval*) !go_counter
+          in store thread position.zobrist_position node_type depth stored_value !best_move (*hash_static_eval*) !go_counter
         end;
       !best_score
       end;
     end
   end
 
-let root_search position in_check depth alpha beta first_move legal_moves number_of_legal_moves short_pv_table multi =
-  node_counter.(0) <- node_counter.(0) + 1;
+let root_search position ordering_tables thread in_check depth alpha beta first_move legal_moves number_of_legal_moves short_pv_table multi =
+  let main_thread = thread = 0 in
+  node_counter.(thread) <- node_counter.(thread) + 1;
   let no_cut = ref true in
   let alpha0 = ref alpha in
   let beta0 = ref beta in
@@ -302,7 +302,7 @@ let root_search position in_check depth alpha beta first_move legal_moves number
     }
     in let score =
       if !counter = 0 then begin
-        - pvs new_position 0 (depth - 1) 1 (- !beta0) (- !alpha0) true
+        - pvs new_position ordering_tables thread (depth - 1) 1 (- !beta0) (- !alpha0) true
       end
       else begin
         let score_lmr =
@@ -318,14 +318,14 @@ let root_search position in_check depth alpha beta first_move legal_moves number
               end)
               (depth - 1)
           in if not (in_check || depth < 3 || reduction = 0) then begin
-            - pvs new_position 0 (depth - 1 - reduction) 1 (- !alpha0 - 1) (- !alpha0) false
+            - pvs new_position ordering_tables thread (depth - 1 - reduction) 1 (- !alpha0 - 1) (- !alpha0) false
           end
           else
             !alpha0 + 1
         in if score_lmr > !alpha0 then begin
-          let score_0 = - pvs new_position 0 (depth - 1) 1 (- !alpha0 - 1) (- !alpha0) false
+          let score_0 = - pvs new_position ordering_tables thread (depth - 1) 1 (- !alpha0 - 1) (- !alpha0) false
           in if (score_0 > !alpha0) then begin 
-            - pvs new_position 0 (depth - 1) 1 (- !beta0) (- !alpha0) true
+            - pvs new_position ordering_tables thread (depth - 1) 1 (- !beta0) (- !alpha0) true
           end
           else begin
             score_0
@@ -334,16 +334,18 @@ let root_search position in_check depth alpha beta first_move legal_moves number
         else
           score_lmr
       end
-    in if score > !best_score && not (stop_search.(0) || total_node_counter () >= !node_limit) then begin
+    in if score > !best_score && not (stop_search.(thread) || total_counter node_counter >= !node_limit) then begin
       best_score := score;
       if score > !alpha0 || !counter = 0 then begin
         best_move := move;
-        pv_table.(0) <- !best_move;
-        for i = 1 to pv_length.(1) do
-          pv_table.(i) <- pv_table.(max_pv_length + i - 1)
-        done;
-        pv_length.(0) <- pv_length.(1) + 1;
-        short_pv_table.(multi) <- pv_finder depth
+        if main_thread then begin
+          pv_table.(0) <- !best_move;
+          for i = 1 to pv_length.(1) do
+            pv_table.(i) <- pv_table.(max_pv_length + i - 1)
+          done;
+          pv_length.(0) <- pv_length.(1) + 1;
+          short_pv_table.(multi) <- pv_finder depth
+        end
       end;
       if score > !alpha0 then begin
         alpha0 := score;
@@ -351,9 +353,9 @@ let root_search position in_check depth alpha beta first_move legal_moves number
       if score >= !beta0 then begin
         no_cut := false;
         if isquiet move then begin
-          history_moves.(4096 * aux_history position.white_to_move + 64 * from move + to_ move) <- depth * depth;
-          killer_moves.(1) <- killer_moves.(0);
-          killer_moves.(0) <- !best_move
+          ordering_tables.history_moves.(4096 * aux_history position.white_to_move + 64 * from move + to_ move) <- depth * depth;
+          ordering_tables.killer_moves.(1) <- ordering_tables.killer_moves.(0);
+          ordering_tables.killer_moves.(0) <- !best_move
         end
       end
     end;
@@ -363,7 +365,7 @@ let root_search position in_check depth alpha beta first_move legal_moves number
     move_loop first_move;
     if !no_cut then begin
       let ordering_array = Array.make !number_of_legal_moves 0 in
-      move_ordering position.board position.white_to_move legal_moves number_of_legal_moves 0 first_move ordering_array;
+      move_ordering ordering_tables position.board position.white_to_move legal_moves number_of_legal_moves 0 first_move ordering_array;
       let moves = ref (merge_sort (List.init !number_of_legal_moves (fun i -> (ordering_array.(i), legal_moves.(i))))) in
       while !no_cut && !moves <> [] do
         move_loop (snd (List.hd !moves));
@@ -373,14 +375,14 @@ let root_search position in_check depth alpha beta first_move legal_moves number
   end
   else begin
     let ordering_array = Array.make !number_of_legal_moves 0 in
-    move_ordering position.board position.white_to_move legal_moves number_of_legal_moves 0 Null ordering_array;
+    move_ordering ordering_tables position.board position.white_to_move legal_moves number_of_legal_moves 0 Null ordering_array;
     let moves = ref (merge_sort (List.init !number_of_legal_moves (fun i -> (ordering_array.(i), legal_moves.(i))))) in
     while !no_cut && !moves <> [] do
       move_loop (snd (List.hd !moves));
       moves := List.tl !moves
     done;
   end;
-  if not (stop_search.(0) || total_node_counter () >= !node_limit) then begin
-    store !transposition_table position.zobrist_position Pv depth !best_score !best_move (*static_eval*) !go_counter
+  if not (stop_search.(thread) || total_counter node_counter >= !node_limit) then begin
+    store thread position.zobrist_position Pv depth !best_score !best_move (*static_eval*) !go_counter
   end;
   !best_score

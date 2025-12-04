@@ -216,21 +216,21 @@ let max_threads_number = 1024
 (*Variable used to forcefully stop the search*)
 let stop_search = Array.make max_threads_number false
 
-(*Node counter*)
-let node_counter = Array.make max_threads_number 0
-
-let total_node_counter () =
-  let total = ref node_counter.(0) in
+let total_counter counter =
+  let total = ref counter.(0) in
   for thread = 1 to !threads_number - 1 do
-    total := !total + node_counter.(thread)
+    total := !total + counter.(thread)
   done;
   !total
+
+(*Node counter*)
+let node_counter = Array.make max_threads_number 0
 
 (*Node limit*)
 let node_limit = ref max_int
 
 (*TT entries tracker*)
-let transposition_counter = ref 0
+let transposition_counter = Array.make max_threads_number 0
 
 (*"Go" counter*)
 let go_counter = ref 0

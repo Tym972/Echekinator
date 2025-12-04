@@ -93,7 +93,7 @@ let min_multipv = 1
 let max_multipv = 256
 
 let reset_hash () =
-  clear !transposition_table;
+  clear ();
   go_counter := 0;
   for i = 0 to 8191 do
     history_moves.(i) <- 0
@@ -233,7 +233,11 @@ let span_of_milliseconds (s : float) : Mtime.span =
 (*Answer to the command "go"*)
 let go instructions position king_position in_check =
   start_time := Mtime_clock.counter ();
-  for thread = 0 to !threads_number - 1 do
+  let ordering_tables = {
+    killer_moves = killer_moves;
+    history_moves = history_moves
+  }
+  in for thread = 0 to !threads_number - 1 do
     stop_search.(thread) <- false;
     node_counter.(thread) <- 0
   done;
@@ -281,17 +285,10 @@ let go instructions position king_position in_check =
               func t
             |_ -> ()
           in func list;
-          if !index = 0 then begin
-            for thread = 0 to !threads_number -1 do
-              stop_search.(thread) <- true
-            done;
-          end
-          else begin
-            number_of_legal_moves := !index;
-            for i = 0 to !index - 1 do
-              legal_moves.(i) <- new_moves.(i)
-            done
-          end
+          number_of_legal_moves := !index;
+          for i = 0 to !index - 1 do
+            legal_moves.(i) <- new_moves.(i)
+          done
         in let rec aux instruction = match instruction with
           |h :: g :: t ->
             begin match h with
@@ -333,95 +330,95 @@ let go instructions position king_position in_check =
         let number_of_pv = min !multipv !number_of_legal_moves in
         let print_score_table = Array.make number_of_pv "cp 0" in
         let short_pv_table = Array.make number_of_pv [] in
-        let alpha_table = Array.make number_of_pv (- max_int) in
-        let beta_table = Array.make number_of_pv max_int in
-        let reached_depth_table = Array.make number_of_pv 0 in
         let info_table = Array.make number_of_pv ((-1), 0, 0) in
-        let var_depth = ref 0 in 
-        let var_mate = ref max_int in
         let info = ref [] in
-        let board_copy = Array.copy position.board in
-        while (Mtime.Span.compare (Mtime_clock.count !start_time) soft_bound < 0) && !var_depth < !depth && total_node_counter () + 1 < !node_limit && !var_mate > !mate do
-          incr var_depth;
-          let legal_moves_copy = (Array.copy legal_moves) in
-          let number_of_legal_moves_copy = (ref !number_of_legal_moves) in
-          for multi = 0 to (number_of_pv - 1) do
-            let first_move =
-              let acc = ref Null in
-              let counter = ref 0 in
-              while !acc = Null && !counter < number_of_pv do
-                let candidate = try List.hd short_pv_table.(!counter) with _ -> Null in
-                if move_array_mem candidate legal_moves_copy !number_of_legal_moves_copy then begin
-                  acc := candidate
-                end;
-                incr counter
-              done;
-              !acc
-            in if !var_depth > 1 then begin
-              for thread = 1 to !threads_number - 1 do
-                stop_search.(thread) <- false;
-                let _ = Domain.spawn (fun () -> pvs {position with board = Array.copy board_copy} thread !var_depth 0 alpha_table.(multi) beta_table.(multi) true) in ()
-              done
-            end;
-            let new_score =
-              let score = ref (root_search position in_check !var_depth alpha_table.(multi) beta_table.(multi) first_move (Array.copy legal_moves_copy) (ref !number_of_legal_moves_copy) short_pv_table multi) in
-              while not (stop_search.(0) || total_node_counter () = !node_limit|| (!score > alpha_table.(multi) && !score < beta_table.(multi))) do
-                if !score <= alpha_table.(multi) then begin
-                  alpha_table.(multi) <- (-max_int)
-                end
-                else if !score >= beta_table.(multi) then begin
-                  beta_table.(multi) <- max_int
-                end;
-                score := root_search position in_check !var_depth alpha_table.(multi) beta_table.(multi) first_move (Array.copy legal_moves_copy) (ref !number_of_legal_moves_copy) short_pv_table multi;
-              done;
-              !score
-            in for thread = 1 to !threads_number - 1 do
-              stop_search.(thread) <- true
-            done;
-            if new_score > (-max_int) then begin
-              let bound =
-                if new_score <= alpha_table.(multi) then begin
-                  " upperbound"
-                end
-                else if new_score >= beta_table.(multi) then begin
-                  " lowerbound"
-                end
-                else begin
-                  ""
-                end
-              in
-              alpha_table.(multi) <- new_score - 25;
-              beta_table.(multi) <- new_score + 25;
-              reached_depth_table.(multi) <- !var_depth;
-              print_score_table.(multi) <- score new_score var_mate ^ bound;
-              info_table.(multi) <- !var_depth, new_score, multi;
-              if number_of_pv > multi + 1 then begin
-                for index = 0 to !number_of_legal_moves_copy - 1 do
-                  if pv_table.(0) = legal_moves_copy.(index) then begin
-                    remove_move index legal_moves_copy number_of_legal_moves_copy
+        let iterative_deepening position ordering_tables thread =
+          let var_depth = ref 0 in 
+          let var_mate = ref max_int in
+          let alpha_table = Array.make number_of_pv (- max_int) in
+          let beta_table = Array.make number_of_pv max_int in
+          while (Mtime.Span.compare (Mtime_clock.count !start_time) soft_bound < 0) && !var_depth < !depth && total_counter node_counter + 1 < !node_limit && !var_mate > !mate do
+            incr var_depth;
+            let legal_moves_copy = (Array.copy legal_moves) in
+            let number_of_legal_moves_copy = (ref !number_of_legal_moves) in
+            for multi = 0 to (number_of_pv - 1) do
+              let first_move =
+                let acc = ref Null in
+                let counter = ref 0 in
+                while !acc = Null && !counter < number_of_pv do
+                  let candidate = try List.hd short_pv_table.(!counter) with _ -> Null in
+                  if move_array_mem candidate legal_moves_copy !number_of_legal_moves_copy then begin
+                    acc := candidate
+                  end;
+                  incr counter
+                done;
+                !acc
+              in let new_score =
+                let score = ref (root_search position ordering_tables thread in_check !var_depth alpha_table.(multi) beta_table.(multi) first_move (Array.copy legal_moves_copy) (ref !number_of_legal_moves_copy) short_pv_table multi) in
+                while not (stop_search.(thread) || total_counter node_counter = !node_limit|| (!score > alpha_table.(multi) && !score < beta_table.(multi))) do
+                  if !score <= alpha_table.(multi) then begin
+                    alpha_table.(multi) <- (-max_int)
                   end
-                done
+                  else if !score >= beta_table.(multi) then begin
+                    beta_table.(multi) <- max_int
+                  end;
+                  score := root_search position ordering_tables thread in_check !var_depth alpha_table.(multi) beta_table.(multi) first_move (Array.copy legal_moves_copy) (ref !number_of_legal_moves_copy) short_pv_table multi;
+                done;
+                !score
+              in if new_score > (-max_int) then begin
+                let bound =
+                  if new_score <= alpha_table.(multi) then begin
+                    " upperbound"
+                  end
+                  else if new_score >= beta_table.(multi) then begin
+                    " lowerbound"
+                  end
+                  else begin
+                    ""
+                  end
+                in
+                alpha_table.(multi) <- new_score - 25;
+                beta_table.(multi) <- new_score + 25;
+                if thread = 0 then begin
+                  print_score_table.(multi) <- score new_score var_mate ^ bound;
+                  info_table.(multi) <- !var_depth, new_score, multi
+                end;
+                if number_of_pv > multi + 1 then begin
+                  for index = 0 to !number_of_legal_moves_copy - 1 do
+                    if pv_table.(0) = legal_moves_copy.(index) then begin
+                      remove_move index legal_moves_copy number_of_legal_moves_copy
+                    end
+                  done
+                end
               end
+            done;
+            if thread = 0 then begin
+              info := merge_sort (Array.to_list info_table);
+              let exec_time =
+                let span = Mtime_clock.count !start_time in
+                Mtime.Span.to_float_ns span /. 1e9
+              in let nps = int_of_float (float_of_int (total_counter node_counter) /. exec_time) in
+              let hashfull = min 1000 (int_of_float (1000. *. (float_of_int (total_counter transposition_counter) /. (float_of_int !slots)))) in
+              let time =  (int_of_float (1000. *. exec_time)) in
+              let rec aux_info list n = match list with
+                |[] -> ()
+                |(depth, _, multi) :: t ->
+                  if !var_depth = depth then begin
+                    let score = print_score_table.(multi) in
+                    let pv = (String.concat " " (List.map uci_of_mouvement short_pv_table.(multi))) in
+                    print_endline (Printf.sprintf "info depth %i seldepth %i multipv %i score %s nodes %i nps %i hashfull %i time %i pv %s" !var_depth !var_depth n score (total_counter node_counter) nps hashfull time pv)
+                  end;
+                  aux_info t (n + 1)
+              in aux_info !info 1;
             end
-          done;
-          info := merge_sort (Array.to_list info_table);
-          let exec_time =
-            let span = Mtime_clock.count !start_time in
-            Mtime.Span.to_float_ns span /. 1e9
-          in
-          let nps = int_of_float (float_of_int (total_node_counter ()) /. exec_time) in
-          let hashfull = int_of_float (1000. *. (float_of_int !transposition_counter /. (float_of_int !slots))) in
-          let time =  (int_of_float (1000. *. exec_time)) in
-          let rec aux_info list n = match list with
-            |[] -> ()
-            |(depth, _, multi) :: t ->
-              if !var_depth = depth then begin
-                let score = print_score_table.(multi) in
-                let pv = (String.concat " " (List.map uci_of_mouvement short_pv_table.(multi))) in
-                print_endline (Printf.sprintf "info depth %i seldepth %i multipv %i score %s nodes %i nps %i hashfull %i time %i pv %s" !var_depth !var_depth n score (total_node_counter ()) nps hashfull time pv)
-              end;
-              aux_info t (n + 1)
-          in aux_info !info 1;
+          done
+        in for thread = 1 to !threads_number - 1 do
+          stop_search.(thread) <- false;
+          let _ = Domain.spawn (fun () -> iterative_deepening {position with board = Array.copy position.board} {killer_moves = Array.copy ordering_tables.killer_moves; history_moves = Array.copy ordering_tables.history_moves} thread) in ()
+        done; 
+        iterative_deepening {position with board = Array.copy position.board} ordering_tables 0;
+        for thread = 1 to !threads_number - 1 do
+          stop_search.(thread) <- true
         done;
         let _, _, best_number = try List.hd !info with _ -> (0, 0, (-1)) in
         if best_number = (-1) then begin

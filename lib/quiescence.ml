@@ -132,7 +132,7 @@ let rec quiescence_search position thread depth ply alpha beta ispv =
       end;
 
       (*Storing in TT*)
-      if not (stop_search.(thread) || total_node_counter () >= !node_limit) then begin
+      if not (stop_search.(thread) || total_counter node_counter >= !node_limit) then begin
         let node_type =
           if !best_score <= alpha then begin
             All
@@ -153,7 +153,7 @@ let rec quiescence_search position thread depth ply alpha beta ispv =
           else begin
             !best_score
           end
-        in store !transposition_table position.zobrist_position node_type depth stored_value !best_move (*hash_static_eval*) !go_counter
+        in store thread position.zobrist_position node_type depth stored_value !best_move (*hash_static_eval*) !go_counter
       end;
     !best_score
     end

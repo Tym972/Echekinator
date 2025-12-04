@@ -386,12 +386,17 @@ let mvvlva move = match move with
 let killer_moves = Array.make (2 * max_depth) Null
 let history_moves = Array.make 8192 0
 
+type ordering_tables = {
+  killer_moves : move array;
+  history_moves : int array
+}
+
 let aux_history white_to_move =
   if white_to_move then 0 else 1
 
 (*let g move = match move with |Normal _ -> true |_ -> false*)
 
-let move_ordering board white_to_move player_moves number_of_moves ply hash_move ordering_array =
+let move_ordering ordering_tables board white_to_move player_moves number_of_moves ply hash_move ordering_array =
   let hash_move_index = ref (-1) in
   let score move move_index =
     (*let _ =
@@ -417,14 +422,14 @@ let move_ordering board white_to_move player_moves number_of_moves ply hash_move
       hash_move_index := move_index;
     end
     else if isquiet move then begin
-      if killer_moves.(2 * ply) = move then begin
+      if ordering_tables.killer_moves.(2 * ply) = move then begin
         ordering_array.(move_index) <- 2000000
       end
-      else if killer_moves.(2 * ply + 1) = move then begin
+      else if ordering_tables.killer_moves.(2 * ply + 1) = move then begin
         ordering_array.(move_index) <- 1000000
       end
       else begin
-        ordering_array.(move_index) <- history_moves.(4096 * aux_history white_to_move + 64 * from move + to_ move)
+        ordering_array.(move_index) <- ordering_tables.history_moves.(4096 * aux_history white_to_move + 64 * from move + to_ move)
       end
     end
     else begin

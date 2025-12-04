@@ -57,23 +57,25 @@ let hash_treatment (hash_node_type : node) (hash_value : int) alpha beta best_sc
       end
 
 (*Fonction vidant la TT*)
-let clear table =
+let clear () =
   for i = 0 to !slots - 1 do
-    table.(i) <- empty_entry
+    !transposition_table.(i) <- empty_entry
   done;
-  transposition_counter := 0
+  for i = 0 to !threads_number do
+    transposition_counter.(i) <- 0
+  done
 
 let score_node node_type = match node_type with
   |Pv -> 10
   |Cut -> 5
   |All -> 0
 
-let store tt key node_type depth value move (*static_eval*) generation =
+let store thread key node_type depth value move (*static_eval*) generation =
   let index = key mod !slots in
-  let old_key, old_node_type, old_depth, old_value, old_best_move(*, old_static_eval*), old_generation = tt.(index) in
+  let old_key, old_node_type, old_depth, old_value, old_best_move(*, old_static_eval*), old_generation = !transposition_table.(index) in
   if old_depth = empty_depth then begin
-    tt.(index) <- (key, node_type, depth, value, move(*, static_eval*), generation);
-    incr transposition_counter
+    !transposition_table.(index) <- (key, node_type, depth, value, move(*, static_eval*), generation);
+    transposition_counter.(thread) <- transposition_counter.(thread) + 1
   end
   else if (!go_counter - old_generation > 5) || (depth > old_depth) || (depth = old_depth && score_node node_type > score_node old_node_type) then begin
     let stored_move =
@@ -81,10 +83,10 @@ let store tt key node_type depth value move (*static_eval*) generation =
         old_best_move
       else
         move
-    in tt.(index) <- (key, node_type, depth, value, stored_move(*, static_eval*), generation)
+    in !transposition_table.(index) <- (key, node_type, depth, value, stored_move(*, static_eval*), generation)
   end
   else if old_best_move = Null && move <> Null && key = old_key then begin
-    tt.(index) <- (old_key, old_node_type, old_depth, old_value, move(*, old_static_eval*), generation)
+    !transposition_table.(index) <- (old_key, old_node_type, old_depth, old_value, move(*, old_static_eval*), generation)
   end
 
 let verif board move = match move with
