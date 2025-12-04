@@ -309,7 +309,10 @@ let go instructions position king_position in_check =
         in aux instructions;
         let soft_bound, hard_bound =
           let soft_bound_ms, hard_bound_ms =
-            if !wtime < 0. && !btime < 0. then begin
+            if !is_pondering then begin
+              (9. *. 10e8), (9. *. 10e8)
+            end
+            else if !wtime < 0. && !btime < 0. then begin
               !movetime, !movetime
             end
             else begin
@@ -320,11 +323,8 @@ let go instructions position king_position in_check =
                 (!btime /. (min !movestogo 22.)) +. !binc /. 2., (!btime /. (min !movestogo 18.)) +. !binc /. 2.
               end
             end
-          in span_of_milliseconds soft_bound_ms, span_of_milliseconds hard_bound_ms in
-        search_time := hard_bound;
-        if not !is_pondering then begin
-          start_time := Mtime_clock.counter ();
-        end;
+          in span_of_milliseconds soft_bound_ms, span_of_milliseconds hard_bound_ms
+        in search_time := hard_bound;
         pv_table.(0) <- (let _, _, _, move(*, _*) = probe !transposition_table position.zobrist_position position.board in move);
         let number_of_pv = min !multipv !number_of_legal_moves in
         let print_score_table = Array.make number_of_pv "cp 0" in
