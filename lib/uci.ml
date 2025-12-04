@@ -85,7 +85,14 @@ let uci () =
     ^ "uciok")
 
 (*Variable indication if Pondering is allowed*)
-let ponder = ref false
+let option_ponder = ref false
+
+let wtime = ref (-. 1.)
+let btime = ref (-. 1.)
+let winc = ref 0.
+let binc = ref 0.
+let movestogo = ref 500.
+let movetime = ref (9. *. 10e8)
 
 (*Variables MultiPV*)
 let multipv = ref 1
@@ -114,7 +121,7 @@ let setoption instructions =
       end
     |_ -> ()
   in match (List.tl instructions) with
-    |"name" :: "Ponder" :: _ -> type_check instructions ponder
+    |"name" :: "Ponder" :: _ -> type_check instructions option_ponder
     |"name" :: "UCI_Chess960" :: _ -> type_check instructions chess_960
     |"name" :: "Clear" :: "Hash" :: _ -> reset_hash ()
     |"name" :: "MultiPV" :: _ -> type_spin instructions multipv min_multipv max_multipv
@@ -228,22 +235,26 @@ let rec algoperft position depth ply table_perft =
 let span_of_milliseconds (s : float) : Mtime.span =
   match Mtime.Span.of_float_ns (s *. 1e6) with
   | Some span -> span
-  | None -> failwith "Eazy e"
+  | None -> failwith "Harry Diboula"
+
+let time_management wtime btime winc binc movetime white_to_move movestogo soft_bound hard_bound =
+  let soft_bound_ms, hard_bound_ms =
+    if wtime < 0. && btime < 0. then begin
+      movetime, movetime
+    end
+    else begin
+      if white_to_move then begin
+        (wtime /. (min movestogo 22.)) +. winc /. 2., (wtime /. (min movestogo 18.)) +. winc /. 2.
+      end
+      else begin
+        (btime /. (min movestogo 22.)) +. binc /. 2., (btime /. (min movestogo 18.)) +. binc /. 2.
+      end
+    end
+  in soft_bound := span_of_milliseconds soft_bound_ms;
+  hard_bound := span_of_milliseconds hard_bound_ms
   
 (*Answer to the command "go"*)
 let go instructions position king_position in_check =
-  start_time := Mtime_clock.counter ();
-  let ordering_tables = {
-    killer_moves = killer_moves;
-    history_moves = history_moves
-  }
-  in for thread = 0 to !threads_number - 1 do
-    node_counter.(thread) <- 0
-  done;
-  for i = 0 to (2 * max_depth) - 1 do
-    killer_moves.(i) <- Null
-  done;
-  incr go_counter;
   match instructions with
     |_ :: "perft" :: depth :: _ when is_integer_string depth ->
       let depth = int_of_string depth in
@@ -258,15 +269,29 @@ let go instructions position king_position in_check =
         print_endline "bestmove (none)"
       end
       else begin
+        start_time := Mtime_clock.counter ();
+        soft_bound := Mtime.Span.max_span;
+        hard_bound := Mtime.Span.max_span;
+        let ordering_tables = {
+          killer_moves = killer_moves;
+          history_moves = history_moves
+        }
+        in for thread = 0 to !threads_number - 1 do
+          node_counter.(thread) <- 0
+        done;
+        for i = 0 to (2 * max_depth) - 1 do
+          killer_moves.(i) <- Null
+        done;
+        incr go_counter;
         let is_pondering = ref false in
-        let wtime = ref (-. 1.) in
-        let btime = ref (-. 1.) in
-        let winc = ref 0. in
-        let binc = ref 0. in
-        let movestogo = ref 500. in
+        wtime := (-. 1.);
+        btime := (-. 1.);
+        winc := 0.;
+        binc := 0.;
+        movestogo := 500.;
+        movetime := (9. *. 10e8);
         let depth = ref max_depth in
         let mate = ref (-1) in
-        let movetime = ref (9. *. 10e8) in
         let aux_searchmoves list =
           let index = ref 0 in
           let new_moves = Array.make !number_of_legal_moves Null in
@@ -307,24 +332,9 @@ let go instructions position king_position in_check =
             aux (g :: t)
           |_ -> ()
         in aux instructions;
-        let soft_bound, hard_bound =
-          let soft_bound_ms, hard_bound_ms =
-            if !is_pondering then begin
-              (9. *. 10e8), (9. *. 10e8)
-            end
-            else if !wtime < 0. && !btime < 0. then begin
-              !movetime, !movetime
-            end
-            else begin
-              if position.white_to_move then begin
-                (!wtime /. (min !movestogo 22.)) +. !winc /. 2., (!wtime /. (min !movestogo 18.)) +. !winc /. 2.
-              end
-              else begin
-                (!btime /. (min !movestogo 22.)) +. !binc /. 2., (!btime /. (min !movestogo 18.)) +. !binc /. 2.
-              end
-            end
-          in span_of_milliseconds soft_bound_ms, span_of_milliseconds hard_bound_ms
-        in search_time := hard_bound;
+        if not !is_pondering then begin
+          time_management !wtime !btime !winc !binc !movetime position.white_to_move !movestogo soft_bound hard_bound
+        end;
         pv_table.(0) <- (let _, _, _, move(*, _*) = probe !transposition_table position.zobrist_position position.board in move);
         let number_of_pv = min !multipv !number_of_legal_moves in
         let print_score_table = Array.make number_of_pv "cp 0" in
@@ -336,7 +346,7 @@ let go instructions position king_position in_check =
           let var_mate = ref max_int in
           let alpha_table = Array.make number_of_pv (- max_int) in
           let beta_table = Array.make number_of_pv max_int in
-          while not (stop_search.(thread) || (thread = 0 && Mtime.Span.compare (Mtime_clock.count !start_time) soft_bound > 0) || !var_depth + 1 > !depth || total_counter node_counter + 1 > !node_limit || !var_mate < !mate + 1 ) do
+          while not (stop_search.(thread) || (thread = 0 && Mtime.Span.compare (Mtime_clock.count !start_time) !soft_bound > 0) || !var_depth + 1 > !depth || total_counter node_counter + 1 > !node_limit || !var_mate < !mate + 1 ) do
             incr var_depth;
             let legal_moves_copy = (Array.copy legal_moves) in
             let number_of_legal_moves_copy = (ref !number_of_legal_moves) in
@@ -492,5 +502,6 @@ let echekinator () =
         print_endline ("HCE Evaluation : " ^ (if eval > 0. then "+" else "") ^ string_of_float eval ^ " (white side)")
       |"ponderhit" ->
         start_time := Mtime_clock.counter ();
+        time_management !wtime !btime !winc !binc !movetime position.white_to_move !movestogo soft_bound hard_bound
       |_ -> print_endline (Printf.sprintf "Unknown command: '%s'. Type help for more information." command)
   done

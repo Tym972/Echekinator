@@ -28,7 +28,7 @@ let rec pvs position ordering_tables thread depth ply alpha beta ispv =
   let main_thread = thread = 0 in
   node_counter.(thread) <- node_counter.(thread) + 1;
   if node_counter.(0) mod 1000 = 0 then begin
-    if Mtime.Span.compare (Mtime_clock.count !start_time) !search_time >= 0 then begin
+    if Mtime.Span.compare (Mtime_clock.count !start_time) !hard_bound > 0 then begin
       stop_search.(0) <- true
     end
   end;

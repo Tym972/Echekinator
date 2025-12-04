@@ -248,4 +248,6 @@ type position = {
 }
 
 let start_time = ref (Mtime_clock.counter ())
-let search_time = ref Mtime.Span.max_span
+let soft_bound = ref Mtime.Span.max_span
+let hard_bound = ref Mtime.Span.max_span
+let ponder_time = ref Mtime.Span.max_span
