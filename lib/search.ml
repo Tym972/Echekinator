@@ -276,7 +276,7 @@ let rec pvs position ordering_tables thread depth ply alpha beta ispv =
     end
   end
 
-let root_search position ordering_tables thread in_check depth alpha beta first_move legal_moves number_of_legal_moves short_pv_table multi =
+let root_search position ordering_tables thread in_check depth alpha beta first_move legal_moves number_of_legal_moves short_pv_table multi number_of_pv =
   let main_thread = thread = 0 in
   node_counter.(thread) <- node_counter.(thread) + 1;
   let no_cut = ref true in
@@ -344,8 +344,8 @@ let root_search position ordering_tables thread in_check depth alpha beta first_
             pv_table.(i) <- pv_table.(max_pv_length + i - 1)
           done;
           pv_length.(0) <- pv_length.(1) + 1;
-          short_pv_table.(multi) <- pv_finder depth
-        end
+        end;
+        short_pv_table.(thread * number_of_pv + multi) <- pv_finder depth
       end;
       if score > !alpha0 then begin
         alpha0 := score;
@@ -383,6 +383,16 @@ let root_search position ordering_tables thread in_check depth alpha beta first_
     done;
   end;
   if not (stop_search.(thread) || total_counter node_counter >= !node_limit) then begin
-    store thread position.zobrist_position Pv depth !best_score !best_move (*static_eval*) !go_counter
+    let node_type =
+      if !best_score <= alpha then begin
+        All
+      end
+      else if !best_score >= beta then begin
+        Cut
+      end
+      else begin
+        Pv
+      end
+    in store thread position.zobrist_position node_type depth !best_score !best_move (*hash_static_eval*) !go_counter
   end;
   !best_score

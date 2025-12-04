@@ -238,7 +238,6 @@ let go instructions position king_position in_check =
     history_moves = history_moves
   }
   in for thread = 0 to !threads_number - 1 do
-    stop_search.(thread) <- false;
     node_counter.(thread) <- 0
   done;
   for i = 0 to (2 * max_depth) - 1 do
@@ -329,7 +328,7 @@ let go instructions position king_position in_check =
         pv_table.(0) <- (let _, _, _, move(*, _*) = probe !transposition_table position.zobrist_position position.board in move);
         let number_of_pv = min !multipv !number_of_legal_moves in
         let print_score_table = Array.make number_of_pv "cp 0" in
-        let short_pv_table = Array.make number_of_pv [] in
+        let short_pv_table = Array.make (!threads_number * number_of_pv) [] in
         let info_table = Array.make number_of_pv ((-1), 0, 0) in
         let info = ref [] in
         let iterative_deepening position ordering_tables thread =
@@ -337,7 +336,7 @@ let go instructions position king_position in_check =
           let var_mate = ref max_int in
           let alpha_table = Array.make number_of_pv (- max_int) in
           let beta_table = Array.make number_of_pv max_int in
-          while (Mtime.Span.compare (Mtime_clock.count !start_time) soft_bound < 0) && !var_depth < !depth && total_counter node_counter + 1 < !node_limit && !var_mate > !mate do
+          while not (stop_search.(thread) || (thread = 0 && Mtime.Span.compare (Mtime_clock.count !start_time) soft_bound > 0) || !var_depth + 1 > !depth || total_counter node_counter + 1 > !node_limit || !var_mate < !mate + 1 ) do
             incr var_depth;
             let legal_moves_copy = (Array.copy legal_moves) in
             let number_of_legal_moves_copy = (ref !number_of_legal_moves) in
@@ -346,7 +345,7 @@ let go instructions position king_position in_check =
                 let acc = ref Null in
                 let counter = ref 0 in
                 while !acc = Null && !counter < number_of_pv do
-                  let candidate = try List.hd short_pv_table.(!counter) with _ -> Null in
+                  let candidate = try List.hd short_pv_table.(thread * !threads_number + !counter) with _ -> Null in
                   if move_array_mem candidate legal_moves_copy !number_of_legal_moves_copy then begin
                     acc := candidate
                   end;
@@ -354,15 +353,15 @@ let go instructions position king_position in_check =
                 done;
                 !acc
               in let new_score =
-                let score = ref (root_search position ordering_tables thread in_check !var_depth alpha_table.(multi) beta_table.(multi) first_move (Array.copy legal_moves_copy) (ref !number_of_legal_moves_copy) short_pv_table multi) in
-                while not (stop_search.(thread) || total_counter node_counter = !node_limit|| (!score > alpha_table.(multi) && !score < beta_table.(multi))) do
+                let score = ref (root_search position ordering_tables thread in_check !var_depth alpha_table.(multi) beta_table.(multi) first_move (Array.copy legal_moves_copy) (ref !number_of_legal_moves_copy) short_pv_table multi number_of_pv) in
+                while not (stop_search.(thread) || total_counter node_counter > !node_limit || (!score > alpha_table.(multi) && !score < beta_table.(multi))) do
                   if !score <= alpha_table.(multi) then begin
                     alpha_table.(multi) <- (-max_int)
                   end
                   else if !score >= beta_table.(multi) then begin
                     beta_table.(multi) <- max_int
                   end;
-                  score := root_search position ordering_tables thread in_check !var_depth alpha_table.(multi) beta_table.(multi) first_move (Array.copy legal_moves_copy) (ref !number_of_legal_moves_copy) short_pv_table multi;
+                  score := root_search position ordering_tables thread in_check !var_depth alpha_table.(multi) beta_table.(multi) first_move (Array.copy legal_moves_copy) (ref !number_of_legal_moves_copy) short_pv_table multi number_of_pv;
                 done;
                 !score
               in if new_score > (-max_int) then begin
@@ -405,7 +404,7 @@ let go instructions position king_position in_check =
                 |(depth, _, multi) :: t ->
                   if !var_depth = depth then begin
                     let score = print_score_table.(multi) in
-                    let pv = (String.concat " " (List.map uci_of_mouvement short_pv_table.(multi))) in
+                    let pv = (String.concat " " (List.map uci_of_mouvement short_pv_table.(thread * number_of_pv + multi))) in
                     print_endline (Printf.sprintf "info depth %i seldepth %i multipv %i score %s nodes %i nps %i hashfull %i time %i pv %s" !var_depth !var_depth n score (total_counter node_counter) nps hashfull time pv)
                   end;
                   aux_info t (n + 1)
@@ -415,7 +414,8 @@ let go instructions position king_position in_check =
         in for thread = 1 to !threads_number - 1 do
           stop_search.(thread) <- false;
           let _ = Domain.spawn (fun () -> iterative_deepening {position with board = Array.copy position.board} {killer_moves = Array.copy ordering_tables.killer_moves; history_moves = Array.copy ordering_tables.history_moves} thread) in ()
-        done; 
+        done;
+        stop_search.(0) <- false;
         iterative_deepening {position with board = Array.copy position.board} ordering_tables 0;
         for thread = 1 to !threads_number - 1 do
           stop_search.(thread) <- true
@@ -425,8 +425,8 @@ let go instructions position king_position in_check =
           print_endline ("info depth 0 score cp 0" ^ "\n" ^ "bestmove (none)");
         end
         else begin
-          let print_bestmove = "bestmove " ^ try (uci_of_mouvement  (List.hd short_pv_table.(best_number))) with _ -> "(none)" in
-          let print_ponder = try (" ponder " ^ uci_of_mouvement  (List.nth short_pv_table.(best_number) 1)) with _ -> "" in
+          let print_bestmove = "bestmove " ^ try (uci_of_mouvement (List.hd short_pv_table.(best_number))) with _ -> "(none)" in
+          let print_ponder = try (" ponder " ^ uci_of_mouvement (List.nth short_pv_table.(best_number) 1)) with _ -> "" in
           print_endline (print_bestmove ^ print_ponder)
         end
       end
