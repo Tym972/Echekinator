@@ -1,13 +1,12 @@
 open Board
 open Generator
 
-let smaller_attacker board square white_to_move =
+let smaller_attacker board square =
   let move = ref Null in
   let smaller = ref (-20) in
   let smaller_possible = ref true in
   let tab64_square = tab64.(square) in
-  let piece = board.(square) in
-  let player_sign = if white_to_move then 1 else (-1) in
+  let player_sign = if board.(square) > 0 then 1 else (-1) in
   let counter = ref 0 in
   let bishop_iterations = Array.make 4 true in
 
@@ -25,13 +24,13 @@ let smaller_attacker board square white_to_move =
         (*If this piece is an opposing pawn, it is neccessarily the smallest attacker*)
         if (attacker = (-1) && direction * player_sign < 0) then begin
           smaller_possible := false;
-          move := Normal {piece = attacker * player_sign; from = attacker_square; to_ = square; capture = piece}
+          move := Normal {piece = attacker * player_sign; from = attacker_square; to_ = square}
         end
 
         (*Else if it is a bishop, a queen or a king, smaller than what we already have, we just update the smaller tracker*)
         else if ((attacker <= (-3) && attacker <> (-4)) && attacker > !smaller) then begin
           smaller := attacker;
-          move := Normal {piece = attacker * player_sign; from = attacker_square; to_ = square; capture = piece};
+          move := Normal {piece = attacker * player_sign; from = attacker_square; to_ = square};
         end
 
       end
@@ -50,7 +49,7 @@ let smaller_attacker board square white_to_move =
         (*We found a knight attacker, it is neccessarily the smallest*)
         if board.(attacker_square) = (-2) * player_sign then begin
           smaller_possible := false;
-          move := Normal {piece = (-2) * player_sign; from = attacker_square; to_ = square; capture = piece}
+          move := Normal {piece = (-2) * player_sign; from = attacker_square; to_ = square}
         end
 
       end;
@@ -85,13 +84,13 @@ let smaller_attacker board square white_to_move =
           (*We found a bishop attacker, it's neccessarily the smallest*)
           if attacker = (-3) then begin
             smaller_possible := false;
-            move := Normal {piece = attacker * player_sign; from = attacker_square; to_ = square; capture = piece}
+            move := Normal {piece = attacker * player_sign; from = attacker_square; to_ = square}
           end
 
           (*We found a queen attacker, we just update the smaller tracker*)
           else if attacker = (-5) then begin
             smaller := attacker;
-            move := Normal {piece = attacker * player_sign; from = attacker_square; to_ = square; capture = piece}
+            move := Normal {piece = attacker * player_sign; from = attacker_square; to_ = square}
           end;
 
           iterate :=  false
@@ -128,7 +127,7 @@ let smaller_attacker board square white_to_move =
               smaller := attacker
             end;
 
-            move := Normal {piece = attacker * player_sign; from = attacker_square; to_ = square; capture = piece}
+            move := Normal {piece = attacker * player_sign; from = attacker_square; to_ = square}
           end
 
         end;
@@ -150,13 +149,13 @@ let smaller_attacker board square white_to_move =
               (*We found a rook attacker, it's neccessarily the smallest*)
               if attacker = (-4) then begin
                 smaller_possible := false;
-                move := Normal {piece = attacker * player_sign; from = attacker_square; to_ = square; capture = piece}
+                move := Normal {piece = attacker * player_sign; from = attacker_square; to_ = square}
               end
 
               (*We found a queen attacker, we just update the smaller tracker*)
               else if attacker = (-5) then begin
                 smaller := attacker;
-                move := Normal {piece = attacker * player_sign; from = attacker_square; to_ = square; capture = piece}
+                move := Normal {piece = attacker * player_sign; from = attacker_square; to_ = square}
               end;
 
               iterate :=  false
@@ -172,20 +171,22 @@ let smaller_attacker board square white_to_move =
 (*Valeur des pièces pour le tri*)
 let tabvalue = [|0; 10; 32; 33; 51; 88; 950|]
 
-let rec see board square white_to_move =
+let rec see position square =
   let value = ref 0 in
-  let move = smaller_attacker board square white_to_move in
+  let move = smaller_attacker position.board square in
   if move <> Null then begin
-    make board move;
-    value := max 0 (tabvalue.(abs (capture move)) - see board square (not white_to_move));
-    unmake board move
+    let last_capture = position.last_capture in
+    make_light position move;
+    value := max 0 (tabvalue.(abs (position.last_capture)) - see position square);
+    unmake_light position move last_capture;
   end;
   !value
 
-let see_forced board move white_to_move =
-  make board move;
-  let note = tabvalue.(abs (capture move)) - see board (to_ move) white_to_move in
-  unmake board move;
+let see_forced (position : position) move =
+  let last_capture = position.last_capture in
+  make_light position move;
+  let note = tabvalue.(abs (position.last_capture)) - see position (to_ move) in
+  unmake_light position move last_capture;
   note
 
 (*let get_attackers board square tab64_square first_attacker first_capture first_attacker_square =
@@ -374,12 +375,17 @@ let new_see board move =
   gain.(0)*)
 
 (*Fonction triant une liste de coups selon la logique Most Valuable Victim - Least Valuable Agressor*)
-let mvvlva move = match move with
-  |Normal {piece; from = _; to_ = _; capture} when capture <> 0 ->
-    10 * tabvalue.(abs capture) - tabvalue.(abs piece)
+let mvvlva board move = match move with
+  |Normal {piece; from = _; to_} ->
+    let capture = board.(to_) in
+    if capture <> 0 then
+      10 * tabvalue.(abs capture) - tabvalue.(abs piece)
+    else
+      0
   |Enpassant {from = _; to_ = _} ->
     9 * tabvalue.(1)                                                          (*10 * tabvalue.(1) - tabvalue.(1)*)
-  |Promotion {from = _; to_ = _; capture; promotion} ->
+  |Promotion {from = _; to_; promotion} ->
+    let capture = board.(to_) in
     10 * (tabvalue.(abs capture) + tabvalue.(abs promotion)) - tabvalue.(1)
   |_ -> 0
 
@@ -396,7 +402,7 @@ let aux_history white_to_move =
 
 (*let g move = match move with |Normal _ -> true |_ -> false*)
 
-let move_ordering ordering_tables board white_to_move player_moves number_of_moves ply hash_move ordering_array =
+let move_ordering ordering_tables (position : position) player_moves number_of_moves ply hash_move ordering_array =
   let hash_move_index = ref (-1) in
   let score move move_index =
     (*let _ =
@@ -421,7 +427,7 @@ let move_ordering ordering_tables board white_to_move player_moves number_of_mov
     if move = hash_move then begin
       hash_move_index := move_index;
     end
-    else if isquiet move then begin
+    else if isquiet move position.board.(to_ move) then begin
       if ordering_tables.killer_moves.(2 * ply) = move then begin
         ordering_array.(move_index) <- 2000000
       end
@@ -429,11 +435,11 @@ let move_ordering ordering_tables board white_to_move player_moves number_of_mov
         ordering_array.(move_index) <- 1000000
       end
       else begin
-        ordering_array.(move_index) <- ordering_tables.history_moves.(4096 * aux_history white_to_move + 64 * from move + to_ move)
+        ordering_array.(move_index) <- ordering_tables.history_moves.(4096 * aux_history position.white_to_move + 64 * from move + to_ move)
       end
     end
     else begin
-      let see_score = see_forced board move white_to_move in
+      let see_score = see_forced position move in
       if see_score >= 0 then
         ordering_array.(move_index) <- 3000000 + see_score
       else
@@ -462,13 +468,13 @@ let move_picker moves ordering_array number_of_moves =
   move
 
   (*Tri les coups selon leur potentiel SEE en supprimant ceux dont cette évaluation est négative*)
-let tri_see liste board white_to_move hash_move =
+let tri_see liste position hash_move =
   begin
     let rec association liste_coups =
       match liste_coups with
       |[] -> []
       |move :: t ->
-        let note = see_forced board move white_to_move in
+        let note = see_forced position move in
         if note >= 0 && move <> hash_move then
           (note, move) :: association t
         else

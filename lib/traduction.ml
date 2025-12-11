@@ -29,21 +29,21 @@ let ep_origin move white_to_move =
   in Enpassant {from = from ; to_ = to_}
 
 (*Fonction traduisant une notation algébrique exhaustive vers la notation avec le type Mouvement*)
-let normal_origin move white_to_move board =
+let normal_origin move white_to_move =
   let player_sign = if white_to_move then 1 else (-1) in
   let piece = player_sign * Hashtbl.find hash_pieces move.[0] in
   let from = Hashtbl.find hash_coord ((String.sub move 1 1) ^ (String.sub move 2 1)) in
   let to_ = Hashtbl.find hash_coord ((String.sub move 3 1) ^ (String.sub move 4 1)) in
-  Normal {piece = piece; from = from; to_ = to_; capture = board.(to_)}
+  Normal {piece = piece; from = from; to_ = to_}
 
 (*Fonction traduisant le move d'un pawn de la notation algébrique vers la notation avec le type Mouvement*)
-let pawn_origin board move white_to_move =
+let pawn_origin position move =
   let from = ref (-1) in
   let l = String.length move in
   let square = Hashtbl.find hash_coord ((String.sub move (l - 2) 1) ^ (String.sub move (l - 1) 1)) in
-  let player_sign = if white_to_move then 1 else (-1) in
+  let player_sign = if position.white_to_move then 1 else (-1) in
   if String.length move = 2 then begin
-    if board.(square + 8 * player_sign) = player_sign then begin
+    if position.board.(square + 8 * player_sign) = player_sign then begin
       from := square + 8 * player_sign
     end
     else begin
@@ -53,7 +53,7 @@ let pawn_origin board move white_to_move =
   else begin
     from := Hashtbl.find hash_coord ((String.sub move 0 1) ^ string_of_int ((int_of_string (String.sub move 2 1)) - player_sign))
   end;
-  Normal {piece = (pawn white_to_move); from = !from; to_ = square; capture = board.(square)}
+  Normal {piece = (pawn position.white_to_move); from = !from; to_ = square}
 
 (*Fonction traduisant le move d'une tour de la notation algébrique vers la notation avec le type Mouvement*)
 let distance_origin board move player_legal_moves number_of_legal_moves piece vect_piece =
@@ -70,7 +70,7 @@ let distance_origin board move player_legal_moves number_of_legal_moves piece ve
       while (tab120.(t + (!k * dir)) <> (-1) && !s) do
         let candidate = tab120.(t + (!k * dir)) in
         let dest = board.(candidate) in
-        if dest = piece && move_array_mem (Normal {piece = piece; from = candidate; to_ = square; capture = board.(square)}) player_legal_moves number_of_legal_moves then begin
+        if dest = piece && move_array_mem (Normal {piece = piece; from = candidate; to_ = square}) player_legal_moves number_of_legal_moves then begin
           from := candidate;
           s := false
         end
@@ -91,7 +91,7 @@ let distance_origin board move player_legal_moves number_of_legal_moves piece ve
       let i = ref 0 in
       while (!from = (-1) && !i < 8) do
         let candidate = square_0 + !i in
-        if board.(candidate) = piece && move_array_mem (Normal {piece = piece; from = candidate; to_ = square; capture = board.(square)}) player_legal_moves number_of_legal_moves then begin
+        if board.(candidate) = piece && move_array_mem (Normal {piece = piece; from = candidate; to_ = square}) player_legal_moves number_of_legal_moves then begin
           from := candidate
         end;
         i := !i + 1
@@ -102,17 +102,17 @@ let distance_origin board move player_legal_moves number_of_legal_moves piece ve
       let i = ref 0 in
       while (!from = (-1) && !i < 8) do
         let candidate = square_0 + (8 * !i) in
-        if board.(candidate) = piece && move_array_mem (Normal {piece = piece; from = candidate; to_ = square; capture = board.(square)}) player_legal_moves number_of_legal_moves then begin
+        if board.(candidate) = piece && move_array_mem (Normal {piece = piece; from = candidate; to_ = square}) player_legal_moves number_of_legal_moves then begin
           from := candidate
         end;
         i := !i + 1
       done
     end
   end;
-  Normal {piece = piece; from = !from; to_ = square; capture = board.(square)}
+  Normal {piece = piece; from = !from; to_ = square}
 
 (*Fonction traduisant une promotion en notation algébrique vers la notation avec le type Mouvement*)
-let origine_promotion move white_to_move board =
+let origine_promotion move white_to_move =
   let from = ref (-1) in
   let l = String.length move in
   let square = Hashtbl.find hash_coord ((String.sub move (l - 4) 1) ^ (String.sub move (l - 3) 1)) in
@@ -125,7 +125,7 @@ let origine_promotion move white_to_move board =
   else begin
     from := Hashtbl.find hash_coord ((String.sub move 0 1) ^ string_of_int ((int_of_string (String.sub move 2 1)) - player_sign))
   end;
-  Promotion {from = !from; to_ = square; promotion = !promo; capture = board.(square)}
+  Promotion {from = !from; to_ = square; promotion = !promo}
 
 (*Fonction décomposant une chain de caractère en list de substring correspondants aux mots*)
 let word_detection chain =
@@ -158,26 +158,26 @@ let hash_origin =
   ht
 
 (*Traduit un move noté en notation algébrique en sa notation avec le type mouvement*)
-let move_of_algebric board move white_to_move player_legal_moves number_of_legal_moves =
+let move_of_algebric position move player_legal_moves number_of_legal_moves =
   let translated_move = ref Null in
   if List.mem move ["0-0"; "O-O"] then begin
-    translated_move := if white_to_move then Castling {sort = 1} else Castling {sort = 3}
+    translated_move := if position.white_to_move then Castling {sort = 1} else Castling {sort = 3}
   end
   else if List.mem move ["0-0-0"; "O-O-O"] then begin
-    translated_move := if white_to_move then Castling {sort = 2} else Castling {sort = 4}
+    translated_move := if position.white_to_move then Castling {sort = 2} else Castling {sort = 4}
   end
   else if String.contains move 'p' then begin
-    translated_move := ep_origin move white_to_move
+    translated_move := ep_origin move position.white_to_move
   end
   else if String.contains move '=' then begin
-    translated_move := origine_promotion move white_to_move board
+    translated_move := origine_promotion move position.white_to_move
   end
   else begin match String.length move with
-    |2 |3 when move.[0] = Char.lowercase_ascii move.[0] && move.[0] <> move.[1] -> translated_move := pawn_origin board move white_to_move
-    |5 -> translated_move := normal_origin move white_to_move board
+    |2 |3 when move.[0] = Char.lowercase_ascii move.[0] && move.[0] <> move.[1] -> translated_move := pawn_origin position move
+    |5 -> translated_move := normal_origin move position.white_to_move
     |_->
       let piece, vect_piece = (Hashtbl.find hash_origin move.[0]) in
-      translated_move := distance_origin board move player_legal_moves number_of_legal_moves (if white_to_move then piece else (- piece)) vect_piece
+      translated_move := distance_origin position.board move player_legal_moves number_of_legal_moves (if position.white_to_move then piece else (- piece)) vect_piece
   end;
   if not (move_array_mem !translated_move player_legal_moves number_of_legal_moves) then begin
     failwith "Invalid Move"
@@ -203,7 +203,7 @@ let mouvement_of_uci uci board player_legal_moves number_of_legal_moves =
     let white_to_move = board.(from) > 0 in
     let player_sign = if white_to_move then 1 else (-1) in
     if promotion <> 10 then begin
-      move := Promotion {from; to_; capture = board.(to_); promotion = player_sign * promotion}
+      move := Promotion {from; to_; promotion = player_sign * promotion}
     end
     else if board.(from) = 6 * player_sign && (to_ / 8 = from / 8) && (abs (to_ - from) <> 1 || board.(to_) * player_sign > 0) then begin
       let player_castling = if white_to_move then 1 else 3 in
@@ -219,7 +219,7 @@ let mouvement_of_uci uci board player_legal_moves number_of_legal_moves =
       move := Enpassant {from; to_}
     end
     else begin
-      move := Normal {piece = board.(from); from; to_; capture = board.(to_)}
+      move := Normal {piece = board.(from); from; to_}
     end;
     if not (move_array_mem !move player_legal_moves number_of_legal_moves) then begin
       failwith "Invalid Move"
@@ -229,37 +229,13 @@ let mouvement_of_uci uci board player_legal_moves number_of_legal_moves =
     end
   
 (*Fonction permettant une tolérance à l'approximation de l'utilisateur dans sa saisie*)
-let tolerance board move white_to_move player_legal_moves number_of_legal_moves =
-  try mouvement_of_uci move board player_legal_moves number_of_legal_moves with _ ->
-  try move_of_algebric board move white_to_move player_legal_moves number_of_legal_moves with _ ->
-  try move_of_algebric board (move ^ "ep") white_to_move player_legal_moves number_of_legal_moves with _ ->
-  try move_of_algebric board (String.capitalize_ascii move) white_to_move player_legal_moves number_of_legal_moves with _ ->
-  try move_of_algebric board (Hashtbl.find dicofrench move.[0] ^ String.sub move 1 (String.length move - 1)) white_to_move player_legal_moves number_of_legal_moves with _ ->
-  try move_of_algebric board (Hashtbl.find dicofrench (Char.uppercase_ascii move.[0]) ^ String.sub move 1 (String.length move - 1)) white_to_move player_legal_moves number_of_legal_moves with _ -> Null
-
-(*Fonction convertissant un relevé de coups notés algébriquement en un relevé de coups notés avec le type Mouvement*)
-let move_list_of_algebric_list algebraic_list initial_white_to_move initial_last_move initial_castling_right start_position =
-  let board = Array.copy start_position in
-  let white_to_move = ref initial_white_to_move in
-  let last_move = ref initial_last_move in
-  let castling_rights = ref initial_castling_right in
-  let move_list = ref [] in
-  let rec func list = match list with
-    |move :: other_moves ->
-      let king_position = (index_array board (king !white_to_move)) in
-      let player_legal_moves, number_of_moves = legal_moves board !white_to_move !last_move !castling_rights king_position (threatened board king_position !white_to_move) in
-      let translated_move = tolerance board move !white_to_move player_legal_moves !number_of_moves in
-      if translated_move <> Null then begin
-        move_list := translated_move :: !move_list;
-        make board translated_move;
-        castling_rights := castling_modification translated_move !castling_rights;
-        last_move := translated_move;
-        white_to_move := not !white_to_move;
-        func other_moves
-      end
-    |_ -> ()
-  in func algebraic_list;
-  List.rev !move_list
+let tolerance position move player_legal_moves number_of_legal_moves =
+  try mouvement_of_uci move position.board player_legal_moves number_of_legal_moves with _ ->
+  try move_of_algebric position move player_legal_moves number_of_legal_moves with _ ->
+  try move_of_algebric position (move ^ "ep") player_legal_moves number_of_legal_moves with _ ->
+  try move_of_algebric position (String.capitalize_ascii move) player_legal_moves number_of_legal_moves with _ ->
+  try move_of_algebric position (Hashtbl.find dicofrench move.[0] ^ String.sub move 1 (String.length move - 1)) player_legal_moves number_of_legal_moves with _ ->
+  try move_of_algebric position (Hashtbl.find dicofrench (Char.uppercase_ascii move.[0]) ^ String.sub move 1 (String.length move - 1)) player_legal_moves number_of_legal_moves with _ -> Null
 
 (*Tableau assoicant la valeur des pièces pour le moteur (indice) à leur notation algébrique anglaise*)
 let english_pieces_lowercase = [|""; "p"; "n"; "b"; "r"; "q"; "k"|]
@@ -267,10 +243,17 @@ let english_pieces_lowercase = [|""; "p"; "n"; "b"; "r"; "q"; "k"|]
 (*Fonction traduisant un move en sa notation UCI*)
 let uci_of_mouvement move = match move with
   |Castling {sort} ->
-    let from_king, to_short, to_long, from_short_rook, from_long_rook = if sort < 3 then !from_white_king, 62, 58, !from_short_white_rook, !from_long_white_rook else !from_black_king, 6, 2, !from_short_black_rook, !from_long_black_rook in
-    let arrivee_roque, depart_tour = if sort mod 2 = 1 then to_short, from_short_rook else to_long, from_long_rook in
-    coord.(from_king) ^ coord.(if not !chess_960 then arrivee_roque else depart_tour)
-  |Promotion {from = _; to_ = _; capture = _; promotion} -> coord.(from move) ^ coord.(to_ move) ^ english_pieces_lowercase.(abs promotion)
+    let from_king, to_short, to_long, from_short_rook, from_long_rook =
+      if sort < 3 then
+        !from_white_king, 62, 58, !from_short_white_rook, !from_long_white_rook
+      else
+        !from_black_king, 6, 2, !from_short_black_rook, !from_long_black_rook
+    in let arrivee_roque, depart_tour = if sort mod 2 = 1 then
+      to_short, from_short_rook
+    else
+      to_long, from_long_rook
+    in coord.(from_king) ^ coord.(if not !chess_960 then arrivee_roque else depart_tour)
+  |Promotion {from = _; to_ = _; promotion} -> coord.(from move) ^ coord.(to_ move) ^ english_pieces_lowercase.(abs promotion)
   |Null -> "(none)"
   |_ -> coord.(from move) ^ coord.(to_ move)
 

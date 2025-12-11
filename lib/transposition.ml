@@ -1,10 +1,20 @@
 open Board
-open Generator
 
 type node =
   |Pv
   |Cut
   |All
+
+(*let encode move = match move with
+  |Castling {sort} -> 0
+  |Enpassant  {from; to_} -> 0
+  |Normal {piece; from; to_} -> 0
+  |Promotion {from; to_; promotion} -> 0
+  |Null -> 0
+
+let decode intmove =
+
+*)
 
 type entry = int * node * int * int * move * int
 
@@ -90,16 +100,20 @@ let store thread key node_type depth value move (*static_eval*) generation =
   end
 
 let verif board move = match move with
-  |Normal {piece; from; to_; capture} -> board.(from) = piece && board.(to_) = capture
-  |Enpassant {from; to_} -> board.(from) = (if from < 32 then 1 else -1)  && board.(to_) = 0
-  |Castling {sort} -> if sort < 3 then board.(!from_white_king) = 6 else board.(!from_black_king) = (-6)
-  |Promotion {from; to_; capture; promotion} -> board.(from) = (if promotion > 0 then 1 else -1) && board.(to_) = capture
+  |Normal {piece; from; to_} -> board.(from) = piece && board.(to_) * piece <= 0
+  |Enpassant {from; to_} -> board.(from) = (if from < 32 then 1 else -1) && board.(to_) = 0
+  |Castling {sort} ->
+    if sort < 3 then
+      board.(!from_white_king) = 6
+    else
+      board.(!from_black_king) = (-6)
+  |Promotion {from; to_; promotion} -> board.(from) = (if promotion > 0 then 1 else -1) && board.(to_) * promotion <= 0
   |Null -> true
 
-let probe tt key board =
-  let index = key mod !slots in
+let probe tt (position : position) =
+  let index = position.zobrist_position mod !slots in
   let old_key, old_node_type, old_depth, old_value, old_best_move(*, old_static_eval*), _ = tt.(index) in
-  if key = old_key && verif board old_best_move then
+  if position.zobrist_position = old_key && verif position.board old_best_move then
     old_node_type, old_depth, old_value, old_best_move(*, old_static_eval*)
   else
     (All, empty_depth, 0, Null(*, (-infinity)*))

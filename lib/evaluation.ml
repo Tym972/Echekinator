@@ -1,8 +1,8 @@
 (*Module implémentant des fonctions d'évaluation*)
 
-(*open Board
+open Board
 
-let board_of_vector vector =
+(*let board_of_vector vector =
   let tab_piece = [|1; 2; 3; 4; 5; 6; -1; -2; -3; -4; -5; -6|] in
   let board = Array.make 64 0 in
   for i = 0 to 767 do
@@ -265,12 +265,12 @@ let () =
     done;
   done
 
-let hce board white_to_move =
+let hce position =
   let mg = [|0; 0|] in
   let eg = [|0; 0|] in
   let gamephase = ref 0 in
   for square = 0 to 63 do
-    let piece = board.(square) in
+    let piece = position.board.(square) in
     if piece > 0 then begin
       mg.(0) <- mg.(0) + mg_table.(12 * square + (piece - 1));
       eg.(0) <- eg.(0) + eg_table.(12 * square + (piece - 1));
@@ -286,7 +286,7 @@ let hce board white_to_move =
   let eg_score = eg.(0) - eg.(1) in
   let phase = min !gamephase 24 in
   let score = (mg_score * phase + eg_score * (24 - phase)) / 24 in
-  if white_to_move then
+  if position.white_to_move then
     score
   else  
     - score

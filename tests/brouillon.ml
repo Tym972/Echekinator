@@ -1,6 +1,26 @@
 
 
 (*
+if !go_counter <= b && !a then begin
+            let fichier_sortie =  open_out_gen [Open_creat; Open_text; Open_append] 0o666 "Harry.txt" in
+            let ma_chaine =
+              Printf.sprintf
+                "fen : %s; zobrist : %i; node_counter : %i; best_score : %i; alpha : %i; beta : %i; depth : %i; bestmove : %s\n"
+                (Fen.fen position []) position.zobrist_position node_counter.(0) !best_score alpha beta depth
+                (Traduction.uci_of_mouvement !best_move)
+            in output_string fichier_sortie ma_chaine;
+            close_out fichier_sortie
+          end;
+
+
+
+
+        if (Fen.fen position [] = "rnbqkbnr/pppppp1p/8/6p1/8/5N2/PPPPPPPP/RNBQKB1R w KQkq - 0 1") then
+          print_endline (((fun h -> match h with |All -> "all" |Cut -> "cut" |Pv -> "pv") hash_node_type) ^ string_of_int hash_value  ^ " " ^ string_of_int position.zobrist_position ^ " counter : " ^ string_of_int node_counter.(0));
+
+          if (Fen.fen position [] = "rnbqkbnr/pppppp1p/8/6p1/8/5N2/PPPPPPPP/RNBQKB1R w KQkq - 0 1") then
+            print_endline ("bestcore : " ^ string_of_int !best_score ^ " alpha :  " ^ string_of_int alpha ^ " beta : " ^ string_of_int beta ^ " zobrist : " ^ string_of_int position.zobrist_position ^ " stored value : " ^ string_of_int stored_value ^ " node type : " ^ ((fun h -> match h with |All -> "all" |Cut -> "cut" |Pv -> "pv") node_type ^ " hash depth : " ^ string_of_int hash_depth));
+        
 
 let moves = Array.make 256 Null
 

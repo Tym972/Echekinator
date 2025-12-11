@@ -1,14 +1,14 @@
 (*Module implémentant le type Mouvement, les constantes et les fonctions de bases du programme*)
 
 (*Program version*)
-let project_name = "Echekinator 1.0"
+let project_name = "Echekinator 1.0.1"
 
 (*Type for chess moves*)
 type move =
   |Castling of {sort : int}
   |Enpassant of  {from : int; to_ : int}
-  |Normal of {piece : int; from : int; to_ : int; capture : int}
-  |Promotion of {from : int; to_ : int; promotion : int; capture : int}
+  |Normal of {piece : int; from : int; to_ : int}
+  |Promotion of {from : int; to_ : int; promotion : int}
   |Null
 
 (*Table of coordinates of a chessboard*)
@@ -159,13 +159,13 @@ let bishop player_is_white = if player_is_white then 3 else (-3)
 let pawn player_is_white = if player_is_white then 1 else (-1)
 
 (*Fonction indiquant si un move est irrémédiable (poussée de pion ou capture)*)
-let is_irreversible move = match move with
+let is_irreversible move capture = match move with
   |Enpassant _ | Promotion _ -> true
-  |Normal {piece; from = _; to_ = _; capture} when (abs piece = 1 || capture <> 0) -> true
+  |Normal {piece; from = _; to_ = _} when (abs piece = 1 || capture <> 0) -> true
   |_ -> false
 
-let isquiet move = match move with
-  |Normal {piece = _; from = _; to_ = _; capture} when capture <> 0 -> false
+let isquiet move capture = match move with
+  |Normal {piece = _; from = _; to_ = _} when capture <> 0 -> false
   |Enpassant _ | Promotion _ -> false
   |_ -> true
 
@@ -237,17 +237,114 @@ let go_counter = ref 0
 
 let zugzwang = ref true
 
+type castling_rights = {
+  white_short : bool;
+  white_long : bool;
+  black_short : bool;
+  black_long : bool
+}
+
 type position = {
   board : int array;
   mutable white_to_move : bool;
-  mutable last_move : move;
-  mutable castling_rights : bool * bool * bool * bool;
+  mutable ep_square : int;
+  mutable castling_rights : castling_rights;
   mutable board_record : int list;
   mutable half_moves : int;
-  mutable zobrist_position : int
+  mutable zobrist_position : int;
+  mutable last_capture : int;
+}
+
+type undo_info = {
+  ep_square : int;
+  castling_rights : castling_rights;
+  board_record : int list;
+  half_moves : int;
+  zobrist_position : int;
+  last_capture : int
 }
 
 let start_time = ref (Mtime_clock.counter ())
 let soft_bound = ref Mtime.Span.max_span
 let hard_bound = ref Mtime.Span.max_span
 let ponder_time = ref Mtime.Span.max_span
+
+let chess_960 = ref false
+
+(*Variables indiquant la positions initiales des pièces impliquées dans un castlings*)
+let from_white_king = ref 60
+let from_black_king = ref 4
+let from_short_white_rook = ref 63
+let from_long_white_rook = ref 56
+let from_short_black_rook = ref 7
+let from_long_black_rook = ref 0
+
+(*Cases de passage du roi pour le castlings*)
+let white_short_path = [|61; 62; 0; 0; 0; 0|]
+let white_long_path = [|59; 58; 0; 0; 0|]
+let black_short_path = [|5; 6; 0; 0; 0; 0|]
+let black_long_path = [|3; 2; 0; 0; 0|]
+
+(*Nombre de square traversée par le roi*)
+let white_short_path_length = ref 2
+let white_long_path_length = ref 2
+let black_short_path_length = ref 2
+let black_long_path_length = ref 2
+
+(*Cases devant êtres empties pour le castlings*)
+let white_short_empties = ref [61; 62]
+let white_long_empties = ref [59; 58; 57]
+let black_short_empties = ref [5; 6]
+let black_long_empties = ref [3; 2; 1]
+
+(*Variable indiquant si le roi doit se déplacer pour atteindre sa square de castlings (échecs 960)*)
+let white_king_pinnable = ref true
+let black_king_pinnable = ref true
+
+(*Variables indicating whether the starting column of the queenside rook is a*)
+let white_long_rook_in_a = ref true
+let black_long_rook_in_a = ref true
+
+(*Variables indicating whether the starting column of the kingside rook is h*)
+let white_short_rook_in_h = ref true
+let black_short_rook_in_h = ref true
+
+(*Critical case for the castling rights*)
+let white_king_pin_1 = ref 52
+let white_king_pin_2 = ref 44
+let black_king_pin_1 = ref 12
+let black_king_pin_2 = ref 20
+
+(*Variable indiquant la direction du grand castlings, valant 1 si le déplacement du roi se fait vers la right, (-1) sinon*)
+let white_long_directions = ref (-1)
+let black_long_directions = ref (-1)
+
+(*Variable indiquant si la square de départ de la tour du grand castlings est b1 (respectivement b8)*)
+let white_long_rook_in_b = ref false
+let black_long_rook_in_b = ref false
+
+(*Vecteurs de déplacement des potentielles menaces au castlings*)
+let white_short_bishop_vect = [|(-9); (-11)|]
+let white_long_bishop_vect = [|(-11); (-9)|]
+let black_short_bishop_vect = [|11; 9|]
+let black_long_bishop_vect = [|9; 11|]
+let white_castling_knights_vect = [|(-8); (-12); (-19); (-21)|]
+let black_castlings_knights_vect = [|8; 12; 19; 21|]
+
+(*Fonction donnant la square de départ d'un move classique et d'une promotion*)
+let from move = match move with
+  |Normal {piece = _; from; to_ = _} | Enpassant {from; to_ = _} | Promotion {from; to_ = _; promotion = _} -> from
+  |Castling {sort} -> if sort < 3 then !from_white_king else !from_black_king
+  |_ -> (-1)
+
+(*Fonction donnant la square d'arrivée d'un move*)
+let to_ move = match move with
+  |Normal {piece = _; from = _; to_} | Promotion {from = _; to_; promotion = _} | Enpassant {from = _; to_} -> to_
+  |Castling {sort} -> begin
+    match sort with
+      |1 -> 62
+      |2 -> 58
+      |3 -> 6
+      |_ -> 2
+  end
+  |_ -> (-1)

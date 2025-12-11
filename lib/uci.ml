@@ -31,44 +31,28 @@ let lire_entree message suppression =
   else
     entree
 
-(*Fonction renvoyant le relevé des positions actualisé*)
-let new_board_record position =
-  if is_irreversible position.last_move then begin
-    position.half_moves <- 0;
-    [position.zobrist_position]
-  end
-  else begin
-    position.half_moves <- position.half_moves + 1;
-    position.zobrist_position :: position.board_record
-  end
-
 (*Fonction permettant de jouer une list de moves*)
-let make_list move_list position king_position in_check moves_record =
+let make_list record position king_position in_check moves_record =
   let rec func move_list control = match move_list with
     |[] -> ()
-    |move :: t when !control ->
-      let legal_moves, number_of_legal_moves = (legal_moves position.board position.white_to_move position.last_move position.castling_rights !king_position !in_check) in
-      if move_array_mem move legal_moves !number_of_legal_moves then begin
-        let new_castling_rights = castling_modification move position.castling_rights in
-        position.zobrist_position <- new_zobrist move position.last_move position.zobrist_position position.castling_rights new_castling_rights position.board;
-        make position.board move;
-        position.last_move <- move;
-        position.board_record <- new_board_record position;
-        position.castling_rights <- new_castling_rights;
-        position.white_to_move <- not position.white_to_move;
+    |string_move :: other_moves when !control ->
+      let player_legal_moves, number_of_legal_moves = (legal_moves position !king_position !in_check) in
+      let move = tolerance position string_move player_legal_moves !number_of_legal_moves in
+      if move <> Null then begin
+        make position move;
         king_position := index_array position.board (king position.white_to_move);
-        in_check := threatened position.board !king_position position.white_to_move;
+        in_check := threatened position!king_position;
         moves_record := move :: !moves_record;
-        func t control
+        func other_moves control
       end
       else if move = Null then begin
-        func t control
+        func other_moves control
       end
       else begin
         control := false
       end
     |_ -> ()
-  in func move_list (ref true)
+  in func record (ref true)
 
 (*Answer to the command "uci"*)
 let uci () =
@@ -137,8 +121,13 @@ let setoption instructions =
       position.board.(i) <- chessboard.(i);
     done;
     position.white_to_move <- true;
-    position.last_move <- Null;
-    position.castling_rights <- (true, true, true, true);
+    position.ep_square <- (-1);
+    position.castling_rights <- {
+      white_short = true;
+      white_long = true;
+      black_short = true;
+      black_long = true
+    };
     position.board_record <- [zobrist_chessboard];
     position.half_moves <- 0;
     position.zobrist_position <- zobrist_chessboard;
@@ -169,8 +158,8 @@ let position_uci instructions position king_position in_check moves_record =
           position_of_fen (aux_fen (pop instructions 2)) position king_position in_check moves_record;
         end;
         if ((List.length instructions) > !index_moves && List.nth instructions !index_moves = "moves") then begin
-          let reverse_historique = move_list_of_algebric_list (algebric_list_of_san (String.concat " " (pop instructions (!index_moves + 1)))) position.white_to_move position.last_move position.castling_rights position.board in
-          make_list reverse_historique position king_position in_check moves_record
+          let record = (algebric_list_of_san (String.concat " " (pop instructions (!index_moves + 1))))in
+          make_list record position king_position in_check moves_record
         end
       end
     |_ -> ()
@@ -192,44 +181,39 @@ let score score var_mate =
     end
   end
 
-let rec algoperft position depth ply table_perft =
+let rec algoperft (position : position) depth ply =
   if depth = 0 then begin
     1
   end
   else begin
-    let old_key, number, hash_depth = table_perft.(position.zobrist_position mod !slots) in
-    if depth = hash_depth && position.zobrist_position = old_key then begin
-      number
-    end
-    else begin
-      let king_position = index_array position.board (king position.white_to_move) in
-      let in_check = threatened position.board king_position position.white_to_move in
-      let moves, number_of_moves = legal_moves position.board position.white_to_move position.last_move position.castling_rights king_position in_check in
-      let nodes = ref 0 in
-      for i = 0 to !number_of_moves - 1 do
-        let move = moves.(i) in
-        let new_castling_rights = castling_modification move position.castling_rights in
-        let new_zobrist = if depth > 1 then (new_zobrist move position.last_move position.zobrist_position position.castling_rights new_castling_rights position.board) else 0 in
-        make position.board move;
-        let new_position = {
-          board = position.board;
-          white_to_move = not position.white_to_move;
-          last_move = move;
-          castling_rights = new_castling_rights;
-          board_record = [];
-          half_moves = 0;
-          zobrist_position = new_zobrist;
-        }
-        in let perft = (algoperft new_position (depth - 1) (ply + 1) table_perft) in
-        nodes := !nodes + perft;
-        if ply = 0 then begin
-          print_endline (uci_of_mouvement move ^ ": " ^ string_of_int perft)
-        end;
-        unmake position.board move
-      done;
-       table_perft.(position.zobrist_position mod !slots) <- (position.zobrist_position, !nodes, depth);
-      !nodes
-    end
+    let king_position = index_array position.board (king position.white_to_move) in
+    let in_check = threatened position king_position in
+    let moves, number_of_moves = legal_moves position king_position in_check in
+    let nodes = ref 0 in
+    for i = 0 to !number_of_moves - 1 do
+      let move = moves.(i) in
+      let undo_info = {
+        ep_square = position.ep_square;
+        castling_rights = {
+          white_short = position.castling_rights.white_short;
+          white_long = position.castling_rights.white_long;
+          black_short = position.castling_rights.black_short;
+          black_long = position.castling_rights.black_long;
+        };
+        board_record = position.board_record;
+        half_moves = position.half_moves;
+        zobrist_position = position.zobrist_position;
+        last_capture = position.last_capture
+      }
+      in make position move;
+      let perft = (algoperft position (depth - 1) (ply + 1)) in
+      nodes := !nodes + perft;
+      if ply = 0 then begin
+        print_endline (uci_of_mouvement move ^ ": " ^ string_of_int perft)
+      end;
+      unmake position undo_info move
+    done;
+    !nodes
   end
 
 let span_of_milliseconds (s : float) : Mtime.span =
@@ -257,12 +241,10 @@ let time_management wtime btime winc binc movetime white_to_move movestogo soft_
 let go instructions position king_position in_check =
   match instructions with
     |_ :: "perft" :: depth :: _ when is_integer_string depth ->
-      let depth = int_of_string depth in
-      let table_perft = Array.make !slots (0, 0, (-1)) in
-      print_endline ("\n" ^ "Nodes searched : " ^ (string_of_int (algoperft position depth 0 table_perft)));
+      print_endline ("\n" ^ "Nodes searched : " ^ (string_of_int (algoperft position (int_of_string depth) 0)));
     |_ ->
       let commands = ["searchmoves"; "ponder"; "wtime"; "btime"; "winc"; "binc"; "movestogo"; "depth"; "nodes"; "mate"; "movetime"; "infinite"] in
-      let legal_moves, number_of_legal_moves = legal_moves position.board position.white_to_move position.last_move position.castling_rights king_position in_check in
+      let legal_moves, number_of_legal_moves = legal_moves position king_position in_check in
       if !number_of_legal_moves = 0 then begin
         let result = if in_check then "mate" else "cp" in
         print_endline (Printf.sprintf "info depth 0 score %s 0" result);
@@ -296,17 +278,17 @@ let go instructions position king_position in_check =
           let index = ref 0 in
           let new_moves = Array.make !number_of_legal_moves Null in
           let control = ref true in
-          let rec func list = match list with
-            |h::t when !control -> print_endline h;
-              let move = tolerance position.board h position.white_to_move legal_moves !number_of_legal_moves in
+          let rec func moves = match moves with
+            |uci_move :: other_moves when !control ->
+              let move = tolerance position uci_move legal_moves !number_of_legal_moves in
               if move_array_mem move legal_moves !number_of_legal_moves then begin
                 new_moves.(!index) <- move;
                 incr index;
               end
-              else if List.mem h commands then begin
+              else if List.mem uci_move commands then begin
                 control := false
               end;
-              func t
+              func other_moves
             |_ -> ()
           in func list;
           number_of_legal_moves := !index;
@@ -335,7 +317,7 @@ let go instructions position king_position in_check =
         if not !is_pondering then begin
           time_management !wtime !btime !winc !binc !movetime position.white_to_move !movestogo soft_bound hard_bound
         end;
-        pv_table.(0) <- (let _, _, _, move(*, _*) = probe !transposition_table position.zobrist_position position.board in move);
+        pv_table.(0) <- (let _, _, _, move(*, _*) = probe !transposition_table position in move);
         let number_of_pv = min !multipv !number_of_legal_moves in
         let print_score_table = Array.make number_of_pv "cp 0" in
         let short_pv_table = Array.make (!threads_number * number_of_pv) [] in
@@ -463,11 +445,17 @@ let echekinator () =
   let position = {
     board = Array.copy chessboard;
     white_to_move = true;
-    last_move = Null;
-    castling_rights = (true, true, true, true);
+    ep_square = (-1);
+    castling_rights = {
+      white_short = true;
+      white_long = true;
+      black_short = true;
+      black_long = true
+    };
     board_record = [zobrist_chessboard];
     half_moves = 0;
     zobrist_position = zobrist_chessboard;
+    last_capture = 0
   }
   in let exit = ref false in
   let hot_command = ref false in
@@ -498,7 +486,7 @@ let echekinator () =
         done;
       |"d" -> display position !moves_record
       |"eval" ->
-        let eval = (float_of_int (hce position.board true)) /. 100. in
+        let eval = (float_of_int (hce {position with white_to_move = true})) /. 100. in
         print_endline ("HCE Evaluation : " ^ (if eval > 0. then "+" else "") ^ string_of_float eval ^ " (white side)")
       |"ponderhit" ->
         start_time := Mtime_clock.counter ();
