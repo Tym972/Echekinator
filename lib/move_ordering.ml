@@ -171,22 +171,22 @@ let smaller_attacker board square =
 (*Valeur des pièces pour le tri*)
 let tabvalue = [|0; 10; 32; 33; 51; 88; 950|]
 
-let rec see position square =
+let rec see board square =
   let value = ref 0 in
-  let move = smaller_attacker position.board square in
+  let move = smaller_attacker board square in
   if move <> Null then begin
-    let last_capture = position.last_capture in
-    make_light position move;
-    value := max 0 (tabvalue.(abs (position.last_capture)) - see position square);
-    unmake_light position move last_capture;
+    let capture = ref 0 in
+    make_light board move capture;
+    value := max 0 (tabvalue.(abs !capture) - see board square);
+    unmake board move !capture;
   end;
   !value
 
-let see_forced (position : position) move =
-  let last_capture = position.last_capture in
-  make_light position move;
-  let note = tabvalue.(abs (position.last_capture)) - see position (to_ move) in
-  unmake_light position move last_capture;
+let see_forced board move =
+  let capture = ref 0 in
+  make_light board move capture;
+  let note = tabvalue.(abs !capture) - see board (to_ move) in
+  unmake board move !capture;
   note
 
 (*let get_attackers board square tab64_square first_attacker first_capture first_attacker_square =
@@ -439,7 +439,7 @@ let move_ordering ordering_tables (position : position) player_moves number_of_m
       end
     end
     else begin
-      let see_score = see_forced position move in
+      let see_score = see_forced position.board move in
       if see_score >= 0 then
         ordering_array.(move_index) <- 3000000 + see_score
       else

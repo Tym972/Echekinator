@@ -206,9 +206,9 @@ let max_pv_length = max_depth
 let pv_table = Array.make ((max_pv_length) * (max_pv_length + 1) / 2) Null
 
 (**)
-let pv_length = Array.make (max_pv_length + 1) 0
+let pv_length = Array.make max_pv_length 0
 
-(*A implémenter*)
+(*SMP variables*)
 let threads_number = ref 1
 let min_threads_number = 1
 let max_threads_number = 1024
@@ -249,19 +249,9 @@ type position = {
   mutable white_to_move : bool;
   mutable ep_square : int;
   mutable castling_rights : castling_rights;
-  mutable board_record : int list;
   mutable half_moves : int;
   mutable zobrist_position : int;
-  mutable last_capture : int;
-}
-
-type undo_info = {
-  ep_square : int;
-  castling_rights : castling_rights;
-  board_record : int list;
-  half_moves : int;
-  zobrist_position : int;
-  last_capture : int
+  mutable last_capture : int
 }
 
 let start_time = ref (Mtime_clock.counter ())
@@ -348,3 +338,7 @@ let to_ move = match move with
       |_ -> 2
   end
   |_ -> (-1)
+
+let initial_half_moves = ref 0
+
+let board_record = Array.make 100 0

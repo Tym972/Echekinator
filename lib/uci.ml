@@ -32,27 +32,22 @@ let lire_entree message suppression =
     entree
 
 (*Fonction permettant de jouer une list de moves*)
-let make_list record position king_position in_check moves_record =
-  let rec func move_list control = match move_list with
+let make_list record position king_position in_check move_counter =
+  let rec func move_list = match move_list with
     |[] -> ()
-    |string_move :: other_moves when !control ->
+    |string_move :: other_moves ->
       let player_legal_moves, number_of_legal_moves = (legal_moves position !king_position !in_check) in
       let move = tolerance position string_move player_legal_moves !number_of_legal_moves in
       if move <> Null then begin
-        make position move;
+        make position position move;
+        initial_half_moves := position.half_moves;
+        board_record.(!initial_half_moves) <- position.zobrist_position;
         king_position := index_array position.board (king position.white_to_move);
-        in_check := threatened position!king_position;
-        moves_record := move :: !moves_record;
-        func other_moves control
+        in_check := threatened position.board !king_position;
+        incr move_counter;
+        func other_moves
       end
-      else if move = Null then begin
-        func other_moves control
-      end
-      else begin
-        control := false
-      end
-    |_ -> ()
-  in func record (ref true)
+  in func record
 
 (*Answer to the command "uci"*)
 let uci () =
@@ -116,7 +111,7 @@ let setoption instructions =
     |"name" :: "Threads" :: _ -> type_spin instructions threads_number min_threads_number max_threads_number
     |_ -> ()
 
-  let reset_position position king_position in_check moves_record =
+  let reset_position position king_position in_check move_counter =
     for i = 0 to 63 do
       position.board.(i) <- chessboard.(i);
     done;
@@ -128,38 +123,38 @@ let setoption instructions =
       black_short = true;
       black_long = true
     };
-    position.board_record <- [zobrist_chessboard];
     position.half_moves <- 0;
     position.zobrist_position <- zobrist_chessboard;
     king_position := !from_white_king;
     in_check := false;
-    moves_record := []
+    move_counter := 0;
+    initial_half_moves := 0;
+    board_record.(0) <- zobrist_chessboard
 
 (*Answer to the command "ucinewgame"*)
-let ucinewgame position king_position in_check moves_record =
+let ucinewgame position king_position in_check move_counter =
   reset_hash ();
-  reset_position position king_position in_check moves_record
-  
+  reset_position position king_position in_check move_counter
 
 (*Answer to the command "command"*)
-let position_uci instructions position king_position in_check moves_record =
+let position_uci instructions position king_position in_check move_counter =
   begin match instructions with
     |"position" :: str :: _ when List.mem str ["fen"; "startpos"] -> begin
-        reset_position position king_position in_check moves_record;
+        reset_position position king_position in_check move_counter;
         let index_moves = ref 2 in
         let rec aux_fen list  = match list with
-        |h::t when h <> "moves" ->
-          begin
-            incr index_moves;
-            h ^ " " ^ aux_fen t
-          end
-        |_ -> ""
+          |h::t when h <> "moves" ->
+            begin
+              incr index_moves;
+              h ^ " " ^ aux_fen t
+            end
+          |_ -> ""
         in if str = "fen" then begin
-          position_of_fen (aux_fen (pop instructions 2)) position king_position in_check moves_record;
+          position_of_fen (aux_fen (pop instructions 2)) position king_position in_check move_counter;
         end;
         if ((List.length instructions) > !index_moves && List.nth instructions !index_moves = "moves") then begin
-          let record = (algebric_list_of_san (String.concat " " (pop instructions (!index_moves + 1))))in
-          make_list record position king_position in_check moves_record
+          let record = (algebric_list_of_san (String.concat " " (pop instructions (!index_moves + 1)))) in
+          make_list record position king_position in_check move_counter
         end
       end
     |_ -> ()
@@ -181,37 +176,25 @@ let score score var_mate =
     end
   end
 
-let rec algoperft (position : position) depth ply =
+let rec algoperft stack depth ply =
   if depth = 0 then begin
     1
   end
   else begin
+    let position = stack.(ply) in
     let king_position = index_array position.board (king position.white_to_move) in
-    let in_check = threatened position king_position in
+    let in_check = threatened position.board king_position in
     let moves, number_of_moves = legal_moves position king_position in_check in
     let nodes = ref 0 in
     for i = 0 to !number_of_moves - 1 do
       let move = moves.(i) in
-      let undo_info = {
-        ep_square = position.ep_square;
-        castling_rights = {
-          white_short = position.castling_rights.white_short;
-          white_long = position.castling_rights.white_long;
-          black_short = position.castling_rights.black_short;
-          black_long = position.castling_rights.black_long;
-        };
-        board_record = position.board_record;
-        half_moves = position.half_moves;
-        zobrist_position = position.zobrist_position;
-        last_capture = position.last_capture
-      }
-      in make position move;
-      let perft = (algoperft position (depth - 1) (ply + 1)) in
+      make position stack.(ply + 1) move;
+      let perft = (algoperft stack (depth - 1) (ply + 1)) in
       nodes := !nodes + perft;
       if ply = 0 then begin
         print_endline (uci_of_mouvement move ^ ": " ^ string_of_int perft)
       end;
-      unmake position undo_info move
+      unmake position.board move stack.(ply + 1).last_capture
     done;
     !nodes
   end
@@ -239,9 +222,20 @@ let time_management wtime btime winc binc movetime white_to_move movestogo soft_
   
 (*Answer to the command "go"*)
 let go instructions position king_position in_check =
+  let board_copy = Array.copy position.board in
+  let stack = Array.init (max_pv_length + 40) (fun _ ->
+  {
+    board = board_copy;
+    white_to_move = position.white_to_move;
+    ep_square = position.ep_square;
+    castling_rights = position.castling_rights;
+    half_moves = position.half_moves;
+    zobrist_position = position.zobrist_position;
+    last_capture = position.last_capture
+  }) in
   match instructions with
     |_ :: "perft" :: depth :: _ when is_integer_string depth ->
-      print_endline ("\n" ^ "Nodes searched : " ^ (string_of_int (algoperft position (int_of_string depth) 0)));
+      print_endline ("\n" ^ "Nodes searched : " ^ (string_of_int (algoperft stack (int_of_string depth) 0)));
     |_ ->
       let commands = ["searchmoves"; "ponder"; "wtime"; "btime"; "winc"; "binc"; "movestogo"; "depth"; "nodes"; "mate"; "movetime"; "infinite"] in
       let legal_moves, number_of_legal_moves = legal_moves position king_position in_check in
@@ -323,7 +317,7 @@ let go instructions position king_position in_check =
         let short_pv_table = Array.make (!threads_number * number_of_pv) [] in
         let info_table = Array.make number_of_pv ((-1), 0, 0) in
         let info = ref [] in
-        let iterative_deepening position ordering_tables thread =
+        let iterative_deepening stack ordering_tables thread =
           let var_depth = ref 0 in 
           let var_mate = ref max_int in
           let alpha_table = Array.make number_of_pv (- max_int) in
@@ -345,7 +339,7 @@ let go instructions position king_position in_check =
                 done;
                 !acc
               in let new_score =
-                let score = ref (root_search position ordering_tables thread in_check !var_depth alpha_table.(multi) beta_table.(multi) first_move (Array.copy legal_moves_copy) (ref !number_of_legal_moves_copy) short_pv_table multi number_of_pv) in
+                let score = ref (root_search stack ordering_tables thread in_check !var_depth alpha_table.(multi) beta_table.(multi) first_move (Array.copy legal_moves_copy) (ref !number_of_legal_moves_copy) short_pv_table multi number_of_pv) in
                 while not (stop_search.(thread) || total_counter node_counter > !node_limit || (!score > alpha_table.(multi) && !score < beta_table.(multi))) do
                   if !score <= alpha_table.(multi) then begin
                     alpha_table.(multi) <- (-max_int)
@@ -353,7 +347,7 @@ let go instructions position king_position in_check =
                   else if !score >= beta_table.(multi) then begin
                     beta_table.(multi) <- max_int
                   end;
-                  score := root_search position ordering_tables thread in_check !var_depth alpha_table.(multi) beta_table.(multi) first_move (Array.copy legal_moves_copy) (ref !number_of_legal_moves_copy) short_pv_table multi number_of_pv;
+                  score := root_search stack ordering_tables thread in_check !var_depth alpha_table.(multi) beta_table.(multi) first_move (Array.copy legal_moves_copy) (ref !number_of_legal_moves_copy) short_pv_table multi number_of_pv;
                 done;
                 !score
               in if new_score > (-max_int) then begin
@@ -405,10 +399,10 @@ let go instructions position king_position in_check =
           done
         in for thread = 1 to !threads_number - 1 do
           stop_search.(thread) <- false;
-          let _ = Domain.spawn (fun () -> iterative_deepening {position with board = Array.copy position.board} {killer_moves = Array.copy ordering_tables.killer_moves; history_moves = Array.copy ordering_tables.history_moves} thread) in ()
+          let _ = Domain.spawn (fun () -> iterative_deepening stack {killer_moves = Array.copy ordering_tables.killer_moves; history_moves = Array.copy ordering_tables.history_moves} thread) in ()
         done;
         stop_search.(0) <- false;
-        iterative_deepening {position with board = Array.copy position.board} ordering_tables 0;
+        iterative_deepening stack ordering_tables 0;
         for thread = 1 to !threads_number - 1 do
           stop_search.(thread) <- true
         done;
@@ -431,9 +425,9 @@ let checkers board white_to_move =
   in let moves,_ = (*pseudo_legal_moves board (not white_to_move) (index_array board (king (not white_to_move)))*) [],[]
   in aux moves
 
-let display position moves_record =
+let display position move_counter =
   print_board position.board;
-  print_endline (Printf.sprintf "Fen: %s" (fen position moves_record));
+  print_endline (Printf.sprintf "Fen: %s" (fen position move_counter));
   print_endline (Printf.sprintf "Key: %i" position.zobrist_position);
   print_endline (Printf.sprintf "Checkers: %s" (checkers position.board position.white_to_move))
 
@@ -441,7 +435,7 @@ let display position moves_record =
 let echekinator () =
   let king_position = ref !from_white_king in
   let in_check = ref false in
-  let moves_record = ref [] in
+  let move_counter = ref 0 in
   let position = {
     board = Array.copy chessboard;
     white_to_move = true;
@@ -452,7 +446,6 @@ let echekinator () =
       black_short = true;
       black_long = true
     };
-    board_record = [zobrist_chessboard];
     half_moves = 0;
     zobrist_position = zobrist_chessboard;
     last_capture = 0
@@ -473,8 +466,8 @@ let echekinator () =
       |"uci" -> uci ()
       |"isready" -> print_endline "readyok"
       |"setoption" -> process (fun () -> setoption command_line)
-      |"ucinewgame" -> process (fun () -> ucinewgame position king_position in_check moves_record)
-      |"position" -> process (fun () -> position_uci command_line position king_position in_check moves_record)
+      |"ucinewgame" -> process (fun () -> ucinewgame position king_position in_check move_counter)
+      |"position" -> process (fun () -> position_uci command_line position king_position in_check move_counter)
       |"go" ->
         let _ = Thread.create
           (fun () -> process (fun () -> go command_line {position with board = Array.copy position.board} !king_position !in_check)) ()
@@ -484,7 +477,7 @@ let echekinator () =
         for thread = 0 to !threads_number - 1 do
           stop_search.(thread) <- true
         done;
-      |"d" -> display position !moves_record
+      |"d" -> display position !move_counter
       |"eval" ->
         let eval = (float_of_int (hce {position with white_to_move = true})) /. 100. in
         print_endline ("HCE Evaluation : " ^ (if eval > 0. then "+" else "") ^ string_of_float eval ^ " (white side)")

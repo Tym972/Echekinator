@@ -4,13 +4,33 @@ open Board
 open Generator
 open Move_ordering
 open Transposition
-open Zobrist
 open Evaluation
+
+(*Fonction détectant les répétitions à partir d'une liste de code zobrist*)
+let repetition (stack : position array) ply =
+  let index = ref (ply - 2) in
+  let zobrist_position = stack.(ply).zobrist_position in
+  let repeat = ref false in
+  let limit = max (ply - stack.(ply).half_moves) (- !initial_half_moves) in
+  while !index >= limit && not !repeat do
+    if !index >= 0 then begin
+      if stack.(!index).zobrist_position = zobrist_position then begin
+        repeat := true
+      end
+    end
+    else begin
+      if board_record.(!initial_half_moves + !index) = zobrist_position then begin
+        repeat := true
+      end
+    end;
+    index := !index - 2;
+  done;
+  !repeat
 
 (*open Evaluation*)
 
 (*Fonction implémentant la recherche quiescente*)
-let rec quiescence_search position thread depth ply alpha beta ispv =
+let rec quiescence_search stack thread depth ply alpha beta ispv =
 
   (*Check search limit*)
   if stop_search.(thread) then begin
@@ -18,11 +38,12 @@ let rec quiescence_search position thread depth ply alpha beta ispv =
   end
 
   else begin
+    let position = stack.(ply) in
     let king_position = index_array position.board (king position.white_to_move) in
-    let in_check = threatened position king_position in
+    let in_check = threatened position.board king_position in
 
     (*Check repetion or fifty moves rule*)
-    if repetition position.board_record 3 || (position.half_moves = 100 && (not in_check || (let _, number_of_moves = legal_moves position king_position in_check in !number_of_moves <> 0))) then begin
+    if repetition stack ply || (position.half_moves = 100 && (not in_check || (let _, number_of_moves = legal_moves position king_position in_check in !number_of_moves <> 0))) then begin
       0
     end
 
@@ -53,22 +74,9 @@ let rec quiescence_search position thread depth ply alpha beta ispv =
           end;
 
           let counter = ref 0 in
-          let undo_info = {
-            ep_square = position.ep_square;
-            castling_rights = {
-              white_short = position.castling_rights.white_short;
-              white_long = position.castling_rights.white_long;
-              black_short = position.castling_rights.black_short;
-              black_long = position.castling_rights.black_long;
-            };
-            board_record = position.board_record;
-            half_moves = position.half_moves;
-            zobrist_position = position.zobrist_position;
-            last_capture = position.last_capture
-          }
-          in let move_loop move =
-            make position move;
-            let score = - quiescence_search position thread (depth - 1) (ply + 1) (- !beta0) (- !alpha0) ispv
+          let move_loop move =
+            make position stack.(ply + 1) move;
+            let score = - quiescence_search stack thread (depth - 1) (ply + 1) (- !beta0) (- !alpha0) ispv
             in if score > !best_score then begin
               best_score := score;
               if score > !alpha0 then begin
@@ -81,7 +89,7 @@ let rec quiescence_search position thread depth ply alpha beta ispv =
                 no_cut := false
               end
             end;
-            unmake position undo_info move;
+            unmake position.board move stack.(ply+ 1).last_capture;
             incr counter
 
           (*If in check search for all moves*)
@@ -113,7 +121,7 @@ let rec quiescence_search position thread depth ply alpha beta ispv =
           (*Else only search for captures and promotions*)
           else begin
             let move_loop_normal () =
-              let captures = ref (tri_see (captures position) position hash_move) in
+              let captures = ref (tri_see (captures position) position.board hash_move) in
               while !no_cut && !captures <> [] do
                 move_loop (List.hd !captures);
                 captures := List.tl !captures

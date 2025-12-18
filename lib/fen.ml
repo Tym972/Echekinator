@@ -54,7 +54,7 @@ let xfen_castlings board =
   castlings_representations
 
 (*Fonction représentant un board en sa notation FEN*)
-let fen (position : position) moves_record =
+let fen (position : position) move_counter =
   let fen = ref "" in
   let empties = ref 0 in
   for i = 0 to 63 do
@@ -101,7 +101,7 @@ let fen (position : position) moves_record =
   end;
   fen := !fen ^ " " ^ (if position.ep_square <> (-1) then coord.(position.ep_square) ^ " " else "- ");
   fen := !fen ^ (string_of_int position.half_moves ^ " ");
-  fen := !fen ^ string_of_int (1 + (List.length moves_record)/ 2);
+  fen := !fen ^ string_of_int (1 + move_counter / 2);
   !fen
 
 (*Dictionnaire associant la repsésentation des pièces dans les tableau-échiquier à une chaîne de caractères*)
@@ -260,7 +260,7 @@ let valid_castlings position castlings =
   end
 
 (*Fonction traduisant une position FEN en l'int array correspondant. Par défaut si non rensigné, le trait est au blancs, il n'y a plus de castlings, pas de capture en passant, aucun coup joué*)
-let position_of_fen chain position king_position in_check moves_record =
+let position_of_fen chain position king_position in_check move_counter =
   let split_fen = ref (word_detection chain) in
   let fen_length = List.length !split_fen in
   let pieces_position = (List.nth !split_fen 0) in
@@ -277,12 +277,12 @@ let position_of_fen chain position king_position in_check moves_record =
   in split_fen := !split_fen @ (complete fen_length);
   if List.nth !split_fen 1 = "w" then begin
     king_position := index_array position.board (king true);
-    in_check := threatened position !king_position
+    in_check := threatened position.board !king_position
   end
   else begin
     position.white_to_move <- false;
     king_position := index_array position.board (king false);
-    in_check := threatened position !king_position
+    in_check := threatened position.board !king_position
   end;
   let ep_square_string = (List.nth !split_fen 3) in
   if ep_square_string <> "-" then begin
@@ -291,16 +291,10 @@ let position_of_fen chain position king_position in_check moves_record =
   valid_castlings position (List.nth !split_fen 2);
   position.half_moves <- (try int_of_string (List.nth !split_fen 4) with _ -> 0);
   position.zobrist_position <- zobrist position;
-  position.board_record <- [position.zobrist_position];
-  let nombre_coup white_to_move coups_complets =
-    if white_to_move then begin
-      for _ = 1 to try (2 * (int_of_string (List.nth !split_fen 5) - 1)) with _ -> 0 do 
-        moves_record := Null :: !moves_record
-      done
-    end
-    else begin
-      for _ = 1 to try (2 * (int_of_string coups_complets - 1) + 1) with _ -> 0 do 
-        moves_record := Null :: !moves_record
-      done
-    end
-  in nombre_coup position.white_to_move (List.nth !split_fen 5)
+  if position.white_to_move then begin
+    move_counter := (try (2 * (int_of_string (List.nth !split_fen 5) - 1)) with _ -> 0)
+  end
+  else begin
+    move_counter := (try (2 * (int_of_string (List.nth !split_fen 5) - 1) + 1) with _ -> 0)
+  end;
+  board_record.(0) <- position.zobrist_position

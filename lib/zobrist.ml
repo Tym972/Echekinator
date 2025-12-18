@@ -51,15 +51,6 @@ let zobrist (position : position) =
   end;
   !h
 
-(*Fonction détectant les répétitions à partir d'une liste de code zobrist*)
-let repetition board_record n = match board_record with
-  |[] -> false
-  |h::q ->
-    let rec aux liste k = match liste with
-      |[] | [_] -> false
-      |_::j::t -> (h = j && (k + 1 = n || aux t (k + 1))) || aux t k
-    in aux q 1
-
 let zobrist_chessboard =
   zobrist {
     board = Array.copy chessboard;
@@ -71,7 +62,6 @@ let zobrist_chessboard =
       black_short = true;
       black_long = true
     };
-    board_record = [];
     half_moves = 0;
     zobrist_position = 0;
     last_capture = 0
