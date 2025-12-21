@@ -77,7 +77,7 @@ let rec pvs stack ordering_tables thread depth ply alpha beta ispv =
       
       else begin
         let best_move = ref Null in
-        let hash_node_type, hash_depth, hash_value, hash_move(*, hash_static_eval*) = probe !transposition_table position in
+        let hash_depth, hash_lower_bound, hash_upper_bound, hash_move(*, hash_static_eval*) = probe position in
         let no_cut = ref true in
         let best_score = ref (- max_int) in
 
@@ -93,7 +93,7 @@ let rec pvs stack ordering_tables thread depth ply alpha beta ispv =
 
         (*Use TT informations*)
         if not (ispv || depth > hash_depth) then begin
-          hash_treatment hash_node_type hash_value alpha0 beta0 best_score no_cut ply
+          hash_treatment hash_lower_bound hash_upper_bound alpha0 beta0 best_score no_cut ply
         end;
 
         if !no_cut then begin
@@ -224,20 +224,9 @@ let rec pvs stack ordering_tables thread depth ply alpha beta ispv =
         
         (*Storing in TT*)
         if not (stop_search.(thread) || total_counter node_counter >= !node_limit) then begin
-          let node_type =
-            if !best_score <= alpha then begin
-              if main_thread && ispv then begin
-                pv_length.(ply) <- 0
-              end;
-              All
-            end
-            else if !best_score >= beta then begin
-              Cut
-            end
-            else begin
-              Pv
-            end
-          in let stored_value =
+          let lower_bound = ref (- max_int) in
+          let upper_bound = ref max_int in
+          let stored_value =
             if is_win !best_score then begin
               !best_score + ply
             end
@@ -247,7 +236,20 @@ let rec pvs stack ordering_tables thread depth ply alpha beta ispv =
             else begin
               !best_score
             end
-          in store thread position.zobrist_position node_type depth stored_value !best_move (*hash_static_eval*) !go_counter
+          in if !best_score <= alpha then begin
+            if main_thread && ispv then begin
+              pv_length.(ply) <- 0
+            end;
+            upper_bound := stored_value
+          end
+          else if !best_score >= beta then begin
+            lower_bound := stored_value
+          end
+          else begin
+            lower_bound := stored_value;
+            upper_bound := stored_value
+          end;
+          store thread position.zobrist_position depth !lower_bound !upper_bound !best_move (*hash_static_eval*) !go_counter
         end;
       !best_score
       end
@@ -350,16 +352,18 @@ let root_search stack ordering_tables thread in_check depth alpha beta first_mov
     done;
   end;
   if not (stop_search.(thread) || total_counter node_counter >= !node_limit) then begin
-    let node_type =
-      if !best_score <= alpha then begin
-        All
-      end
-      else if !best_score >= beta then begin
-        Cut
-      end
-      else begin
-        Pv
-      end
-    in store thread position.zobrist_position node_type depth !best_score !best_move (*hash_static_eval*) !go_counter
+    let lower_bound = ref (- max_int) in
+    let upper_bound = ref max_int in
+    if !best_score <= alpha then begin
+      upper_bound := !best_score
+    end
+    else if !best_score >= beta then begin
+      lower_bound := !best_score
+    end
+    else begin
+      lower_bound := !best_score;
+      upper_bound := !best_score
+    end;
+    store thread position.zobrist_position depth !lower_bound !upper_bound !best_move (*hash_static_eval*) !go_counter
   end;
   !best_score

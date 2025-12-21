@@ -1,10 +1,5 @@
 open Board
 
-type node =
-  |Pv
-  |Cut
-  |All
-
 (*let encode move = match move with
   |Castling {sort} -> 0
   |Enpassant  {from; to_} -> 0
@@ -16,11 +11,11 @@ let decode intmove =
 
 *)
 
-type entry = int * node * int * int * move * int
+type entry = int * int * int * int * move * int
 
-let empty_depth = (-300)
+let empty_depth = (-40)
 
-let empty_entry = (0, All, empty_depth, 0, Null(*, (-infinity)*), 0)
+let empty_entry = (0, empty_depth, - max_int, max_int, Null(*, (-infinity)*), 0)
 
 let entry_size =
   let size_in_words x = Obj.size (Obj.repr x) in
@@ -39,32 +34,28 @@ let is_loss score = score < (-90000)
 
 let is_win score = score > 90000
 
+let is_decisive score = abs score > 90000
+
 (*PV node : Exact value, Cut Node : Lower Bound, All Node : Upper Bound*)
-let hash_treatment (hash_node_type : node) (hash_value : int) alpha beta best_score no_cut ply =
-  let adjusted_value =
-    if is_win hash_value then begin
-      hash_value - ply
+let hash_treatment hash_lower_bound hash_upper_bound alpha beta best_score no_cut ply =
+  let adjust_value bound =
+    if abs bound = max_int || not (is_decisive bound) then begin
+      bound
     end
-    else if is_loss hash_value then begin
-      hash_value + ply
+    else if is_win bound then begin
+      bound - ply
     end
     else begin
-      hash_value
+      bound + ply
     end
-  in match hash_node_type with
-    |Pv ->
-      best_score := adjusted_value;
-      no_cut := false
-    |Cut ->
-      if adjusted_value >= !beta then begin
-        best_score := adjusted_value;
-        no_cut := false
-      end
-    |All ->
-      if !alpha >= adjusted_value then begin
-        best_score := adjusted_value;
-        no_cut := false
-      end
+  in let adjusted_low = adjust_value hash_lower_bound in
+  let adjusted_up = adjust_value hash_upper_bound in
+  beta := min !beta adjusted_up;
+  alpha := max !alpha adjusted_low;
+  if !alpha >= !beta then begin
+    best_score := !alpha;
+    no_cut := false
+  end
 
 (*Fonction vidant la TT*)
 let clear () =
@@ -75,28 +66,38 @@ let clear () =
     transposition_counter.(i) <- 0
   done
 
-let score_node node_type = match node_type with
-  |Pv -> 10
-  |Cut -> 5
-  |All -> 0
+let score_node lower_bound upper_bound =
+  if lower_bound = upper_bound then 3
+  else if lower_bound > - max_int then begin
+    if upper_bound < max_int then 2
+    else 1
+  end
+  else 0
 
-let store thread key node_type depth value move (*static_eval*) generation =
+let store thread key depth lower_bound upper_bound move (*static_eval*) generation =
   let index = key mod !slots in
-  let old_key, old_node_type, old_depth, old_value, old_best_move(*, old_static_eval*), old_generation = !transposition_table.(index) in
+  let old_key, old_depth, old_lower_bound, old_upper_bound, old_best_move(*, old_static_eval*), old_generation = !transposition_table.(index) in
   if old_depth = empty_depth then begin
-    !transposition_table.(index) <- (key, node_type, depth, value, move(*, static_eval*), generation);
+    !transposition_table.(index) <- (key, depth, lower_bound, upper_bound, move(*, static_eval*), generation);
     transposition_counter.(thread) <- transposition_counter.(thread) + 1
   end
-  else if (!go_counter - old_generation > 5) || (depth > old_depth) || (depth = old_depth && score_node node_type > score_node old_node_type) then begin
-    let stored_move =
-      if move = Null && key = old_key then
-        old_best_move
-      else
-        move
-    in !transposition_table.(index) <- (key, node_type, depth, value, stored_move(*, static_eval*), generation)
+  else if (!go_counter - old_generation > 5) || (depth > old_depth) || (depth = old_depth && (key = old_key || score_node lower_bound upper_bound > score_node old_lower_bound old_upper_bound)) then begin
+    let stored_lower_bound = ref lower_bound in
+    let stored_upper_bound = ref upper_bound in
+    let stored_move = ref move in
+    if key = old_key then begin
+      if move = Null then begin
+        stored_move := old_best_move
+      end;
+      if depth = old_depth then begin
+        stored_lower_bound := max lower_bound old_lower_bound;
+        stored_upper_bound := min upper_bound old_upper_bound
+      end
+    end;
+    !transposition_table.(index) <- (key, depth, !stored_lower_bound, !stored_upper_bound, !stored_move(*, static_eval*), generation)
   end
   else if old_best_move = Null && move <> Null && key = old_key then begin
-    !transposition_table.(index) <- (old_key, old_node_type, old_depth, old_value, move(*, old_static_eval*), generation)
+    !transposition_table.(index) <- (old_key, old_depth, old_lower_bound, old_upper_bound, move(*, old_static_eval*), generation)
   end
 
 let verif board move = match move with
@@ -110,10 +111,10 @@ let verif board move = match move with
   |Promotion {from; to_; promotion} -> board.(from) = (if promotion > 0 then 1 else -1) && board.(to_) * promotion <= 0
   |Null -> true
 
-let probe tt (position : position) =
+let probe position =
   let index = position.zobrist_position mod !slots in
-  let old_key, old_node_type, old_depth, old_value, old_best_move(*, old_static_eval*), _ = tt.(index) in
+  let old_key, old_depth, old_lower_bound, old_upper_bound, old_best_move(*, old_static_eval*), _ = !transposition_table.(index) in
   if position.zobrist_position = old_key && verif position.board old_best_move then
-    old_node_type, old_depth, old_value, old_best_move(*, old_static_eval*)
+    old_depth, old_lower_bound, old_upper_bound, old_best_move(*, old_static_eval*)
   else
-    (All, empty_depth, 0, Null(*, (-infinity)*))
+    (empty_depth, - max_int, max_int, Null(*, (-infinity)*))

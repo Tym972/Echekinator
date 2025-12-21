@@ -311,7 +311,7 @@ let go instructions position king_position in_check =
         if not !is_pondering then begin
           time_management !wtime !btime !winc !binc !movetime position.white_to_move !movestogo soft_bound hard_bound
         end;
-        pv_table.(0) <- (let _, _, _, move(*, _*) = probe !transposition_table position in move);
+        pv_table.(0) <- (let _, _, _, move(*, _*) = probe position in move);
         let number_of_pv = min !multipv !number_of_legal_moves in
         let print_score_table = Array.make number_of_pv "cp 0" in
         let short_pv_table = Array.make (!threads_number * number_of_pv) [] in
