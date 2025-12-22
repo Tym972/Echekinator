@@ -181,7 +181,7 @@ let rec pvs stack ordering_tables thread depth ply alpha beta ispv =
                 if score >= !beta0 then begin
                   no_cut := false;
                   if isquiet move stack.(ply + 1).last_capture then begin
-                    ordering_tables.history_moves.(4096 * aux_history position.white_to_move + 64 * from move + to_ move) <- depth * depth;
+                    ordering_tables.history_moves.(aux_history position.white_to_move move) <- depth * depth;
                     ordering_tables.killer_moves.(2 * ply + 1) <- ordering_tables.killer_moves.(2 * ply);
                     ordering_tables.killer_moves.(2 * ply) <- !best_move
                   end
@@ -322,7 +322,7 @@ let root_search stack ordering_tables thread in_check depth alpha beta first_mov
       if score >= !beta0 then begin
         no_cut := false;
         if isquiet move stack.(1).last_capture then begin
-          ordering_tables.history_moves.(4096 * aux_history position.white_to_move + 64 * from move + to_ move) <- depth * depth;
+          ordering_tables.history_moves.(aux_history position.white_to_move move) <- depth * depth;
           ordering_tables.killer_moves.(1) <- ordering_tables.killer_moves.(0);
           ordering_tables.killer_moves.(0) <- !best_move
         end

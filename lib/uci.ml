@@ -417,19 +417,29 @@ let go instructions position king_position in_check =
         end
       end
 
-let checkers board white_to_move =
-  let position_roi = (index_array board (king white_to_move)) in
-  let rec aux list = match list with
-    |[] -> ""
-    |move :: t -> if to_ move = position_roi then coord.(from move) ^ " " ^ aux t else aux t
-  in let moves,_ = (*pseudo_legal_moves board (not white_to_move) (index_array board (king (not white_to_move)))*) [],[]
-  in aux moves
+let checkers position king_position in_check =
+  let squares = ref "" in
+  let aux_promotion move = match move with
+    |Promotion {from = _; to_ = _; promotion} when abs promotion <> 2-> false
+    |_ -> true
+  in if in_check then begin
+    position.white_to_move <- not position.white_to_move;
+    let moves, number_of_moves = legal_moves position (index_array position.board (king position.white_to_move)) false in
+    for i = 0 to !number_of_moves - 1 do
+      let move = moves.(i) in
+      if to_ move = king_position && aux_promotion move then begin
+        squares := !squares ^ coord.(from move) ^ " "
+      end;
+    done;
+    position.white_to_move <- not position.white_to_move;
+  end;
+  !squares
 
-let display position move_counter =
+let display position king_position in_check move_counter =
   print_board position.board;
   print_endline (Printf.sprintf "Fen: %s" (fen position move_counter));
   print_endline (Printf.sprintf "Key: %i" position.zobrist_position);
-  print_endline (Printf.sprintf "Checkers: %s" (checkers position.board position.white_to_move))
+  print_endline (Printf.sprintf "Checkers: %s" (checkers position king_position in_check))
 
 (*Fonction lançant le programme*)
 let echekinator () =
@@ -477,7 +487,7 @@ let echekinator () =
         for thread = 0 to !threads_number - 1 do
           stop_search.(thread) <- true
         done;
-      |"d" -> display position !move_counter
+      |"d" -> display position !king_position !in_check !move_counter
       |"eval" ->
         let eval = (float_of_int (hce {position with white_to_move = true})) /. 100. in
         print_endline ("HCE Evaluation : " ^ (if eval > 0. then "+" else "") ^ string_of_float eval ^ " (white side)")

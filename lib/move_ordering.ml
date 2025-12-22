@@ -397,9 +397,20 @@ type ordering_tables = {
   history_moves : int array
 }
 
-let aux_history white_to_move =
-  if white_to_move then 0 else 1
-
+let aux_history white_to_move move =
+  let white_to_move_int = if white_to_move then 0 else 1 in
+  match move with
+  |Normal {piece = _; from; to_} | Enpassant {from; to_} | Promotion {from; to_; promotion = _} ->
+    4096 * white_to_move_int + 64 * from + to_
+  |Castling {sort} ->
+    4096 * white_to_move_int + 64 * (if sort < 3 then !from_white_king else !from_black_king) +
+    (match sort with
+      |1 -> 62
+      |2 -> 58
+      |3 -> 6
+      |_ -> 2)
+  |_ -> (-1)
+  
 (*let g move = match move with |Normal _ -> true |_ -> false*)
 
 let move_ordering ordering_tables (position : position) player_moves number_of_moves ply hash_move ordering_array =
@@ -435,7 +446,7 @@ let move_ordering ordering_tables (position : position) player_moves number_of_m
         ordering_array.(move_index) <- 1000000
       end
       else begin
-        ordering_array.(move_index) <- ordering_tables.history_moves.(4096 * aux_history position.white_to_move + 64 * from move + to_ move)
+        ordering_array.(move_index) <- ordering_tables.history_moves.(aux_history position.white_to_move move)
       end
     end
     else begin
