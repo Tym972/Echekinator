@@ -3,7 +3,7 @@
  (modules
   board
   generator
-  traduction
+  translation
   fen
   zobrist
   move_ordering

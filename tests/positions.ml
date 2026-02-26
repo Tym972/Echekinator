@@ -149,3 +149,5 @@ let position15 = "n1n5/1Pk5/8/8/8/8/5Kp1/5N1N b - - 0 1"
 let position16 = "8/PPPk4/8/8/8/8/4Kppp/8 b - - 0 1"
 let position17 = "n1n5/PPPk4/8/8/8/8/4Kppp/5N1N b - - 0 1"
 let perft_test = [standard; kiwipete; position3; position4; position5; position6; position7; position8; position9; position10; position11; position12; position13; position14; position15; position16; position17]
+
+let london1= "r1b2r2/5p1k/1pn1pBp1/p2pP2p/q7/2P2P2/P2QBKP1/R4R2 b - - 2 23"

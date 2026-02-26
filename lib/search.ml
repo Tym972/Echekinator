@@ -6,7 +6,7 @@ open Move_ordering
 open Transposition
 open Quiescence
 open Evaluation
-open Traduction
+open Translation
 
 let zugzwang board white_to_move =
   let player_sign = if white_to_move then 1 else (-1) in

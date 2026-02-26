@@ -2,7 +2,7 @@
 
 open Board
 open Generator
-open Traduction
+open Translation
 open Zobrist
 
 (*Tableau contenant la représentation algébrique des pièces*)
