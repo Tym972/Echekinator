@@ -64,5 +64,10 @@ let zobrist_chessboard =
     };
     half_moves = 0;
     zobrist_position = 0;
-    last_capture = 0
+    last_capture = 0;
+    king_positions = {
+      king_to_move = !from_white_king;
+      king_not_to_move = !from_black_king
+    };
+    in_check = false
   }

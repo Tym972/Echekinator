@@ -48,8 +48,6 @@ let rec pvs stack ordering_tables thread depth ply alpha beta ispv =
 
   (*Normal search*)
   else begin
-    let king_position = index_array position.board (king position.white_to_move) in
-    let in_check = threatened position.board king_position in
     (*let bg = Array.copy accumulator in Array.blit bg 0 accumulator 0 n;*)
     (*vector board;
     if evaluate () <> make_output_layer board_vector then begin
@@ -59,7 +57,7 @@ let rec pvs stack ordering_tables thread depth ply alpha beta ispv =
     end; *)
 
     (*Check repetion or fifty moves rule*)
-    if repetition stack ply || (position.half_moves = 100 && (not in_check || (let _, number_of_moves = legal_moves position king_position in_check in !number_of_moves <> 0))) then begin
+    if repetition stack ply || (position.half_moves = 100 && (not position.in_check || (let _, number_of_moves = legal_moves position in !number_of_moves <> 0))) then begin
       if main_thread && ispv then begin
         pv_length.(ply) <- 0
       end;
@@ -99,7 +97,7 @@ let rec pvs stack ordering_tables thread depth ply alpha beta ispv =
         if !no_cut then begin
           
           (*Reverse futility pruning and null move pruning*)
-          if not (in_check || ispv || is_loss !beta0 || zugzwang position.board position.white_to_move) then begin
+          if not (position.in_check || ispv || is_loss !beta0 || zugzwang position.board position.white_to_move) then begin
             let static_eval = hce position in
             (*let _ = evaluate () in*)
             if depth < 3 then begin
@@ -146,7 +144,7 @@ let rec pvs stack ordering_tables thread depth ply alpha beta ispv =
                             0.20 +. log (float_depth) *. log (float_counter) /. 3.35
                         end)
                         (depth - 1)
-                    in if not (in_check || depth < 3 || reduction = 0) then begin
+                    in if not (position.in_check || depth < 3 || reduction = 0) then begin
                       - pvs stack ordering_tables thread (depth - 1 - reduction) (ply + 1) (- !alpha0 - 1) (- !alpha0) false
                     end
                     else
@@ -192,7 +190,7 @@ let rec pvs stack ordering_tables thread depth ply alpha beta ispv =
             in if hash_move <> Null then begin
               move_loop hash_move;
               if !no_cut then begin
-                let legal_moves, number_of_legal_moves = legal_moves position king_position in_check in
+                let legal_moves, number_of_legal_moves = legal_moves position in
                 let ordering_array = Array.make !number_of_legal_moves 0 in
                 move_ordering ordering_tables position legal_moves number_of_legal_moves ply hash_move ordering_array;
                 while !no_cut && !number_of_legal_moves > 0 do
@@ -201,7 +199,7 @@ let rec pvs stack ordering_tables thread depth ply alpha beta ispv =
               end
             end
             else begin
-              let legal_moves, number_of_legal_moves = legal_moves position king_position in_check in
+              let legal_moves, number_of_legal_moves = legal_moves position in
               let ordering_array = Array.make !number_of_legal_moves 0 in
               move_ordering ordering_tables position legal_moves number_of_legal_moves ply Null ordering_array;
               while !no_cut && !number_of_legal_moves > 0 do
@@ -212,7 +210,7 @@ let rec pvs stack ordering_tables thread depth ply alpha beta ispv =
               if main_thread && ispv then begin
                 pv_length.(ply) <- 0
               end;
-              if in_check then begin
+              if position.in_check then begin
                 best_score := ply - 99999
               end 
               else begin
@@ -256,7 +254,22 @@ let rec pvs stack ordering_tables thread depth ply alpha beta ispv =
     end
   end
 
-let root_search stack ordering_tables thread in_check depth alpha beta first_move legal_moves number_of_legal_moves short_pv_table multi number_of_pv =
+type pv_info = {
+  depth : int;
+  score : int;
+  pv : move list;
+  }
+
+type search_result = {
+  mutable pvs : pv_info array;
+  }
+
+let results =
+  ref (Array.init !threads_number (fun _ ->
+    { pvs = Array.make !multipv { depth = 0; score = 0; pv = [] } })
+  )
+
+let root_search stack ordering_tables thread depth alpha beta first_move legal_moves number_of_legal_moves multi =
   let main_thread = thread = 0 in
   let position = stack.(0) in
   node_counter.(thread) <- node_counter.(thread) + 1;
@@ -286,7 +299,7 @@ let root_search stack ordering_tables thread in_check depth alpha beta first_mov
                   0.20 +. log (float_depth) *. log (float_counter) /. 3.35
               end)
               (depth - 1)
-          in if not (in_check || depth < 3 || reduction = 0) then begin
+          in if not (position.in_check || depth < 3 || reduction = 0) then begin
             - pvs stack ordering_tables thread (depth - 1 - reduction) 1 (- !alpha0 - 1) (- !alpha0) false
           end
           else
@@ -314,7 +327,12 @@ let root_search stack ordering_tables thread in_check depth alpha beta first_mov
           done;
           pv_length.(0) <- pv_length.(1) + 1;
         end;
-        short_pv_table.(thread * number_of_pv + multi) <- pv_finder depth
+        if main_thread then begin
+          !results.(0).pvs.(multi) <- {depth = depth; score = score; pv = pv_finder depth}
+        end
+        else begin
+          !results.(thread).pvs.(multi) <- {depth = depth; score = 0; pv = [pv_table.(0)]}
+        end
       end;
       if score > !alpha0 then begin
         alpha0 := score;

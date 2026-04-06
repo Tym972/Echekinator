@@ -260,7 +260,7 @@ let valid_castlings position castlings =
   end
 
 (*Fonction traduisant une position FEN en l'int array correspondant. Par défaut si non rensigné, le trait est au blancs, il n'y a plus de castlings, pas de capture en passant, aucun coup joué*)
-let position_of_fen chain position king_position in_check move_counter =
+let position_of_fen chain position move_counter =
   let split_fen = ref (word_detection chain) in
   let fen_length = List.length !split_fen in
   let pieces_position = (List.nth !split_fen 0) in
@@ -276,13 +276,19 @@ let position_of_fen chain position king_position in_check move_counter =
     in List.rev (aux [] longueur)
   in split_fen := !split_fen @ (complete fen_length);
   if List.nth !split_fen 1 = "w" then begin
-    king_position := index_array position.board (king true);
-    in_check := threatened position.board !king_position
+    position.king_positions <- { 
+      king_to_move = index_array position.board (king true);
+      king_not_to_move = index_array position.board (king false)
+    };
+    position.in_check <- threatened position.board position.king_positions.king_to_move
   end
   else begin
     position.white_to_move <- false;
-    king_position := index_array position.board (king false);
-    in_check := threatened position.board !king_position
+    position.king_positions <- { 
+      king_to_move = index_array position.board (king false);
+      king_not_to_move = index_array position.board (king true)
+    };
+    position.in_check <- threatened position.board position.king_positions.king_to_move
   end;
   let ep_square_string = (List.nth !split_fen 3) in
   if ep_square_string <> "-" then begin

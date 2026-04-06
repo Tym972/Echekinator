@@ -27,8 +27,6 @@ let repetition stack ply =
   done;
   !repeat
 
-(*open Evaluation*)
-
 (*Fonction implémentant la recherche quiescente*)
 let rec quiescence_search stack thread depth ply alpha beta ispv =
 
@@ -39,11 +37,9 @@ let rec quiescence_search stack thread depth ply alpha beta ispv =
 
   else begin
     let position = stack.(ply) in
-    let king_position = index_array position.board (king position.white_to_move) in
-    let in_check = threatened position.board king_position in
 
     (*Check repetion or fifty moves rule*)
-    if repetition stack ply || (position.half_moves = 100 && (not in_check || (let _, number_of_moves = legal_moves position king_position in_check in !number_of_moves <> 0))) then begin
+    if repetition stack ply || (position.half_moves = 100 && (not position.in_check || (let _, number_of_moves = legal_moves position in !number_of_moves <> 0))) then begin
       0
     end
 
@@ -62,7 +58,7 @@ let rec quiescence_search stack thread depth ply alpha beta ispv =
       if !no_cut then begin
 
         (*Static eval*)
-        if not in_check then begin
+        if not position.in_check then begin
           best_score := hce position;
         end;
 
@@ -93,9 +89,9 @@ let rec quiescence_search stack thread depth ply alpha beta ispv =
             incr counter
 
           (*If in check search for all moves*)
-          in if in_check then begin
+          in if position.in_check then begin
             let move_loop_in_check () =
-              let legal_moves, number_of_legal_moves = legal_moves position king_position in_check in
+              let legal_moves, number_of_legal_moves = legal_moves position in
               let i = ref 0 in
               while !no_cut && !i < !number_of_legal_moves do
                 move_loop legal_moves.(!i);

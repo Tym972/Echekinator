@@ -213,6 +213,11 @@ let threads_number = ref 1
 let min_threads_number = 1
 let max_threads_number = 1024
 
+(*Variables MultiPV*)
+let multipv = ref 1
+let min_multipv = 1
+let max_multipv = 256
+
 (*Variable used to forcefully stop the search*)
 let stop_search = Array.make max_threads_number false
 
@@ -244,6 +249,11 @@ type castling_rights = {
   black_long : bool
 }
 
+type king_positions = {
+  king_to_move : int;
+  king_not_to_move : int
+}
+
 type position = {
   board : int array;
   mutable white_to_move : bool;
@@ -251,7 +261,9 @@ type position = {
   mutable castling_rights : castling_rights;
   mutable half_moves : int;
   mutable zobrist_position : int;
-  mutable last_capture : int
+  mutable last_capture : int;
+  mutable king_positions : king_positions;
+  mutable in_check : bool
 }
 
 let start_time = ref (Mtime_clock.counter ())
