@@ -135,7 +135,7 @@ let moves, number_of_moves = legal_moves position
 
 let number_of_pv = ref 1
 
-let best_line_number = ref (-1)
+let best_line_id = ref (-1)
 
 let inialize_stacks () =
   for thread = 0 to !threads_number - 1 do
@@ -154,67 +154,6 @@ let inialize_stacks () =
       in_check = position.in_check
     }
   done
-
-let setoption instructions =
-  let type_check instructions boolean =
-    match instructions with
-    |_ :: _ :: _ :: "value" :: value :: _ -> begin try boolean := (bool_of_string value) with _ -> () end
-    |_ -> ()
-  in 
-  let type_spin instructions variable min_value max_value =
-    match instructions with
-    |_ :: _ :: _ :: "value" :: value :: _ ->
-      let value = try int_of_string value with _ -> !variable
-      in if min_value <= value && value <= max_value then begin
-        variable := value
-      end
-    |_ -> ()
-  in match (List.tl instructions) with
-    |"name" :: "Ponder" :: _ -> type_check instructions option_ponder
-    |"name" :: "UCI_Chess960" :: _ -> type_check instructions chess_960
-    |"name" :: "Clear" :: "Hash" :: _ -> reset_hash ()
-    |"name" :: "MultiPV" :: _ ->
-      type_spin instructions multipv min_multipv max_multipv;
-      results :=
-        (Array.init !threads_number (fun _ ->
-          { pvs = Array.make !multipv { depth = 0; score = 0; pv = [] } })
-        )
-    |"name" :: "Hash" :: _ ->
-      type_spin instructions hash_size min_hash_size max_hash_size;
-      slots := (!hash_size * 1024 * 1024) / entry_size;
-      transposition_table := Array.make !slots empty_entry;
-    |"name" :: "Threads" :: _ ->
-      type_spin instructions threads_number min_threads_number max_threads_number;
-      results :=
-        (Array.init !threads_number (fun _ ->
-          { pvs = Array.make !multipv { depth = 0; score = 0; pv = [] } })
-        );
-      boards := Array.init !threads_number (fun _ -> Array.copy chessboard);
-      stacks :=
-        Array.init !threads_number begin
-          fun i ->
-            Array.init (max_pv_length + 40)
-              (fun _ ->
-                { board = !boards.(i);
-                  white_to_move = true;
-                  ep_square = (-1);
-                  castling_rights = {
-                    white_short = true;
-                    white_long = true;
-                    black_short = true;
-                    black_long = true};
-                  half_moves = 0;
-                  zobrist_position = 0;
-                  last_capture = 0;
-                  king_positions = {
-                    king_to_move = !from_white_king;
-                    king_not_to_move = !from_black_king
-                  };
-                  in_check = false
-                })
-          end;
-      inialize_stacks ()
-    |_ -> ()
 
 let reset_position position move_counter =
   for i = 0 to 63 do
@@ -400,13 +339,13 @@ let iterative_deepening stack ordering_tables depth mate thread =
       let time =  (int_of_float (1000. *. exec_time)) in
       let order_of_multi = ref [] in
       for multi = 0 to !number_of_pv - 1 do
-        if !results.(thread).pvs.(multi).depth = !var_depth then begin
-          order_of_multi := (!results.(thread).pvs.(multi).score, multi) :: !order_of_multi
+        if !results.(0).pvs.(multi).depth = !var_depth then begin
+          order_of_multi := (!results.(0).pvs.(multi).score, multi) :: !order_of_multi
         end
       done;
       order_of_multi := merge_sort !order_of_multi;
       begin try
-        best_line_number := snd (List.hd !order_of_multi) with _ -> ()
+        best_line_id := snd (List.hd !order_of_multi) with _ -> ()
       end;
       let rec printer variations already_printed = match variations with
         |[] -> ()
@@ -419,34 +358,109 @@ let iterative_deepening stack ordering_tables depth mate thread =
     end;
   done
 
-(*let domains = ref [||]
+let (domains : unit Domain.t array ref) = ref [||]
 
 let domain_mutex = Mutex.create ()
 let domain_cond = Condition.create ()
 
 let work_available = ref false
-let stop_domains = ref false
+let jobs_remaining = ref 0
+
+let current_job = ref 0
 
 let domain_loop thread_id =
-  while not !stop_domains do
+  let my_job = ref (-1) in
+  while thread_id < !threads_number do
     Mutex.lock domain_mutex;
-    while not !work_available do
-      Condition.wait domain_cond domain_mutex
-    done;
+      while not !work_available || (!current_job = !my_job) do
+        Condition.wait domain_cond domain_mutex
+      done;
+      my_job := !current_job;
     Mutex.unlock domain_mutex;
+    iterative_deepening !stacks.(thread_id) {killer_moves = Array.copy killer_moves; history_moves = Array.copy history_moves} max_depth (-1) thread_id;
+    Mutex.lock domain_mutex;
+      decr jobs_remaining;
+      if !jobs_remaining = 0 then begin
+        work_available := false;
+        Condition.signal domain_cond
+      end;
+    Mutex.unlock domain_mutex;
+  done
 
-    (* Travail de recherche *)
-    iterative_deepening !stacks.(thread_id)
-      { killer_moves = Array.copy killer_moves;
-        history_moves = Array.copy history_moves }
-      thread_id
-  done*)
-
-  (*Array.init (!threads_number - 1) (fun i ->
-    Domain.spawn (fun () ->
-      iterative_deepening !stacks.(i+1) {killer_moves = Array.copy ordering_tables.killer_moves; history_moves = Array.copy ordering_tables.history_moves} (i+1)
-    )
-  *)
+let setoption instructions =
+  let type_check instructions boolean =
+    match instructions with
+    |_ :: _ :: _ :: "value" :: value :: _ -> begin try boolean := (bool_of_string value) with _ -> () end
+    |_ -> ()
+  in
+  let value_of_instructions instructions = match instructions with
+    |_ :: _ :: _ :: "value" :: value :: _ -> (try int_of_string value with _ -> (-1))
+    |_ -> (-1)
+  in let type_spin value variable min_value max_value =
+    if min_value <= value && value <= max_value then begin
+      variable := value
+    end
+  in match (List.tl instructions) with
+    |"name" :: "Ponder" :: _ -> type_check instructions option_ponder
+    |"name" :: "UCI_Chess960" :: _ -> type_check instructions chess_960
+    |"name" :: "Clear" :: "Hash" :: _ -> reset_hash ()
+    |"name" :: "MultiPV" :: _ ->
+      let value = value_of_instructions instructions in
+      if value <> !multipv then begin
+        type_spin value multipv min_multipv max_multipv;
+        results :=
+          (Array.init !threads_number (fun _ ->
+            { pvs = Array.make !multipv { depth = 0; score = 0; pv = [] } })
+          )
+        end
+    |"name" :: "Hash" :: _ ->
+      let value = value_of_instructions instructions in
+      if value <> !hash_size then begin
+        type_spin value hash_size min_hash_size max_hash_size;
+        slots := (!hash_size * 1024 * 1024) / entry_size;
+        transposition_table := Array.make !slots empty_entry;
+      end
+    |"name" :: "Threads" :: _ ->
+      let value = value_of_instructions instructions in
+      if value <> !threads_number then begin
+        let old_value = !threads_number in
+        type_spin value threads_number min_threads_number max_threads_number;
+        if value > old_value then begin
+          results :=
+            (Array.init !threads_number (fun _ ->
+              { pvs = Array.make !multipv { depth = 0; score = 0; pv = [] } })
+            );
+          boards := Array.init !threads_number (fun _ -> Array.copy chessboard);
+          stacks :=
+            Array.init !threads_number begin
+              fun i ->
+                Array.init (max_pv_length + 40)
+                  (fun _ ->
+                    { board = !boards.(i);
+                      white_to_move = true;
+                      ep_square = (-1);
+                      castling_rights = {
+                        white_short = true;
+                        white_long = true;
+                        black_short = true;
+                        black_long = true};
+                      half_moves = 0;
+                      zobrist_position = 0;
+                      last_capture = 0;
+                      king_positions = {
+                        king_to_move = !from_white_king;
+                        king_not_to_move = !from_black_king
+                      };
+                      in_check = false
+                    })
+              end;
+          inialize_stacks ();
+          domains := Array.init (!threads_number - old_value) (fun id ->
+            Domain.spawn (fun () -> domain_loop (id + old_value))
+          )
+        end
+      end
+    |_ -> ()
 
 (*Answer to the command "go"*)
 let go instructions position =
@@ -477,6 +491,7 @@ let go instructions position =
     binc := 0.;
     movestogo := 500.;
     movetime := (9. *. 10e8);
+    node_limit := max_int;
     let depth = ref max_depth in
     let mate = ref (-1) in
     let aux_searchmoves list =
@@ -523,22 +538,29 @@ let go instructions position =
     if not !is_pondering then begin
       time_management !wtime !btime !winc !binc !movetime position.white_to_move !movestogo soft_bound hard_bound
     end;
-    pv_table.(0) <- (let _, _, _, move(*, _*) = probe position in move);
     number_of_pv := min !multipv !number_of_moves;
     results :=
       (Array.init !threads_number (fun _ ->
-        { pvs = Array.make !multipv { depth = 0; score = 0; pv = [] } })
+        {pvs = Array.make !number_of_pv {depth = 0; score = 0; pv = []}})
       );
+    if !threads_number > 1 then begin
+      Mutex.lock domain_mutex;
+        incr current_job;
+        jobs_remaining := !threads_number - 1;
+        work_available := true;
+        Condition.broadcast domain_cond;
+      Mutex.unlock domain_mutex
+    end;
     iterative_deepening !stacks.(0) ordering_tables !depth !mate 0;
     for thread = 1 to !threads_number - 1 do
       stop_search.(thread) <- true
     done;
-    if !best_line_number = (-1) then begin
+    if !best_line_id = (-1) then begin
       print_endline ("info depth 0 score cp 0" ^ "\n" ^ "bestmove (none)");
     end
     else begin
-      let print_bestmove = "bestmove " ^ try (uci_of_mouvement (List.hd !results.(0).pvs.(!best_line_number).pv)) with _ -> "(none)" in
-      let print_ponder = try (" ponder " ^ uci_of_mouvement (List.nth !results.(0).pvs.(!best_line_number).pv 1)) with _ -> "" in
+      let print_bestmove = "bestmove " ^ try (uci_of_mouvement (List.hd !results.(0).pvs.(!best_line_id).pv)) with _ -> "(none)" in
+      let print_ponder = try (" ponder " ^ uci_of_mouvement (List.nth !results.(0).pvs.(!best_line_id).pv 1)) with _ -> "" in
       print_endline (print_bestmove ^ print_ponder)
     end
   end
@@ -572,14 +594,9 @@ let echekinator () =
   print_endline (project_name ^ " by Timothée Fixy");
   let move_counter = ref 0 in
   let exit = ref false in
-  let hot_command = ref false in
+  let hot_command = Mutex.create () in
   let process instruction =
-    while !hot_command do
-      ()
-    done;
-    hot_command := true;
-    instruction ();
-    hot_command := false
+    Mutex.protect hot_command instruction
   in while not !exit do
     let instructions = word_detection (lire_entree "" true) in
     match instructions with
