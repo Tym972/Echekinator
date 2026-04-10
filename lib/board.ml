@@ -158,12 +158,6 @@ let bishop player_is_white = if player_is_white then 3 else (-3)
 (*Function returning the representation of the player's pawn in the chessboard*)
 let pawn player_is_white = if player_is_white then 1 else (-1)
 
-(*Fonction indiquant si un move est irrémédiable (poussée de pion ou capture)*)
-let is_irreversible move capture = match move with
-  |Enpassant _ | Promotion _ -> true
-  |Normal {piece; from = _; to_ = _} when (abs piece = 1 || capture <> 0) -> true
-  |_ -> false
-
 let isquiet move capture = match move with
   |Normal {piece = _; from = _; to_ = _} when capture <> 0 -> false
   |Enpassant _ | Promotion _ -> false

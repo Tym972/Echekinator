@@ -1438,7 +1438,6 @@ let pinned_squares position pin_table =
 
 (*Fonction construisant une list des moves légaux du joueur*)
 let legal_moves position =
-  
   let moves = Array.make 256 Null in
   let number_of_moves = ref 0 in
   let king_moves_index = ref (0,0) in

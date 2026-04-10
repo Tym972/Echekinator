@@ -478,7 +478,7 @@ let move_picker moves ordering_array number_of_moves =
   remove_move !max_index moves number_of_moves;
   move
 
-  (*Tri les coups selon leur potentiel SEE en supprimant ceux dont cette évaluation est négative*)
+(*Tri les coups selon leur potentiel SEE en supprimant ceux dont cette évaluation est négative*)
 let tri_see liste position hash_move =
   begin
     let rec association liste_coups =

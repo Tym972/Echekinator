@@ -38,7 +38,7 @@ let precision_piece board from to_ player_legal_moves piece vect_piece =
     while (tab120.(tab64_square + (!k * dir)) <> (-1) && !iterate) do
       let candidate = tab120.(tab64_square + (!k * dir)) in
       let dest = board.(candidate) in
-      if (dest = piece && candidate <> from && (List.mem (Normal {piece = piece; from = candidate; to_; capture = board.(to_)}) player_legal_moves)) then begin
+      if (dest = piece && candidate <> from && (List.mem (Normal {piece = piece; from = candidate; to_}) player_legal_moves)) then begin
         antecedent := coord.(candidate) :: !antecedent;
         iterate := false
       end
@@ -63,7 +63,7 @@ let knight_precision board from to_ white_to_move player_legal_moves =
     let dir = knight_vect.(i) in
     if tab120.(tab64_square + dir) <> (-1) then begin
       let candidate = tab120.(tab64_square + dir) in
-      if (board.(candidate) = knight && candidate <> from && (List.mem (Normal {piece = knight; from = candidate; to_; capture = board.(to_)}) player_legal_moves)) then begin
+      if (board.(candidate) = knight && candidate <> from && (List.mem (Normal {piece = knight; from = candidate; to_}) player_legal_moves)) then begin
         antecedent := coord.(candidate) :: !antecedent;
       end
     end
@@ -113,25 +113,26 @@ let algebraic_of_promotion from to_ promotion =
 let algebraic_of_move move board player_legal_moves = match move with
   |Enpassant {from = from; to_ = to_} -> String.sub coord.(from) 0 1 ^ "x" ^ coord.(to_) ^ "ep"
   |Castling {sort} -> if sort mod 2 = 1 then "0-0" else "0-0-0"
-  |Normal {piece = piece; from = from; to_ = to_; capture} -> algebraic_of_normal piece from to_ capture board player_legal_moves
-  |Promotion {from = from; to_ = to_; promotion = promotion; capture = _} -> algebraic_of_promotion from to_ promotion
+  |Normal {piece = piece; from = from; to_ = to_} -> algebraic_of_normal piece from to_ capture board player_legal_moves
+  |Promotion {from = from; to_ = to_; promotion = promotion} -> algebraic_of_promotion from to_ promotion
   |_ -> ""
 
 
 (*Fonction renvoyant le statut de la partie (2 si elle est en cours, 0 si il y a pat, 1 si les blancs l'emportent, -1 si les noirs l'emportent)*)
-let win board white_to_move last_move king_position in_check =
+let win position =
   let winner = ref 2 in
-  if white_to_move then begin
-    if (legal_moves board white_to_move last_move (false, false, false, false) king_position in_check) = [] then begin
-      if threatened board (index_array board 6) true then
+  let _, number_of_moves = legal_moves position in
+  if position.white_to_move then begin
+    if !number_of_moves = 0 then begin
+      if threatened position.board position.king_positions.king_to_move then
         winner := -1
       else
         winner := 0
     end
   end
   else begin
-    if (legal_moves board white_to_move last_move (false, false, false, false) king_position in_check) = [] then begin
-      if threatened board (index_array board (-6)) false then
+    if !number_of_moves = 0 then begin
+      if threatened position.board position.king_positions.king_to_move then
         winner := 1
       else
         winner := 0
@@ -152,8 +153,8 @@ let san_of_move_list list start_position initial_last_move initial_castling_righ
   let counter = ref 1 in
   while !moves_list <> [] do
     let king_position = index_array board (king !white_to_move) in
-    let in_check = threatened board king_position !white_to_move in
-    let player_legal_moves = legal_moves board !white_to_move !last_move !castling_right king_position in_check in
+    let in_check = threatened board king_position in
+    let player_legal_moves = legal_moves position in
     let move = List.hd !moves_list in
     moves_list := List.tl !moves_list;
     if move <> Null then begin
@@ -166,7 +167,7 @@ let san_of_move_list list start_position initial_last_move initial_castling_righ
         word := !word ^ " " ^ algebraic_of_move move board player_legal_moves
       end;
       make_move_1 board move white_to_move last_move castling_right;
-      if threatened board (index_array board (king !white_to_move)) !white_to_move then begin
+      if threatened position.board (index_array board (king !white_to_move)) then begin
         word := !word ^ "+"
       end;
       if !moves_list <> [] then begin
@@ -181,7 +182,7 @@ let san_of_move_list list start_position initial_last_move initial_castling_righ
         end
       end
       else begin
-        if (win board !white_to_move move king_position in_check) = lose !white_to_move then begin
+        if (win position) = lose !white_to_move then begin
           let result = if !white_to_move then "0-1" else "1-0" in
           word := String.sub !word 0 (String.length !word - 1) ^ "# " ^ result
         end

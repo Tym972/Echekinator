@@ -20,7 +20,7 @@ let () =
   done
 
 (*Fonction de hachage*)
-let zobrist (position : position) =
+let zobrist position =
   let h = ref 0 in
   for i = 0 to 63 do
     let piece = position.board.(i) in

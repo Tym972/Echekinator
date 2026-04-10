@@ -331,7 +331,7 @@ let root_search stack ordering_tables thread depth alpha beta first_move legal_m
           !results.(0).pvs.(multi) <- {depth = depth; score = score; pv = pv_finder depth}
         end
         else begin
-          !results.(thread).pvs.(multi) <- {depth = depth; score = 0; pv = [pv_table.(0)]}
+          !results.(thread).pvs.(multi) <- {depth = depth; score = 0; pv = [move]}
         end
       end;
       if score > !alpha0 then begin

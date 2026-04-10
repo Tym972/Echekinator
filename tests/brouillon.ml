@@ -17,13 +17,39 @@ fastchess  -openings order=random file=/home/tym972/openbench-books-master/UHO_L
 fastchess  -openings order=random file=/home/tym972/openbench-books-master/UHO_Lichess_4852_v1.epd  -engine name=new cmd=/home/tym972/Echekinator/_build/default/bin/echekinator.exe  -engine name=base cmd=/home/tym972/Base/_build/default/bin/echekinator.exe  -concurrency 1   -each tc=600  option.Threads=16 option.Hash=512  -rounds 8000 -repeat -recover   -sprt alpha=0.05 beta=0.10 elo0=-10 elo1=0 -pgnout file=/home/tym972/Pgn_fastchess.pgn -pgnout notation=san file=/home/tym972/Echekinator/Results/Pgn_fastchess.pgn -log file=/home/tym972/Echekinator/Results/fastchess.log level=info engine=true
 fastchess -config file=config.json -recover
 
-          begin
-            let fichier_sortie =  open_out_gen [Open_creat; Open_text; Open_append] 0o666 "Harry.txt" in
+         (*let gives_check move position =
+  let capture = ref 0 in
+  make_light position.board move capture;
+  let b = threatened position.board (position.king_positions.king_not_to_move) in
+  unmake position.board move !capture;
+  b
+
+let quiescence_moves position =
+  let moves, number_of_moves = legal_moves position in
+  let quiescence_moves = Array.make 256 Null in
+  let number_of_quiescence_moves = ref 0 in
+  for i = 0 to !number_of_moves - 1 do
+    let move = moves.(i) in
+    if not (isquiet move position.board.(to_ move)) then begin
+      quiescence_moves.(!number_of_quiescence_moves) <- move;
+      incr number_of_quiescence_moves
+    end
+    else begin
+      if gives_check move position then begin
+        quiescence_moves.(!number_of_quiescence_moves) <- move;
+        incr number_of_quiescence_moves
+      end;
+    end
+  done;
+  quiescence_moves, number_of_quiescence_moves*)
+
+begin
+            let fichier_sortie = open_out_gen [Open_creat; Open_text; Open_append] 0o666 "Harry.txt" in
             let ma_chaine =
               Printf.sprintf
                 "fen : %s; zobrist : %i; node_counter : %i; best_score : %i; alpha : %i; beta : %i; depth : %i; bestmove : %s\n"
-                (Fen.fen position []) position.zobrist_position node_counter.(0) !best_score alpha beta depth
-                (Traduction.uci_of_mouvement !best_move)
+                (Fen.fen position 0) position.zobrist_position node_counter.(0) !best_score alpha beta depth
+                (Translation.uci_of_mouvement !best_move)
             in output_string fichier_sortie ma_chaine;
             close_out fichier_sortie
           end;

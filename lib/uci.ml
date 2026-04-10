@@ -72,7 +72,7 @@ let movestogo = ref 500.
 let movetime = ref (9. *. 10e8)
 
 let reset_hash () =
-  clear ();
+  clear !tt;
   go_counter := 0;
   for i = 0 to 8191 do
     history_moves.(i) <- 0
@@ -130,6 +130,8 @@ let position =
     };
     in_check = false
   }
+
+let move_counter = ref 0
 
 let moves, number_of_moves = legal_moves position
 
@@ -418,7 +420,7 @@ let setoption instructions =
       if value <> !hash_size then begin
         type_spin value hash_size min_hash_size max_hash_size;
         slots := (!hash_size * 1024 * 1024) / entry_size;
-        transposition_table := Array.make !slots empty_entry;
+        tt := create_tt !slots;
       end
     |"name" :: "Threads" :: _ ->
       let value = value_of_instructions instructions in
@@ -592,7 +594,6 @@ let display position move_counter =
 (*Fonction lançant le programme*)
 let echekinator () =
   print_endline (project_name ^ " by Timothée Fixy");
-  let move_counter = ref 0 in
   let exit = ref false in
   let hot_command = Mutex.create () in
   let process instruction =
