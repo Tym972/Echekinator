@@ -337,7 +337,7 @@ let iterative_deepening stack ordering_tables depth mate thread =
         let span = Mtime_clock.count !start_time in
         Mtime.Span.to_float_ns span /. 1e9
       in let nps = int_of_float (float_of_int (total_counter node_counter) /. exec_time) in
-      let hashfull = min 1000 (int_of_float (1000. *. (float_of_int (total_counter transposition_counter) /. (float_of_int !slots)))) in
+      let hashfull = min 1000 (int_of_float (1000. *. (float_of_int (total_counter transposition_counter) /. (Int64.to_float !slots)))) in
       let time =  (int_of_float (1000. *. exec_time)) in
       let order_of_multi = ref [] in
       for multi = 0 to !number_of_pv - 1 do
@@ -419,8 +419,8 @@ let setoption instructions =
       let value = value_of_instructions instructions in
       if value <> !hash_size then begin
         type_spin value hash_size min_hash_size max_hash_size;
-        slots := (!hash_size * 1024 * 1024) / entry_size;
-        tt := create_tt !slots;
+        slots := Int64.of_int ((!hash_size * 1024 * 1024) / entry_size);
+        tt := create_tt (Int64.to_int !slots);
       end
     |"name" :: "Threads" :: _ ->
       let value = value_of_instructions instructions in
@@ -447,7 +447,7 @@ let setoption instructions =
                         black_short = true;
                         black_long = true};
                       half_moves = 0;
-                      zobrist_position = 0;
+                      zobrist_position = 0L;
                       last_capture = 0;
                       king_positions = {
                         king_to_move = !from_white_king;
@@ -588,7 +588,7 @@ let checkers position =
 let display position move_counter =
   print_board position.board;
   print_endline (Printf.sprintf "Fen: %s" (fen position move_counter));
-  print_endline (Printf.sprintf "Key: %i" position.zobrist_position);
+  print_endline (Printf.sprintf "Key: %s" (Int64.to_string position.zobrist_position));
   print_endline (Printf.sprintf "Checkers: %s" (checkers position))
 
 (*Fonction lançant le programme*)

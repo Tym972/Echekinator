@@ -1,4 +1,72 @@
+open Libs.Bitboards
+open Libs.Board
 
+let b = [|0L; 0L; 0L; 0L; 0L; 0L; 0L; 0L; 0L; 0L; 0L; 0L |]
+
+let index_of_bitboard bitboard =
+  let index = ref [] in
+  if bitboard <> 0L then begin
+    for i = 0 to 63 do
+      if Int64.logand bitboard (Int64.shift_left 1L i) <> 0L then index := (63 - i) :: !index
+    done
+  end;
+  !index
+
+let mailbox_of_bitboard bitboard =
+  let mailbox = Array.make 64 0 in
+  let rec aux_1 mailbox index piece = match index with
+  |[] -> ()
+  |h::t ->
+    mailbox.(h) <- piece;
+    aux_1 mailbox t piece
+  in for i = 0 to 11 do
+    aux_1 mailbox (index_of_bitboard bitboard.(i)) pieces.(i)
+  done;
+  mailbox
+
+let bitboard_of_mailbox mailbox =
+  let bitboard = [|0L; 0L; 0L; 0L; 0L; 0L; 0L; 0L; 0L; 0L; 0L; 0L|]
+  in for i = 63 downto 0 do
+    let piece = mailbox.(i) in
+    if piece > 0 then begin
+      bitboard.(piece - 1) <- (Int64.logor) bitboard.(piece - 1) (Int64.shift_left 1L (63 - i))
+    end
+    else if piece < 0 then begin
+      bitboard.(5 - piece) <- (Int64.logor) bitboard.(5 - piece) (Int64.shift_left 1L (63 - i))
+    end
+  done;
+  bitboard
+
+let () =
+  let _ = bitboard_of_mailbox in
+  if true then begin
+    let aux bitboard =
+      let n = (Array.length bitboard) in
+      for i = 0 to n - 1 do
+      b.(1) <- set 0L i;
+        b.(2) <- (Int64.logor 0L bitboard.(i));
+        print_board (mailbox_of_bitboard b);
+      done;
+      print_endline (string_of_int n)
+    in aux white_pawn_attacks_table
+  end;
+  if false then begin
+    let bibi = (bishop_masks, bishop_blockers, bishop_moves, bishop_shifts, bishop_magics, bishop_table) in
+    let roro = (rook_masks, rook_blockers, rook_moves, rook_shifts, rook_magics, rook_table) in
+    let tab = [|bibi; roro|] in
+    let aux (masks, blockers, moves, shifts, magics, table) =
+      for square = 34 to 34 do
+        b.(2) <- masks.(square);
+        print_board (mailbox_of_bitboard b);
+        b.(2) <- (blockers.(square).(8));
+        print_board (mailbox_of_bitboard b);
+        b.(2) <- (moves.(square).(8));
+        print_board (mailbox_of_bitboard b);
+        b.(2) <- table.(square).(index magics.(square) (blockers.(square).(8)) shifts.(square));
+        print_board (mailbox_of_bitboard b)
+      done;
+    in aux tab.(1)
+  end
 
 (*position fen r3kb1r/ppp1qpp1/2np1n1p/1B2p3/3PP1b1/2N1BN2/PPP2PPP/R2QK2R b KQkq - 4 8 moves e5d4 e3d4 f6e4 c3d5 e7d7 d1e2 g4f5 b5d3 e8c8 e1c1 c6d4 f3d4 d8e8 d4f5 d7f5 h1e1 f5d5 d3e4 d5g5 c1b1 c8b8 e2f3 g5e7 e1e3 e7f6 e3b3 b7b6 e4c6 e8e7 f3f6 g7f6 c6d5 h8g8 b3d3 g8g5 d3d2 g5e5 f2f3 f8g7 h2h3 f6f5 c2c3 e5e1 a2a3 b6b5 b1c2 f7f6 f3f4 a7a6 d1e1 e7e1 d5f3 e1f1 d2d5 f1f2 c2b1 f2f1 b1c2 f1e1 b2b4 e1a1 d5f5 a1h1 f5d5 h1h2 c2b1 h2h1 d5d1 h1d1 f3d1 f6f5 d1c2 g7c3 c2f5 c7c5 b4c5 d6c5 b1c2 c3d4 f5d7 c5c4 d7c6 c4c3 c2d3 d4f6 f4f5 f6e5 d3c2 b8c7 c6d5 a6a5 h3h4 c7d6 d5f7 a5a4 f7e8 d6c5 h4h5 b5b4 a3b4 c5b4 e8f7 a4a3 f7e6 b4c5 e6f7 c5b4
 
@@ -16,6 +84,366 @@ fastchess  -openings order=random file=/home/tym972/openbench-books-master/UHO_L
 fastchess  -openings order=random file=/home/tym972/openbench-books-master/UHO_Lichess_4852_v1.epd  -engine name=new cmd=/home/tym972/Echekinator/_build/default/bin/echekinator.exe  -engine name=base cmd=/home/tym972/Base/_build/default/bin/echekinator.exe  -concurrency 16  -each nodes=20000 -rounds 8000 -repeat -recover   -sprt alpha=0.05 beta=0.10 elo0=-10 elo1=0 -pgnout file=/home/tym972/Pgn_fastchess.pgn -pgnout notation=san file=/home/tym972/Echekinator/Results/Pgn_fastchess.pgn -log file=/home/tym972/Echekinator/Results/fastchess.log level=info engine=true
 fastchess  -openings order=random file=/home/tym972/openbench-books-master/UHO_Lichess_4852_v1.epd  -engine name=new cmd=/home/tym972/Echekinator/_build/default/bin/echekinator.exe  -engine name=base cmd=/home/tym972/Base/_build/default/bin/echekinator.exe  -concurrency 1   -each tc=600  option.Threads=16 option.Hash=512  -rounds 8000 -repeat -recover   -sprt alpha=0.05 beta=0.10 elo0=-10 elo1=0 -pgnout file=/home/tym972/Pgn_fastchess.pgn -pgnout notation=san file=/home/tym972/Echekinator/Results/Pgn_fastchess.pgn -log file=/home/tym972/Echekinator/Results/fastchess.log level=info engine=true
 fastchess -config file=config.json -recover
+
+
+(*let rook_mobility board square =
+  let piece = board.(square) in
+  let tab64_square = tab64.(square) in
+  let mobility = ref 0 in
+  for i = 0 to 3 do
+    let direction = rook_vect.(i) in
+    let distance = ref 1 in
+    let iterate = ref true in
+    while (!iterate && tab120.(tab64_square + (!distance * direction)) <> (-1)) do
+      let attacker_square = tab120.(tab64_square + (!distance * direction)) in
+      let attacker = board.(attacker_square) in
+      if attacker = 0 then begin
+        incr mobility;
+        incr distance
+      end
+      else if piece * attacker > 0 then begin
+        iterate :=  false
+      end
+      else begin
+        incr mobility;
+        iterate :=  false
+      end
+    done
+  done;
+  !mobility * 4
+
+(*Fonction construisant une list des déplacements possible d'un fou*)
+let bishop_mobility board square =
+  let piece = board.(square) in
+  let tab64_square = tab64.(square) in
+  let mobility = ref 0 in
+  for i = 0 to 3 do
+    let direction = bishop_vect.(i) in
+    let distance = ref 1 in
+    let iterate = ref true in
+    while (!iterate && tab120.(tab64_square + (!distance * direction)) <> (-1)) do
+      let attacker_square = tab120.(tab64_square + (!distance * direction)) in
+      let attacker = board.(attacker_square) in
+      if attacker = 0 then begin
+        incr mobility;
+        incr distance
+      end
+      else if piece * attacker > 0 then begin
+        iterate :=  false
+      end
+      else begin
+        incr mobility;
+        iterate :=  false
+      end
+    done
+  done;
+  !mobility * 4
+
+(*Fonction construisant une list des déplacements possible d'un cavalier*)
+let knight_mobility board square =
+  let piece = board.(square) in
+  let tab64_square = tab64.(square) in
+  let mobility = ref 0 in
+  for i = 0 to 7 do
+    let direction = knight_vect.(i) in
+    if tab120.(tab64_square + direction) <> (-1) then begin
+      let attacker_square = tab120.(tab64_square + direction) in
+      let attacker = board.(attacker_square) in
+      if piece * attacker <= 0 then begin
+        incr mobility;
+      end
+    end
+  done;
+  !mobility * 4
+
+(*Fonction construisant une list des déplacements possible d'une dame*)
+let queen_mobility board square =
+  let piece = board.(square) in
+  let tab64_square = tab64.(square) in
+  let mobility = ref 0 in
+  for i = 0 to 7 do
+    let direction = king_vect.(i) in
+    let distance = ref 1 in
+    let iterate = ref true in
+    while (!iterate && tab120.(tab64_square + (!distance * direction)) <> (-1)) do
+      let attacker_square = tab120.(tab64_square + (!distance * direction)) in
+      let attacker = board.(attacker_square) in
+      if attacker = 0 then begin
+        incr mobility;
+        incr distance
+      end
+      else if piece * attacker > 0 then begin
+        iterate :=  false
+      end
+      else begin
+        incr mobility;
+        iterate :=  false
+      end
+    done
+  done;
+  !mobility * 2
+
+(*Fonction construisant une list des déplacements possible d'un roi*)
+let king_mobility board square =
+  let piece = board.(square) in
+  let tab64_square = tab64.(square) in
+  let mobility = ref 0 in
+  for i = 0 to 7 do
+    let direction = king_vect.(i) in
+    if tab120.(tab64_square + direction) <> (-1) then begin
+      let attacker_square = tab120.(tab64_square + direction) in
+      let attacker = board.(attacker_square) in
+      if piece * attacker <= 0 then begin
+        incr mobility;
+      end
+    end
+  done;
+  !mobility * 4
+
+(*Fonction construisant une list des déplacements possible d'un pion*)
+let pawn_mobility board square =
+  let piece = board.(square) in
+  let tab64_square = tab64.(square) in
+  let mobility = ref 0 in
+  if piece > 0 then begin
+    if ((square + 1) mod 8 <> 0) then begin
+      let attacker_square_3 = tab120.(tab64_square - 9) in
+      let attacker_3 = board.(attacker_square_3) in
+      if attacker_3 < 0 || attacker_3 = 1 then begin
+        incr mobility;
+      end
+    end;
+    if (square mod 8 <> 0) then begin
+      let attacker_square_4 = tab120.(tab64_square - 11) in
+      let attacker_4 = board.(attacker_square_4) in
+      if attacker_4 < 0 || attacker_4 = 1 then begin
+        incr mobility;
+      end
+    end
+  end
+  else begin
+    if (square mod 8 <> 0) then begin
+      let attacker_square_3 = tab120.(tab64_square + 9) in
+      let attacker_3 = board.(attacker_square_3) in
+      if attacker_3 > 0 || attacker_3 = (-1) then begin
+        incr mobility;
+      end
+    end;
+    if ((square + 1) mod 8 <> 0) then begin
+      let attacker_square_4 = tab120.(tab64_square + 11) in
+      let attacker_4 = board.(attacker_square_4) in
+      if attacker_4 > 0 || attacker_4 = (-1) then begin
+        incr mobility
+      end
+    end
+  end;
+  !mobility
+
+let mobility_tab = [|pawn_mobility; knight_mobility; bishop_mobility; rook_mobility; queen_mobility; king_mobility|]
+
+let hce position =
+  let white_pawns = ref [] in
+  let black_pawns = ref [] in
+  let white_pawns_file = [|0; 0; 0; 0; 0; 0; 0; 0|] in
+  let black_pawns_file = [|0; 0; 0; 0; 0; 0; 0; 0|] in
+  let white_rook_file = [|0; 0; 0; 0; 0; 0; 0; 0|] in
+  let black_rook_file = [|0; 0; 0; 0; 0; 0; 0; 0|] in
+  let white_bishops = ref 0 in
+  let black_bishops = ref 0 in
+  let mg_score = ref 0 in
+  let eg_score = ref 0  in
+  let gamephase = ref 0 in
+  for square = 0 to 63 do
+    let piece = position.board.(square) in
+    if piece > 0 then begin
+      let mob = mobility_tab.(piece - 1) position.board square in
+      mg_score := !mg_score + mg_table.(12 * square + (piece - 1)) + mob;
+      eg_score := !eg_score + eg_table.(12 * square + (piece - 1)) + mob;
+      gamephase := !gamephase + gamephase_table.(piece - 1);
+      if piece = 1 then begin
+        white_pawns := square :: !white_pawns;
+        white_pawns_file.(square mod 8) <- white_pawns_file.(square mod 8) + 1
+      end
+      else if piece = 3 then begin
+        incr white_bishops
+      end
+      else if piece = 4 then begin
+        white_rook_file.(square mod 8) <- white_rook_file.(square mod 8) + 1
+      end
+    end
+    else if piece < 0 then begin
+      let mob = mobility_tab.(- piece - 1) position.board square in
+      mg_score := !mg_score - mg_table.(12 * square + (5 - piece)) - mob;
+      eg_score := !eg_score - eg_table.(12 * square + (5 - piece)) - mob;
+      gamephase := !gamephase + gamephase_table.(- piece - 1);
+      if piece = (-1) then begin
+        black_pawns := square :: !black_pawns;
+        black_pawns_file.(square mod 8) <- black_pawns_file.(square mod 8) + 1
+      end
+      else if piece = (-3) then begin
+        incr black_bishops
+      end
+      else if piece = (-4) then begin
+        black_rook_file.(square mod 8) <- black_rook_file.(square mod 8) + 1
+      end
+    end
+  done;
+  let phase = min !gamephase 24 in
+  let score = ref ((!mg_score * phase + !eg_score * (24 - phase)) / 24) in
+
+  if white_pawns_file.(0) > 0 then begin
+    if white_pawns_file.(0) > 1 then begin
+
+    end;
+    if white_pawns_file.(1) = 0 then begin
+
+    end;
+    if black_pawns_file.(0) + black_pawns_file.(1) = 0 then begin
+
+    end
+  end;
+  if black_pawns_file.(0) > 0 then begin
+    if black_pawns_file.(0) > 1 then begin
+
+    end;
+    if black_pawns_file.(1) = 0 then begin
+      
+    end;
+    if white_pawns_file.(0) + white_pawns_file.(1) = 0 then begin
+      
+    end
+  end;
+  if white_rook_file.(0) > 0 then begin
+    if white_pawns_file.(0) = 0 then begin
+      ();
+      if black_pawns_file.(0) = 0 then begin
+
+      end
+    end
+  end;
+  if black_rook_file.(0) > 0 then begin
+    if black_pawns_file.(0) = 0 then begin
+      ();
+      if white_pawns_file.(0) = 0 then begin
+
+      end
+    end
+  end;
+  for file = 1 to 6 do
+    if white_pawns_file.(file) > 0 then begin
+      if white_pawns_file.(file) > 1 then begin
+
+      end;
+      if white_pawns_file.(file -1) + white_pawns_file.(file + 1) = 0 then begin
+
+      end;
+      if black_pawns_file.(file - 1) + black_pawns_file.(file) + black_pawns_file.(file + 1) = 0 then begin
+
+      end
+    end;
+    if black_pawns_file.(file) > 0 then begin
+      if black_pawns_file.(file) > 1 then begin
+
+      end;
+      if black_pawns_file.(file -1) + black_pawns_file.(file + 1) = 0 then begin
+
+      end;
+      if white_pawns_file.(file - 1) + white_pawns_file.(file) + white_pawns_file.(file + 1) = 0 then begin
+
+      end
+    end;
+    if white_rook_file.(file) > 0 then begin
+      if white_pawns_file.(file) = 0 then begin
+        ();
+        if black_pawns_file.(file) = 0 then begin
+
+        end
+      end
+    end;
+    if black_rook_file.(file) > 0 then begin
+      if black_pawns_file.(file) = 0 then begin
+        ();
+        if white_pawns_file.(file) = 0 then begin
+
+        end
+      end
+    end;
+  done;
+  if white_pawns_file.(7) > 0 then begin
+    if white_pawns_file.(7) > 1 then begin
+
+    end;
+    if white_pawns_file.(6) = 0 then begin
+
+    end;
+    if black_pawns_file.(7) + black_pawns_file.(6) = 0 then begin
+
+    end
+  end;
+  if black_pawns_file.(7) > 0 then begin
+    if black_pawns_file.(7) > 1 then begin
+
+    end;
+    if black_pawns_file.(6) = 0 then begin
+
+    end;
+    if white_pawns_file.(7) + white_pawns_file.(6) = 0 then begin
+      
+    end
+  end;
+  if white_rook_file.(7) > 0 then begin
+    if white_pawns_file.(7) = 0 then begin
+      ();
+      if black_pawns_file.(7) = 0 then begin
+        
+      end
+    end
+  end;
+  if black_rook_file.(7) > 0 then begin
+    if black_pawns_file.(7) = 0 then begin
+      ();
+      if white_pawns_file.(7) = 0 then begin
+
+      end
+    end
+  end;
+  if !white_bishops > 1 then begin
+
+  end;
+  if !black_bishops > 1 then begin
+
+  end;
+  let white_king_position, black_king_position = 
+    if position.white_to_move then
+      position.king_positions.king_to_move, position.king_positions.king_not_to_move
+    else
+      position.king_positions.king_not_to_move, position.king_positions.king_to_move
+  in if white_king_position > 55 then begin
+    if white_king_position = 56 && position.board.(48) = 1 && position.board.(49) = 1 then begin
+
+    end
+    else if white_king_position = 63 && position.board.(54) = 1 && position.board.(55) = 1 then begin
+      
+    end
+    else if position.board.(white_king_position - 8) = 1 && position.board.(white_king_position - 7) = 1 && position.board.(white_king_position - 9) = 1 then begin
+
+    end
+  end;
+  if black_king_position < 8 then begin
+    if black_king_position = 0 && position.board.(8) = (-1) && position.board.(9) = (-1) then begin
+
+    end
+    else if black_king_position = 7 && position.board.(14) = (-1) && position.board.(15) = (-1) then begin
+      
+    end
+    else if position.board.(black_king_position + 8) = (-1) && position.board.(black_king_position + 7) = (-1) && position.board.(black_king_position + 9) = (-1) then begin
+
+    end
+  end;
+  if position.white_to_move then
+    !score
+  else  
+    - !score*)
 
          (*let gives_check move position =
   let capture = ref 0 in

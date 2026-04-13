@@ -1,46 +1,21 @@
 (tests
- (names 
- ouvertures_test
- reduction
- algo
- tri
- clouage
- pv
+ (names
  perft
- perftcapture
- perftefficace
- captures
- evaluations
- quiescence
  zobrist
  see
  brouillon
  trad
- nnue)
+ nnue
+ bitboards)
  (modules
- ouvertures_test
- reduction
- algo
- tri
- clouage
- pv
  perft
- perftcapture
- perftefficace
- captures
- evaluations
- quiescence
  zobrist
  see
  brouillon
  config
  positions
  trad
- ouvertures
- strategie2
  to_algebraic
- oldevaluations
- bitboards
  nnue)
  (libraries 
  unix

@@ -12,42 +12,42 @@ let zobrist_from_long_black_rook = ref 9
 (*Création d'un tableau de nombres pseudo aléatoires. 12 * 64 cases
   pour chaque pièce de chaque case, + 1 case pour indiquer le trait + 4 cases
   pour les droits roques + 8 cases pour les colonnes de capture en passant*)
-let tab_zobrist = Array.make 781 0
+let tab_zobrist = Array.make 781 0L
 
 let () =
   for i = 0 to 780 do
-    tab_zobrist.(i) <- Int64.to_int (Random.int64 4611686018427387903L)
+    tab_zobrist.(i) <- Random.int64 Int64.max_int
   done
 
 (*Fonction de hachage*)
 let zobrist position =
-  let h = ref 0 in
+  let h = ref 0L in
   for i = 0 to 63 do
     let piece = position.board.(i) in
     if piece > 0 then begin
-      h := !h lxor tab_zobrist.(12 * i + (piece - 1))
+      h := Int64.logxor !h tab_zobrist.(12 * i + (piece - 1))
     end
     else if piece < 0 then begin
-      h := !h lxor tab_zobrist.(12 * i + (5 - piece))
+      h := Int64.logxor !h tab_zobrist.(12 * i + (5 - piece))
     end
   done;
   if position.white_to_move then begin
-    h := !h lxor tab_zobrist.(768)
+    h := Int64.logxor !h tab_zobrist.(768)
   end;
   if position.castling_rights.white_short then begin
-    h := !h lxor tab_zobrist.(769)
+    h := Int64.logxor !h tab_zobrist.(769)
   end;
   if position.castling_rights.white_long then begin
-    h := !h lxor tab_zobrist.(770)
+    h := Int64.logxor !h tab_zobrist.(770)
   end;
   if position.castling_rights.black_short then begin
-    h := !h lxor tab_zobrist.(771)
+    h := Int64.logxor !h tab_zobrist.(771)
   end;
   if position.castling_rights.black_long then begin
-    h := !h lxor tab_zobrist.(772)
+    h := Int64.logxor !h tab_zobrist.(772)
   end;
   if position.ep_square <> (-1) then begin
-    h := !h lxor tab_zobrist.(773 + (position.ep_square mod 8))
+    h := Int64.logxor !h tab_zobrist.(773 + (position.ep_square mod 8))
   end;
   !h
 
@@ -63,7 +63,7 @@ let zobrist_chessboard =
       black_long = true
     };
     half_moves = 0;
-    zobrist_position = 0;
+    zobrist_position = 0L;
     last_capture = 0;
     king_positions = {
       king_to_move = !from_white_king;

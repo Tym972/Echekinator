@@ -42,7 +42,7 @@ let decode intmove =
   end
 
 type tt = {
-  key   : (int, int_elt, c_layout) Array1.t;
+  key   : (int64, int64_elt, c_layout) Array1.t;
   depth  : (int, int_elt, c_layout) Array1.t;
   lower_bound  : (int, int_elt, c_layout) Array1.t;
   upper_bound  : (int, int_elt, c_layout) Array1.t;
@@ -59,17 +59,17 @@ let hash_size = ref 16
 let min_hash_size = 1
 let max_hash_size = 33554432
 
-let slots = ref ((!hash_size * 1024 * 1024) / entry_size)
+let slots = ref (Int64.of_int ((!hash_size * 1024 * 1024) / entry_size))
 
 let clear tt =
-  for i = 0 to !slots - 1 do
+  for i = 0 to Int64.to_int !slots - 1 do
     Array1.set tt.depth i empty_depth
   done
 
 let create_tt size =
   let tt =
   {
-    key  = Array1.create Int C_layout size;
+    key  = Array1.create Int64 C_layout size;
     depth = Array1.create Int C_layout size;
     lower_bound = Array1.create Int C_layout size;
     upper_bound = Array1.create Int C_layout size;
@@ -79,7 +79,7 @@ let create_tt size =
   in clear tt;
   tt 
 
-let tt = ref (create_tt !slots)
+let tt = ref (create_tt (Int64.to_int !slots))
 
 let is_loss score = score < (-90000)
 
@@ -117,7 +117,7 @@ let score_node lower_bound upper_bound =
   else 0
 
 let store thread key depth lower_bound upper_bound move (*static_eval*) generation =
-  let index = key mod !slots in
+  let index = Int64.to_int (Int64.rem key !slots) in
   let encoded_move = encode move in
   let old_key   = Array1.get !tt.key index in
   let old_depth = Array1.get !tt.depth index in
@@ -175,7 +175,7 @@ let verif board move = match move with
   |Null -> true
 
 let probe position =
-  let index = position.zobrist_position mod !slots in
+  let index = Int64.to_int (Int64.rem position.zobrist_position !slots) in
   let old_key   = Array1.get !tt.key index in
   let old_best_move = Array1.get !tt.encoded_move index in
   let decoded_move = decode old_best_move in

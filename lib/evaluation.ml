@@ -267,226 +267,25 @@ let () =
     done;
   done
 
-(*let hce position =
-  let white_pawns_file = [|0; 0; 0; 0; 0; 0; 0; 0|] in
-  let black_pawns_file = [|0; 0; 0; 0; 0; 0; 0; 0|] in
-  let white_rook_file = [|0; 0; 0; 0; 0; 0; 0; 0|] in
-  let black_rook_file = [|0; 0; 0; 0; 0; 0; 0; 0|] in
-  let white_bishops = ref 0 in
-  let black_bishops = ref 0 in
-  let mg = [|0; 0|] in
-  let eg = [|0; 0|] in
-  let gamephase = ref 0 in
-  for square = 0 to 63 do
-    let piece = position.board.(square) in
-    if piece > 0 then begin
-      mg.(0) <- mg.(0) + mg_table.(12 * square + (piece - 1));
-      eg.(0) <- eg.(0) + eg_table.(12 * square + (piece - 1));
-      incr gamephase;
-      if piece = 1 then begin
-        white_pawns_file.(square mod 8) <- white_pawns_file.(square mod 8) + 1
-      end
-      else if piece = 3 then begin
-        incr white_bishops
-      end
-      else if piece = 4 then begin
-        white_rook_file.(square mod 8) <- white_rook_file.(square mod 8) + 1
-      end
-    end
-    else if piece < 0 then begin
-      mg.(1) <- mg.(1) + mg_table.(12 * square + (5 - piece));
-      eg.(1) <- eg.(1) + eg_table.(12 * square + (5 - piece));
-      incr gamephase;
-      if piece = (-1) then begin
-        black_pawns_file.(square mod 8) <- black_pawns_file.(square mod 8) + 1
-      end
-      else if piece = (-3) then begin
-        incr black_bishops
-      end
-      else if piece = (-4) then begin
-        black_rook_file.(square mod 8) <- black_rook_file.(square mod 8) + 1
-      end
-    end
-  done;
-  let mg_score = mg.(0) - mg.(1) in
-  let eg_score = eg.(0) - eg.(1) in
-  let phase = min !gamephase 24 in
-  let score = ref ((mg_score * phase + eg_score * (24 - phase)) / 24) in
-  if white_pawns_file.(0) > 0 then begin
-    if white_pawns_file.(0) > 1 then begin
-
-    end;
-    if white_pawns_file.(1) = 0 then begin
-
-    end;
-    if black_pawns_file.(0) + black_pawns_file.(1) = 0 then begin
-
-    end
-  end;
-  if black_pawns_file.(0) > 0 then begin
-    if black_pawns_file.(0) > 1 then begin
-
-    end;
-    if black_pawns_file.(1) = 0 then begin
-      
-    end;
-    if white_pawns_file.(0) + white_pawns_file.(1) = 0 then begin
-      
-    end
-  end;
-  if white_rook_file.(0) > 0 then begin
-    if white_pawns_file.(0) = 0 then begin
-      ();
-      if black_pawns_file.(0) = 0 then begin
-
-      end
-    end
-  end;
-  if black_rook_file.(0) > 0 then begin
-    if black_pawns_file.(0) = 0 then begin
-      ();
-      if white_pawns_file.(0) = 0 then begin
-
-      end
-    end
-  end;
-  for file = 1 to 6 do
-    if white_pawns_file.(file) > 0 then begin
-      if white_pawns_file.(file) > 1 then begin
-
-      end;
-      if white_pawns_file.(file -1) + white_pawns_file.(file + 1) = 0 then begin
-
-      end;
-      if black_pawns_file.(file - 1) + black_pawns_file.(file) + black_pawns_file.(file + 1) = 0 then begin
-
-      end
-    end;
-    if black_pawns_file.(file) > 0 then begin
-      if black_pawns_file.(file) > 1 then begin
-
-      end;
-      if black_pawns_file.(file -1) + black_pawns_file.(file + 1) = 0 then begin
-
-      end;
-      if white_pawns_file.(file - 1) + white_pawns_file.(file) + white_pawns_file.(file + 1) = 0 then begin
-
-      end
-    end;
-    if white_rook_file.(file) > 0 then begin
-      if white_pawns_file.(file) = 0 then begin
-        ();
-        if black_pawns_file.(file) = 0 then begin
-
-        end
-      end
-    end;
-    if black_rook_file.(file) > 0 then begin
-      if black_pawns_file.(file) = 0 then begin
-        ();
-        if white_pawns_file.(file) = 0 then begin
-
-        end
-      end
-    end;
-  done;
-  if white_pawns_file.(7) > 0 then begin
-    if white_pawns_file.(7) > 1 then begin
-
-    end;
-    if white_pawns_file.(6) = 0 then begin
-
-    end;
-    if black_pawns_file.(7) + black_pawns_file.(6) = 0 then begin
-
-    end
-  end;
-  if black_pawns_file.(7) > 0 then begin
-    if black_pawns_file.(7) > 1 then begin
-
-    end;
-    if black_pawns_file.(6) = 0 then begin
-
-    end;
-    if white_pawns_file.(7) + white_pawns_file.(6) = 0 then begin
-      
-    end
-  end;
-  if white_rook_file.(7) > 0 then begin
-    if white_pawns_file.(7) = 0 then begin
-      ();
-      if black_pawns_file.(7) = 0 then begin
-        
-      end
-    end
-  end;
-  if black_rook_file.(7) > 0 then begin
-    if black_pawns_file.(7) = 0 then begin
-      ();
-      if white_pawns_file.(7) = 0 then begin
-
-      end
-    end
-  end;
-  if !white_bishops > 1 then begin
-
-  end;
-  if !black_bishops > 1 then begin
-
-  end;
-  let white_king_position, black_king_position = 
-    if position.white_to_move then
-      position.king_positions.king_to_move, position.king_positions.king_not_to_move
-    else
-      position.king_positions.king_not_to_move, position.king_positions.king_to_move
-  in if white_king_position > 55 then begin
-    if white_king_position = 56 && position.board.(48) = 1 && position.board.(49) = 1 then begin
-
-    end
-    else if white_king_position = 63 && position.board.(54) = 1 && position.board.(55) = 1 then begin
-      
-    end
-    else if position.board.(white_king_position - 8) = 1 && position.board.(white_king_position - 7) = 1 && position.board.(white_king_position - 9) = 1 then begin
-
-    end
-  end;
-  if black_king_position < 8 then begin
-    if black_king_position = 0 && position.board.(8) = (-1) && position.board.(9) = (-1) then begin
-
-    end
-    else if black_king_position = 7 && position.board.(14) = (-1) && position.board.(15) = (-1) then begin
-      
-    end
-    else if position.board.(black_king_position + 8) = (-1) && position.board.(black_king_position + 7) = (-1) && position.board.(black_king_position + 9) = (-1) then begin
-
-    end
-  end;
-  if position.white_to_move then
-    !score
-  else  
-    - !score*)
-
 let hce position =
-  let mg = [|0; 0|] in
-  let eg = [|0; 0|] in
+  let mg_score = ref 0 in
+  let eg_score = ref 0  in
   let gamephase = ref 0 in
   for square = 0 to 63 do
     let piece = position.board.(square) in
     if piece > 0 then begin
-      mg.(0) <- mg.(0) + mg_table.(12 * square + (piece - 1));
-      eg.(0) <- eg.(0) + eg_table.(12 * square + (piece - 1));
+      mg_score := !mg_score + mg_table.(12 * square + (piece - 1));
+      eg_score := !eg_score + eg_table.(12 * square + (piece - 1));
       gamephase := !gamephase + gamephase_table.(piece - 1)
     end
     else if piece < 0 then begin
-      mg.(1) <- mg.(1) + mg_table.(12 * square + (5 - piece));
-      eg.(1) <- eg.(1) + eg_table.(12 * square + (5 - piece));
+      mg_score := !mg_score - mg_table.(12 * square + (5 - piece));
+      eg_score := !eg_score - eg_table.(12 * square + (5 - piece));
       gamephase := !gamephase + gamephase_table.(- piece - 1)
     end;
   done;
-  let mg_score = mg.(0) - mg.(1) in
-  let eg_score = eg.(0) - eg.(1) in
   let phase = min !gamephase 24 in
-  let score = (mg_score * phase + eg_score * (24 - phase)) / 24 in
+  let score = ((!mg_score * phase + !eg_score * (24 - phase)) / 24) in
   if position.white_to_move then
     score
   else  

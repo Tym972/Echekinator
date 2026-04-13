@@ -263,8 +263,8 @@ let () =
   end
 
 let accumulator,n,hidden_weights = [||],0,[||]
-let update_acc move = match move with
-  |Normal {piece; from; to_; capture} -> begin
+let update_acc move capture = match move with
+  |Normal {piece; from; to_} -> begin
     if piece > 0 then begin
       let idx_to = 12 * to_ + (piece - 1) in
       let idx_from = 12 * from + (piece - 1) in
@@ -333,7 +333,7 @@ let update_acc move = match move with
       done
     end
   end
-  |Promotion {from; to_; promotion; capture} -> begin
+  |Promotion {from; to_; promotion} -> begin
     if to_ < 8 then begin
       let idx_to = 12 * to_ + (promotion - 1) in
       let idx_from = 12 * from in

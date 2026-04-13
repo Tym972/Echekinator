@@ -254,7 +254,7 @@ type position = {
   mutable ep_square : int;
   mutable castling_rights : castling_rights;
   mutable half_moves : int;
-  mutable zobrist_position : int;
+  mutable zobrist_position : int64;
   mutable last_capture : int;
   mutable king_positions : king_positions;
   mutable in_check : bool
@@ -347,4 +347,4 @@ let to_ move = match move with
 
 let initial_half_moves = ref 0
 
-let board_record = Array.make 100 0
+let board_record = Array.make 100 0L
