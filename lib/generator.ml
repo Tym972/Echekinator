@@ -458,7 +458,7 @@ let pin_moves position king_moves_index pinned_pieces pinned_moves_index moves n
   end
 
 (*Fonction actualisant les variables relatives au castlings en fonction de la position de départ*)
-let castling_update start_position =
+let castling_init start_position =
   List.iter (fun tab -> Array.fill tab 0 (Array.length tab) 0) [white_short_path; white_long_path; black_short_path; black_long_path];
   List.iter (fun mut -> mut := 0) [white_short_path_length; white_long_path_length; black_short_path_length; black_long_path_length];
   List.iter (fun mut -> mut := []) [white_short_empties; white_long_empties; black_short_empties; black_long_empties];
@@ -513,9 +513,9 @@ let castling_update start_position =
     end
   in List.iter
   (fun (reference, square, piece) -> func reference square piece)
-  [(zobrist_from_white_king, !from_white_king, 6); (zobrist_from_black_king, !from_black_king, (-6));
-  (zobrist_from_short_white_rook, !from_short_white_rook, 4); (zobrist_from_long_white_rook, !from_long_white_rook, 4);
-  (zobrist_from_short_black_rook, !from_short_black_rook, (-4)); (zobrist_from_long_black_rook, !from_long_black_rook, (-4))];
+  [(from_white_king_zobrist, !from_white_king, 6); (from_black_king_zobrist, !from_black_king, (-6));
+  (from_short_white_rook_zobrist, !from_short_white_rook, 4); (from_long_white_rook_zobrist, !from_long_white_rook, 4);
+  (from_short_black_rook_zobrist, !from_short_black_rook, (-4)); (from_long_black_rook_zobrist, !from_long_black_rook, (-4))];
   let j = ref 0 in
   let aux path path_lenght empties j i =
     path.(!j) <- i;
@@ -523,43 +523,43 @@ let castling_update start_position =
     empties := i :: !empties;
     incr j
   in
-  for i = !from_white_king + 1 to 62 do
+  for i = !from_white_king + 1 to to_short_white_king do
     aux white_short_path white_short_path_length white_short_empties j i
   done;
   j := 0;
   if !from_white_king = 57 then begin
-    aux white_long_path white_long_path_length white_long_empties j 58
+    aux white_long_path white_long_path_length white_long_empties j to_long_white_king
   end
   else begin
-    for i = !from_white_king - 1 downto 58 do
+    for i = !from_white_king - 1 downto to_long_white_king do
       aux white_long_path white_long_path_length white_long_empties j i
     done
   end;
   j := 0;
-  for i = !from_black_king + 1 to 6 do
+  for i = !from_black_king + 1 to to_short_black_king do
     aux black_short_path black_short_path_length black_short_empties j i
   done;
   j := 0;
   if !from_black_king = 1 then begin
-    aux black_long_path black_long_path_length black_long_empties j 2
+    aux black_long_path black_long_path_length black_long_empties j to_long_black_king
   end
   else begin 
-    for i = !from_black_king - 1 downto 2 do
+    for i = !from_black_king - 1 downto to_long_black_king do
       aux black_long_path black_long_path_length black_long_empties j i
     done
   end;
   j := 0;
-  for i = !from_long_white_rook + 1 to 59 do
+  for i = !from_long_white_rook + 1 to to_long_white_rook do
     white_long_empties := i :: !white_long_empties
   done;
-  for i = !from_short_white_rook - 1 downto 61 do
+  for i = !from_short_white_rook - 1 downto to_short_white_rook do
     white_short_empties := i :: !white_short_empties
   done;
   j := 0;
-  for i = !from_long_black_rook + 1 to 3 do
+  for i = !from_long_black_rook + 1 to to_long_black_rook do
     black_long_empties := i :: !black_long_empties
   done;
-  for i = !from_short_black_rook - 1 downto 5 do
+  for i = !from_short_black_rook - 1 downto to_short_black_rook do
     black_short_empties := i :: !black_short_empties
   done;
   let rec remove_sorted_doubles list = match list with
@@ -672,20 +672,20 @@ let castlings (position : position) moves number_of_moves =
   if position.white_to_move then begin
     let pseudo_e2 = position.board.(!white_king_pin_1) in
     if not (!white_king_pinnable && (pseudo_e2 = (-1) || position.board.(!white_king_pin_2) = (-2))) then begin
-      if position.castling_rights.white_short && (!white_short_rook_in_h || position.board.(63) > (-4)) && List.for_all (fun square -> position.board.(square) = 0) !white_short_empties && not (castling_threats position.board 1 !white_king_pin_1 pseudo_e2 white_short_path !white_short_path_length white_short_bishop_vect white_castling_knights_vect 1) then
+      if position.castling_rights.white_castling_rights.short && (!white_short_rook_in_h || position.board.(63) > (-4)) && List.for_all (fun square -> position.board.(square) = 0) !white_short_empties && not (castling_threats position.board 1 !white_king_pin_1 pseudo_e2 white_short_path !white_short_path_length white_short_bishop_vect white_castling_knights_vect 1) then
         add_move (Castling {sort = 1}) moves number_of_moves
       end;
-      if position.castling_rights.white_long && (!white_long_rook_in_a || possible_long position.board true) && List.for_all (fun square -> position.board.(square) = 0) !white_long_empties && not (castling_threats position.board 1 !white_king_pin_1 pseudo_e2 white_long_path !white_long_path_length white_long_bishop_vect white_castling_knights_vect !white_long_directions) then
-         add_move (Castling {sort = 2}) moves number_of_moves
+      if position.castling_rights.white_castling_rights.long && (!white_long_rook_in_a || possible_long position.board true) && List.for_all (fun square -> position.board.(square) = 0) !white_long_empties && not (castling_threats position.board 1 !white_king_pin_1 pseudo_e2 white_long_path !white_long_path_length white_long_bishop_vect white_castling_knights_vect !white_long_directions) then
+        add_move (Castling {sort = 2}) moves number_of_moves
   end
   else begin
     let pseudo_e7 = - position.board.(!black_king_pin_1) in
     if not (!black_king_pinnable && (pseudo_e7 = (-1) || position.board.(!black_king_pin_2) = 2)) then begin
-      if  position.castling_rights.black_short && (!black_short_rook_in_h || position.board.(7) < 4) && List.for_all (fun square -> position.board.(square) = 0) !black_short_empties && not (castling_threats position.board (-1) !black_king_pin_1 pseudo_e7 black_short_path !black_short_path_length black_short_bishop_vect black_castlings_knights_vect 1) then
-         add_move (Castling {sort = 3}) moves number_of_moves
+      if  position.castling_rights.black_castling_rights.short && (!black_short_rook_in_h || position.board.(7) < 4) && List.for_all (fun square -> position.board.(square) = 0) !black_short_empties && not (castling_threats position.board (-1) !black_king_pin_1 pseudo_e7 black_short_path !black_short_path_length black_short_bishop_vect black_castlings_knights_vect 1) then
+        add_move (Castling {sort = 3}) moves number_of_moves
       end;
-      if  position.castling_rights.black_long && (!black_long_rook_in_a || possible_long position.board false) && List.for_all (fun square -> position.board.(square) = 0) !black_long_empties && not (castling_threats position.board (-1) !black_king_pin_1 pseudo_e7 black_long_path !black_long_path_length black_long_bishop_vect black_castlings_knights_vect !black_long_directions)then
-         add_move (Castling {sort = 4}) moves number_of_moves
+      if  position.castling_rights.black_castling_rights.long && (!black_long_rook_in_a || possible_long position.board false) && List.for_all (fun square -> position.board.(square) = 0) !black_long_empties && not (castling_threats position.board (-1) !black_king_pin_1 pseudo_e7 black_long_path !black_long_path_length black_long_bishop_vect black_castlings_knights_vect !black_long_directions)then
+        add_move (Castling {sort = 4}) moves number_of_moves
     end
 
 (*Fonction construisant une list des prises en passant possible d'un joueur*)
@@ -723,10 +723,10 @@ let make_light board move capture = match move with
   end
   |Castling {sort} -> begin
     match sort with
-    |1 -> board.(!from_white_king) <- 0; board.(!from_short_white_rook) <- 0; board.(62) <- 6; board.(61) <- 4
-    |2 -> board.(!from_white_king) <- 0; board.(!from_long_white_rook) <- 0; board.(58) <- 6; board.(59) <- 4
-    |3 -> board.(!from_black_king) <- 0; board.(!from_short_black_rook) <- 0; board.(6) <- (-6); board.(5) <- (-4)
-    |_ -> board.(!from_black_king) <- 0; board.(!from_long_black_rook) <- 0; board.(2) <- (-6); board.(3) <- (-4)
+    |1 -> board.(!from_white_king) <- 0; board.(!from_short_white_rook) <- 0; board.(to_short_white_king) <- 6; board.(to_short_white_rook) <- 4
+    |2 -> board.(!from_white_king) <- 0; board.(!from_long_white_rook) <- 0; board.(to_long_white_king) <- 6; board.(to_long_white_rook) <- 4
+    |3 -> board.(!from_black_king) <- 0; board.(!from_short_black_rook) <- 0; board.(to_short_black_king) <- (-6); board.(to_short_black_rook) <- (-4)
+    |_ -> board.(!from_black_king) <- 0; board.(!from_long_black_rook) <- 0; board.(to_long_black_king) <- (-6); board.(to_long_black_rook) <- (-4)
   end
   |Enpassant {from; to_} -> begin
     let player_pawn = if from < 32 then 1 else (-1) in
@@ -742,18 +742,39 @@ let make_light board move capture = match move with
   end
   |Null -> ()
 
+let [@inline] update_castlings position castling =
+  let cr = position.castling_rights in
+  let wcr = cr.white_castling_rights in
+  let bcr = cr.black_castling_rights in
+  match castling with
+  |1 -> 
+    position.zobrist_position <- Int64.logxor position.zobrist_position tab_zobrist.(white_short_castling_zobrist);
+    position.castling_rights <- {cr with white_castling_rights = {short = false; long = wcr.long}}
+  |2 ->
+    position.zobrist_position <- Int64.logxor position.zobrist_position tab_zobrist.(white_long_castling_zobrist);
+    position.castling_rights <- {cr with white_castling_rights = {short = wcr.short; long = false}}
+  |3 -> 
+    position.zobrist_position <- Int64.logxor position.zobrist_position tab_zobrist.(black_short_castling_zobrist);
+    position.castling_rights <- {cr with black_castling_rights = {short = false; long = bcr.long}}
+  |_ ->
+    position.zobrist_position <- Int64.logxor position.zobrist_position tab_zobrist.(black_long_castling_zobrist);
+    position.castling_rights <- {cr with black_castling_rights = {short = bcr.short; long = false}}
+
+let [@inline] update_king_position position king_to_move king_not_to_move =
+  position.king_positions <- {king_to_move = king_to_move; king_not_to_move = king_not_to_move}
+
+let no_castling_allowed = {short = false; long = false}
+
 (*Fonction permettant de jouer un move sur l'échiquier*)
 let make position new_position move =
   new_position.white_to_move <- not position.white_to_move;
   new_position.castling_rights <- {
-    white_short = position.castling_rights.white_short;
-    white_long  = position.castling_rights.white_long;
-    black_short = position.castling_rights.black_short;
-    black_long  = position.castling_rights.black_long;
+    white_castling_rights = position.castling_rights.white_castling_rights;
+    black_castling_rights = position.castling_rights.black_castling_rights
   };
-  new_position.zobrist_position <- Int64.logxor position.zobrist_position tab_zobrist.(768);
+  new_position.zobrist_position <- Int64.logxor position.zobrist_position tab_zobrist.(white_to_move_zobrist);
   if position.ep_square <> (-1) then begin
-    new_position.zobrist_position <- Int64.logxor new_position.zobrist_position tab_zobrist.(773 + (position.ep_square mod 8));
+    new_position.zobrist_position <- Int64.logxor new_position.zobrist_position tab_zobrist.(ep_zobrist + (position.ep_square mod 8));
   end;
   new_position.ep_square <- (-1);
   begin match move with
@@ -761,146 +782,59 @@ let make position new_position move =
       position.board.(from) <- 0;
       new_position.last_capture <- position.board.(to_);
       position.board.(to_) <- piece;
-      if piece = 6 then begin
-        if to_ = !from_short_black_rook && new_position.castling_rights.black_short then begin
-          new_position.castling_rights <- {
-            white_short = new_position.castling_rights.white_short;
-            white_long  = new_position.castling_rights.white_long;
-            black_short = false;
-            black_long  = new_position.castling_rights.black_long;
-          };
-          new_position.zobrist_position <- Int64.logxor new_position.zobrist_position tab_zobrist.(771)
+      let [@inline] aux_normal oponent_short_castling from_short_oponent_rook oponent_short_castling_right 
+      oponent_long_castling from_long_oponent_rook oponent_long_castling_right 
+      player_short_castling_right player_short_castling player_long_castling_right player_long_castling =
+        if to_ = from_short_oponent_rook && oponent_short_castling_right then begin
+          update_castlings new_position oponent_short_castling
         end
-        else if to_ = !from_long_black_rook && new_position.castling_rights.black_long then begin
-          new_position.castling_rights <- {
-            white_short = new_position.castling_rights.white_short;
-            white_long  = new_position.castling_rights.white_long;
-            black_short = new_position.castling_rights.black_short;
-            black_long  = false;
-          };
-          new_position.zobrist_position <- Int64.logxor new_position.zobrist_position tab_zobrist.(772)
+        else if to_ = from_long_oponent_rook && oponent_long_castling_right then begin
+          update_castlings new_position oponent_long_castling
         end
         else begin
-          if new_position.castling_rights.white_short then begin
-            new_position.castling_rights <- {
-            white_short = false;
-            white_long  = new_position.castling_rights.white_long;
-            black_short = new_position.castling_rights.black_short;
-            black_long  = new_position.castling_rights.black_long;
-          };
-            new_position.zobrist_position <- Int64.logxor new_position.zobrist_position tab_zobrist.(769)
+          if player_short_castling_right then begin
+            update_castlings new_position player_short_castling
           end;
-          if new_position.castling_rights.white_long then begin
-            new_position.castling_rights <- {
-            white_short = new_position.castling_rights.white_short;
-            white_long  = false;
-            black_short = new_position.castling_rights.black_short;
-            black_long  = new_position.castling_rights.black_long;
-          };
-            new_position.zobrist_position <- Int64.logxor new_position.zobrist_position tab_zobrist.(770)
+          if player_long_castling_right then begin
+            update_castlings new_position player_long_castling
           end
         end;
-        new_position.king_positions <- {
-          king_to_move = position.king_positions.king_not_to_move;
-          king_not_to_move = to_
-        }
+        update_king_position new_position position.king_positions.king_not_to_move to_
+      in if piece = 6 then begin
+        aux_normal 3 !from_short_black_rook new_position.castling_rights.black_castling_rights.short 
+        4 !from_long_black_rook new_position.castling_rights.black_castling_rights.long 
+        new_position.castling_rights.white_castling_rights.short 1 new_position.castling_rights.white_castling_rights.long 2
       end
       else if piece = (-6) then begin
-        if to_ = !from_short_white_rook && new_position.castling_rights.white_short then begin
-          new_position.castling_rights <- {
-            white_short = false;
-            white_long  = new_position.castling_rights.white_long;
-            black_short = new_position.castling_rights.black_short;
-            black_long  = new_position.castling_rights.black_long;
-          };
-          new_position.zobrist_position <- Int64.logxor new_position.zobrist_position tab_zobrist.(769)
-        end
-        else if to_ = !from_long_white_rook && new_position.castling_rights.white_long then begin
-          new_position.castling_rights <- {
-            white_short = new_position.castling_rights.white_short;
-            white_long = false;
-            black_short = new_position.castling_rights.black_short;
-            black_long  = new_position.castling_rights.black_long;
-          };
-          new_position.zobrist_position <- Int64.logxor new_position.zobrist_position tab_zobrist.(770)
-        end
-        else begin
-          if new_position.castling_rights.black_short then begin
-            new_position.castling_rights <- {
-            white_short = new_position.castling_rights.white_short;
-            white_long  = new_position.castling_rights.white_long;
-            black_short = false;
-            black_long  = new_position.castling_rights.black_long;
-          };
-            new_position.zobrist_position <- Int64.logxor new_position.zobrist_position tab_zobrist.(771)
-          end;
-          if new_position.castling_rights.black_long then begin
-            new_position.castling_rights <- {
-            white_short = new_position.castling_rights.white_short;
-            white_long  = new_position.castling_rights.white_long;
-            black_short = new_position.castling_rights.black_short;
-            black_long  = false;
-          };
-            new_position.zobrist_position <- Int64.logxor new_position.zobrist_position tab_zobrist.(772)
-          end
-        end;
-        new_position.king_positions <- {
-          king_to_move = position.king_positions.king_not_to_move;
-          king_not_to_move = to_
-        }
+        aux_normal 1 !from_short_white_rook new_position.castling_rights.white_castling_rights.short
+        2 !from_long_white_rook new_position.castling_rights.white_castling_rights.long
+        new_position.castling_rights.black_castling_rights.short 3 new_position.castling_rights.black_castling_rights.long 4
       end
       else begin
-        if new_position.castling_rights.white_short && (from = !from_short_white_rook || to_ = !from_short_white_rook) then begin
-          new_position.castling_rights <- {
-            white_short = false;
-            white_long  = new_position.castling_rights.white_long;
-            black_short = new_position.castling_rights.black_short;
-            black_long  = new_position.castling_rights.black_long;
-          };
-          new_position.zobrist_position <- Int64.logxor new_position.zobrist_position tab_zobrist.(769)
+        if new_position.castling_rights.white_castling_rights.short && (from = !from_short_white_rook || to_ = !from_short_white_rook) then begin
+          update_castlings new_position 1
         end
-        else if new_position.castling_rights.white_long && (from = !from_long_white_rook || to_ = !from_long_white_rook) then begin
-          new_position.castling_rights <- {
-            white_short = new_position.castling_rights.white_short;
-            white_long  = false;
-            black_short = new_position.castling_rights.black_short;
-            black_long  = new_position.castling_rights.black_long;
-          };
-          new_position.zobrist_position <- Int64.logxor new_position.zobrist_position tab_zobrist.(770)
+        else if new_position.castling_rights.white_castling_rights.long && (from = !from_long_white_rook || to_ = !from_long_white_rook) then begin
+          update_castlings new_position 2
         end;
-        if new_position.castling_rights.black_short && (from = !from_short_black_rook || to_ = !from_short_black_rook) then begin
-          new_position.castling_rights <- {
-            white_short = new_position.castling_rights.white_short;
-            white_long  = new_position.castling_rights.white_long;
-            black_short = false;
-            black_long  = new_position.castling_rights.black_long;
-          };
-          new_position.zobrist_position <- Int64.logxor new_position.zobrist_position tab_zobrist.(771)
+        if new_position.castling_rights.black_castling_rights.short && (from = !from_short_black_rook || to_ = !from_short_black_rook) then begin
+          update_castlings new_position 3
         end
-        else if new_position.castling_rights.black_long && (from = !from_long_black_rook || to_ = !from_long_black_rook) then begin
-          new_position.castling_rights <- {
-            white_short = new_position.castling_rights.white_short;
-            white_long  = new_position.castling_rights.white_long;
-            black_short = new_position.castling_rights.black_short;
-            black_long  = false;
-          };
-          new_position.zobrist_position <- Int64.logxor new_position.zobrist_position tab_zobrist.(772)
+        else if new_position.castling_rights.black_castling_rights.long && (from = !from_long_black_rook || to_ = !from_long_black_rook) then begin
+          update_castlings new_position 4
         end;
-        new_position.king_positions <- {
-          king_to_move = position.king_positions.king_not_to_move;
-          king_not_to_move = position.king_positions.king_to_move
-        }
+        update_king_position new_position position.king_positions.king_not_to_move position.king_positions.king_to_move
       end;
       if (abs piece = 1) && (abs (from - to_) = 16) && ((from mod 8 <> 0 && position.board.(to_ - 1) = - piece) || (from mod 8 <> 7 && position.board.(to_ + 1) = - piece)) then begin
         new_position.ep_square <- from + (if piece > 0 then - 8 else 8);
-        new_position.zobrist_position <- Int64.logxor new_position.zobrist_position tab_zobrist.(773 + (from mod 8))
+        new_position.zobrist_position <- Int64.logxor new_position.zobrist_position tab_zobrist.(ep_zobrist + (from mod 8))
       end;
       let piece_index, capture_index = if piece > 0 then (piece - 1), (5 - new_position.last_capture) else (5 - piece), (new_position.last_capture - 1) in
       if new_position.last_capture = 0 then begin
-        new_position.zobrist_position <- Int64.logxor new_position.zobrist_position (Int64.logxor tab_zobrist.(12 * from + piece_index) tab_zobrist.(12 * to_ + piece_index))
+        new_position.zobrist_position <- xor3 new_position.zobrist_position tab_zobrist.(12 * from + piece_index) tab_zobrist.(12 * to_ + piece_index)
       end
       else begin
-        new_position.zobrist_position <- Int64.logxor new_position.zobrist_position (Int64.logxor tab_zobrist.(12 * from + piece_index) (Int64.logxor tab_zobrist.(12 * to_ + piece_index) tab_zobrist.(12 * to_ + capture_index)))
+        new_position.zobrist_position <- xor4 new_position.zobrist_position tab_zobrist.(12 * from + piece_index) tab_zobrist.(12 * to_ + piece_index) tab_zobrist.(12 * to_ + capture_index)
       end;
       if (abs piece = 1 || new_position.last_capture <> 0) then begin
         new_position.half_moves <- 0
@@ -911,91 +845,36 @@ let make position new_position move =
     end
     |Castling {sort} -> begin
       new_position.last_capture <- 0;
-      begin match sort with
-        |1 ->
-          position.board.(!from_white_king) <- 0;
-          position.board.(!from_short_white_rook) <- 0;
-          position.board.(62) <- 6;
-          position.board.(61) <- 4;
-          if new_position.castling_rights.white_long then begin
-            new_position.zobrist_position <- Int64.logxor new_position.zobrist_position (Int64.logxor tab_zobrist.(769) (Int64.logxor tab_zobrist.(770) (Int64.logxor tab_zobrist.(!zobrist_from_white_king) (Int64.logxor tab_zobrist.(749) (Int64.logxor tab_zobrist.(!zobrist_from_short_white_rook) tab_zobrist.(735))))))
-          end
-          else begin
-            new_position.zobrist_position <- Int64.logxor new_position.zobrist_position (Int64.logxor tab_zobrist.(769) (Int64.logxor tab_zobrist.(!zobrist_from_white_king) (Int64.logxor tab_zobrist.(749) (Int64.logxor tab_zobrist.(!zobrist_from_short_white_rook) tab_zobrist.(735)))))
-          end;
-          new_position.castling_rights <- {
-            white_short = false;
-            white_long  = false;
-            black_short = new_position.castling_rights.black_short;
-            black_long  = new_position.castling_rights.black_long;
-          };
-          new_position.king_positions <- {
-            king_to_move = position.king_positions.king_not_to_move;
-            king_not_to_move = 62
-          }
-        |2 ->
-          position.board.(!from_white_king) <- 0;
-          position.board.(!from_long_white_rook) <- 0;
-          position.board.(58) <- 6;
-          position.board.(59) <- 4;
-          if new_position.castling_rights.white_short then begin
-            new_position.zobrist_position <- Int64.logxor new_position.zobrist_position (Int64.logxor tab_zobrist.(769) (Int64.logxor tab_zobrist.(770) (Int64.logxor tab_zobrist.(!zobrist_from_white_king) (Int64.logxor tab_zobrist.(701) (Int64.logxor tab_zobrist.(!zobrist_from_long_white_rook) tab_zobrist.(711))))))
-          end
-          else begin
-            new_position.zobrist_position <- Int64.logxor new_position.zobrist_position (Int64.logxor tab_zobrist.(770) (Int64.logxor tab_zobrist.(!zobrist_from_white_king) (Int64.logxor tab_zobrist.(701) (Int64.logxor tab_zobrist.(!zobrist_from_long_white_rook) tab_zobrist.(711)))))
-          end;
-          new_position.castling_rights <- {
-            white_short = false;
-            white_long  = false;
-            black_short = new_position.castling_rights.black_short;
-            black_long  = new_position.castling_rights.black_long;
-          };
-          new_position.king_positions <- {
-            king_to_move = position.king_positions.king_not_to_move;
-            king_not_to_move = 58
-          }
-        |3 ->
-          position.board.(!from_black_king) <- 0;
-          position.board.(!from_short_black_rook) <- 0;
-          position.board.(6) <- (-6);
-          position.board.(5) <- (-4);
-          if new_position.castling_rights.black_long then begin
-            new_position.zobrist_position <- Int64.logxor new_position.zobrist_position (Int64.logxor tab_zobrist.(771) (Int64.logxor tab_zobrist.(772) (Int64.logxor tab_zobrist.(!zobrist_from_black_king) (Int64.logxor tab_zobrist.(83) (Int64.logxor tab_zobrist.(!zobrist_from_short_black_rook) tab_zobrist.(69))))))
-          end
-          else begin
-            new_position.zobrist_position <- Int64.logxor new_position.zobrist_position (Int64.logxor tab_zobrist.(771) (Int64.logxor tab_zobrist.(!zobrist_from_black_king) (Int64.logxor tab_zobrist.(83) (Int64.logxor tab_zobrist.(!zobrist_from_short_black_rook) tab_zobrist.(69)))))
-          end;
-          new_position.castling_rights <- {
-            white_short = new_position.castling_rights.white_short;
-            white_long  = new_position.castling_rights.white_long;
-            black_short = false;
-            black_long  = false;
-          };
-          new_position.king_positions <- {
-            king_to_move = position.king_positions.king_not_to_move;
-            king_not_to_move = 6
-          }
-        |_ ->
-          position.board.(!from_black_king) <- 0;
-          position.board.(!from_long_black_rook) <- 0;
-          position.board.(2) <- (-6);
-          position.board.(3) <- (-4);
-          if new_position.castling_rights.black_short then begin
-            new_position.zobrist_position <- Int64.logxor new_position.zobrist_position (Int64.logxor tab_zobrist.(771) (Int64.logxor tab_zobrist.(772) (Int64.logxor tab_zobrist.(!zobrist_from_black_king) (Int64.logxor tab_zobrist.(35) (Int64.logxor tab_zobrist.(!zobrist_from_long_black_rook) tab_zobrist.(45))))))
-          end
-          else begin
-            new_position.zobrist_position <- Int64.logxor new_position.zobrist_position (Int64.logxor tab_zobrist.(772) (Int64.logxor tab_zobrist.(!zobrist_from_black_king) (Int64.logxor tab_zobrist.(35) (Int64.logxor tab_zobrist.(!zobrist_from_long_black_rook) tab_zobrist.(45)))))
-          end;
-          new_position.castling_rights <- {
-            white_short = new_position.castling_rights.white_short;
-            white_long  = new_position.castling_rights.white_long;
-            black_short = false;
-            black_long  = false;
-          };
-          new_position.king_positions <- {
-            king_to_move = position.king_positions.king_not_to_move;
-            king_not_to_move = 2
-          }
+      let [@inline] make_castling position player_sign new_castling_rights other_castling_possible from_king from_rook to_king to_rook castling_zobrist other_castling_zobrist from_king_zobrist from_rook_zobrist to_king_zobrist to_rook_zobrist king_not_to_move =
+        position.board.(from_king) <- 0;
+        position.board.(from_rook) <- 0;
+        position.board.(to_king) <- 6 * player_sign;
+        position.board.(to_rook) <- 4 * player_sign;
+        if other_castling_possible then begin
+          position.zobrist_position <- Int64.logxor position.zobrist_position (Int64.logxor tab_zobrist.(castling_zobrist) (Int64.logxor tab_zobrist.(other_castling_zobrist) (Int64.logxor tab_zobrist.(from_king_zobrist) (Int64.logxor tab_zobrist.(to_king_zobrist) (Int64.logxor tab_zobrist.(from_rook_zobrist) tab_zobrist.(to_rook_zobrist))))))
+        end
+        else begin
+          position.zobrist_position <- Int64.logxor position.zobrist_position (Int64.logxor tab_zobrist.(castling_zobrist) (Int64.logxor tab_zobrist.(from_king_zobrist) (Int64.logxor tab_zobrist.(to_king_zobrist) (Int64.logxor tab_zobrist.(from_rook_zobrist) tab_zobrist.(to_rook_zobrist)))))
+        end;
+        position.castling_rights <- new_castling_rights;
+        update_king_position position king_not_to_move to_king
+      in begin match sort with
+        |1 -> make_castling new_position 1 {
+            white_castling_rights = no_castling_allowed;
+            black_castling_rights = position.castling_rights.black_castling_rights
+            } position.castling_rights.white_castling_rights.long !from_white_king !from_short_white_rook to_short_white_king to_short_white_rook white_short_castling_zobrist white_long_castling_zobrist !from_white_king_zobrist !from_short_white_rook_zobrist to_short_white_king_zobrist to_short_white_rook_zobrist position.king_positions.king_not_to_move
+        |2 -> make_castling new_position 1 {
+            white_castling_rights = no_castling_allowed;
+            black_castling_rights = position.castling_rights.black_castling_rights
+            } position.castling_rights.white_castling_rights.short !from_white_king !from_long_white_rook to_long_white_king to_long_white_rook white_long_castling_zobrist white_short_castling_zobrist !from_white_king_zobrist !from_long_white_rook_zobrist to_long_white_king_zobrist to_long_white_rook_zobrist position.king_positions.king_not_to_move
+        |3 -> make_castling new_position (-1) {
+            white_castling_rights = position.castling_rights.white_castling_rights;
+            black_castling_rights = no_castling_allowed
+            } position.castling_rights.black_castling_rights.long !from_black_king !from_short_black_rook to_short_black_king to_short_black_rook black_short_castling_zobrist black_long_castling_zobrist !from_black_king_zobrist !from_short_black_rook_zobrist to_short_black_king_zobrist to_short_black_rook_zobrist position.king_positions.king_not_to_move
+        |_ -> make_castling new_position (-1) {
+            white_castling_rights = position.castling_rights.white_castling_rights;
+            black_castling_rights = no_castling_allowed
+            } position.castling_rights.black_castling_rights.short !from_black_king !from_long_black_rook to_long_black_king to_long_black_rook black_long_castling_zobrist black_short_castling_zobrist !from_black_king_zobrist !from_long_black_rook_zobrist to_long_black_king_zobrist to_long_black_rook_zobrist position.king_positions.king_not_to_move
       end;
       new_position.half_moves <- position.half_moves + 1 
     end
@@ -1009,72 +888,35 @@ let make position new_position move =
       new_position.last_capture <- - player_pawn;
       position.board.(to_) <- player_pawn;
       position.board.(to_ + player_pawn * 8) <- 0;
-      new_position.zobrist_position <- Int64.logxor new_position.zobrist_position (Int64.logxor tab_zobrist.(from_index) (Int64.logxor tab_zobrist.(to_index) tab_zobrist.(capture_index)));
+      new_position.zobrist_position <- xor4 new_position.zobrist_position tab_zobrist.(from_index) tab_zobrist.(to_index) tab_zobrist.(capture_index);
       new_position.half_moves <- 0;
-      new_position.king_positions <- {
-        king_to_move = position.king_positions.king_not_to_move;
-        king_not_to_move = position.king_positions.king_to_move
-      }
+      update_king_position new_position position.king_positions.king_not_to_move position.king_positions.king_to_move
     end
     |Promotion {from; to_; promotion} -> begin
       position.board.(from) <- 0;
       new_position.last_capture <- position.board.(to_);
       position.board.(to_) <- promotion;
-      if new_position.castling_rights.white_short && to_ = !from_short_white_rook then begin
-        new_position.castling_rights <- {
-          white_short = false;
-          white_long  = new_position.castling_rights.white_long;
-          black_short = new_position.castling_rights.black_short;
-          black_long  = new_position.castling_rights.black_long;
-        };
-        new_position.zobrist_position <- Int64.logxor new_position.zobrist_position tab_zobrist.(769)
-      end;
-      if new_position.castling_rights.white_long && to_ = !from_long_white_rook then begin
-        new_position.castling_rights <- {
-          white_short = new_position.castling_rights.white_short;
-          white_long  = false;
-          black_short = new_position.castling_rights.black_short;
-          black_long  = new_position.castling_rights.black_long;
-        };
-        new_position.zobrist_position <- Int64.logxor new_position.zobrist_position tab_zobrist.(770)
-      end;
-      if new_position.castling_rights.black_short && to_ = !from_short_black_rook then begin
-        new_position.castling_rights <- {
-          white_short = new_position.castling_rights.white_short;
-          white_long  = new_position.castling_rights.white_long;
-          black_short = false;
-          black_long  = new_position.castling_rights.black_long;
-        };
-        new_position.zobrist_position <- Int64.logxor new_position.zobrist_position tab_zobrist.(771)
-      end;
-      if new_position.castling_rights.black_long && to_ = !from_long_black_rook then begin
-        new_position.castling_rights <- {
-          white_short = new_position.castling_rights.white_short;
-          white_long  = new_position.castling_rights.white_long;
-          black_short = new_position.castling_rights.black_short;
-          black_long  = false;
-        };
-        new_position.zobrist_position <- Int64.logxor new_position.zobrist_position tab_zobrist.(772)
-      end;
+      let aux_promotion castling_right from_rook castling =
+        if castling_right && to_ = from_rook then begin
+          update_castlings new_position castling
+        end
+      in aux_promotion new_position.castling_rights.white_castling_rights.short !from_short_white_rook 1;
+      aux_promotion new_position.castling_rights.white_castling_rights.long !from_long_white_rook 2;
+      aux_promotion new_position.castling_rights.black_castling_rights.short !from_short_black_rook 3;
+      aux_promotion new_position.castling_rights.black_castling_rights.long !from_long_black_rook 4;
       let pawn_index, promotion_index, capture_index = if promotion > 0 then 0, (promotion - 1), (5 - new_position.last_capture) else 6, (5 - promotion), (new_position.last_capture - 1) in
       if new_position.last_capture = 0 then begin
-        new_position.zobrist_position <- Int64.logxor new_position.zobrist_position (Int64.logxor tab_zobrist.(12 * from + pawn_index) tab_zobrist.(12 * to_ + promotion_index))
+        new_position.zobrist_position <- xor3 new_position.zobrist_position tab_zobrist.(12 * from + pawn_index) tab_zobrist.(12 * to_ + promotion_index)
       end
       else begin
-        new_position.zobrist_position <- Int64.logxor new_position.zobrist_position (Int64.logxor tab_zobrist.(12 * from + pawn_index) (Int64.logxor tab_zobrist.(12 * to_ + promotion_index) tab_zobrist.(12 * to_ + capture_index)))
+        new_position.zobrist_position <- xor4 new_position.zobrist_position tab_zobrist.(12 * from + pawn_index) tab_zobrist.(12 * to_ + promotion_index) tab_zobrist.(12 * to_ + capture_index)
       end;
       new_position.half_moves <- 0;
-      new_position.king_positions <- {
-        king_to_move = position.king_positions.king_not_to_move;
-        king_not_to_move = position.king_positions.king_to_move
-      }
+      update_king_position new_position position.king_positions.king_not_to_move position.king_positions.king_to_move
     end
     |Null ->
       new_position.half_moves <- position.half_moves + 1;
-      new_position.king_positions <- {
-        king_to_move = position.king_positions.king_not_to_move;
-        king_not_to_move = position.king_positions.king_to_move
-      }
+      update_king_position new_position position.king_positions.king_not_to_move position.king_positions.king_to_move
   end;
   new_position.in_check <- threatened position.board new_position.king_positions.king_to_move
 
@@ -1086,10 +928,10 @@ let unmake board move last_capture =
     end
     |Castling {sort} -> begin
       match sort with
-      |1 -> board.(62) <- 0; board.(61) <- 0; board.(!from_short_white_rook) <- 4; board.(!from_white_king) <- 6
-      |2 -> board.(58) <- 0; board.(59) <- 0; board.(!from_long_white_rook) <- 4; board.(!from_white_king) <- 6
-      |3 -> board.(6) <- 0; board.(5) <- 0; board.(!from_short_black_rook) <- (-4); board.(!from_black_king) <- (-6)
-      |_ -> board.(2) <- 0; board.(3) <- 0; board.(!from_long_black_rook) <- (-4); board.(!from_black_king) <- (-6)
+      |1 -> board.(to_short_white_king) <- 0; board.(to_short_white_rook) <- 0; board.(!from_short_white_rook) <- 4; board.(!from_white_king) <- 6
+      |2 -> board.(to_long_white_king) <- 0; board.(to_long_white_rook) <- 0; board.(!from_long_white_rook) <- 4; board.(!from_white_king) <- 6
+      |3 -> board.(to_short_black_king) <- 0; board.(to_short_black_rook) <- 0; board.(!from_short_black_rook) <- (-4); board.(!from_black_king) <- (-6)
+      |_ -> board.(to_long_black_king) <- 0; board.(to_long_black_rook) <- 0; board.(!from_long_black_rook) <- (-4); board.(!from_black_king) <- (-6)
     end
     |Enpassant {from; to_} -> begin
       if from < 32 then begin
@@ -1150,35 +992,35 @@ let unmake board move last_capture =
     match sort with
     |1 ->
       board.(!from_white_king) <- 0;
-      board.(62) <- 6;
+      board.(to_short_white_king) <- 6;
       board.(!from_short_white_rook) <- 0;
-      board.(61) <- 4;
+      board.(to_short_white_rook) <- 4;
       for i = 0 to n - 1 do
-        accumulator.(i) <- accumulator.(i) +. hidden_weights.(i * 768 + 749) +. hidden_weights.(i * 768 + 735) -. hidden_weights.(i * 768 + !zobrist_from_white_king) -. hidden_weights.(i * 768 + !zobrist_from_short_white_rook)
+        accumulator.(i) <- accumulator.(i) +. hidden_weights.(i * 768 + to_short_white_king_zobrist) +. hidden_weights.(i * 768 + to_short_white_rook_zobrist) -. hidden_weights.(i * 768 + !zobrist_from_white_king) -. hidden_weights.(i * 768 + !zobrist_from_short_white_rook)
       done
     |2 ->
       board.(!from_white_king) <- 0;
-      board.(58) <- 6;
+      board.(to_long_white_king) <- 6;
       board.(!from_long_white_rook) <- 0;
-      board.(59) <- 4;
+      board.(to_long_white_rook) <- 4;
       for i = 0 to n - 1 do
-        accumulator.(i) <- accumulator.(i) +. hidden_weights.(i * 768 + 701) +. hidden_weights.(i * 768 + 711) -. hidden_weights.(i * 768 + !zobrist_from_white_king) -. hidden_weights.(i * 768 + !zobrist_from_long_white_rook)
+        accumulator.(i) <- accumulator.(i) +. hidden_weights.(i * 768 + to_long_white_king_zobrist) +. hidden_weights.(i * 768 + to_long_white_rook_zobrist) -. hidden_weights.(i * 768 + !zobrist_from_white_king) -. hidden_weights.(i * 768 + !zobrist_from_long_white_rook)
       done
     |3 ->
       board.(!from_black_king) <- 0;
-      board.(6) <- (-6);
+      board.(to_short_black_king) <- (-6);
       board.(!from_short_black_rook) <- 0;
-      board.(5) <- (-4);
+      board.(to_short_black_rook) <- (-4);
       for i = 0 to n - 1 do
-        accumulator.(i) <- accumulator.(i) +. hidden_weights.(i * 768 + 83) +. hidden_weights.(i * 768 + 69) -. hidden_weights.(i * 768 + !zobrist_from_black_king) -. hidden_weights.(i * 768 + !zobrist_from_short_black_rook)
+        accumulator.(i) <- accumulator.(i) +. hidden_weights.(i * 768 + to_short_black_king_zobrist) +. hidden_weights.(i * 768 + to_short_black_rook_zobrist) -. hidden_weights.(i * 768 + !zobrist_from_black_king) -. hidden_weights.(i * 768 + !zobrist_from_short_black_rook)
       done
     |_ ->
       board.(!from_black_king) <- 0;
-      board.(2) <- (-6);
+      board.(to_long_black_king) <- (-6);
       board.(!from_long_black_rook) <- 0;
-      board.(3) <- (-4);
+      board.(to_long_black_rook) <- (-4);
       for i = 0 to n - 1 do
-        accumulator.(i) <- accumulator.(i) +. hidden_weights.(i * 768 + 35) +. hidden_weights.(i * 768 + 45) -. hidden_weights.(i * 768 + !zobrist_from_black_king) -. hidden_weights.(i * 768 + !zobrist_from_long_black_rook)
+        accumulator.(i) <- accumulator.(i) +. hidden_weights.(i * 768 + to_long_black_king_zobrist) +. hidden_weights.(i * 768 + to_long_black_rook_zobrist) -. hidden_weights.(i * 768 + !zobrist_from_black_king) -. hidden_weights.(i * 768 + !zobrist_from_long_black_rook)
       done
   end
   |Enpassant {from; to_} -> begin
@@ -1280,36 +1122,36 @@ let unmake_acc board move = match move with
   |Castling {sort} -> begin
     match sort with
     |1 ->
-      board.(62) <- 0;
+      board.(to_short_white_king) <- 0;
       board.(!from_white_king) <- 6;
-      board.(61) <- 0;
+      board.(to_short_white_rook) <- 0;
       board.(!from_short_white_rook) <- 4;
       for i = 0 to n - 1 do
-        accumulator.(i) <- accumulator.(i) -. hidden_weights.(i * 768 + 749) -. hidden_weights.(i * 768 + 735) +. hidden_weights.(i * 768 + !zobrist_from_white_king) +. hidden_weights.(i * 768 + !zobrist_from_short_white_rook)
+        accumulator.(i) <- accumulator.(i) -. hidden_weights.(i * 768 + to_short_white_king_zobrist) -. hidden_weights.(i * 768 + to_short_white_rook_zobrist) +. hidden_weights.(i * 768 + !zobrist_from_white_king) +. hidden_weights.(i * 768 + !zobrist_from_short_white_rook)
       done
     |2 ->
-      board.(58) <- 0;
+      board.(to_long_white_king) <- 0;
       board.(!from_white_king) <- 6;
-      board.(59) <- 0;
+      board.(to_long_white_rook) <- 0;
       board.(!from_long_white_rook) <- 4;
       for i = 0 to n - 1 do
-        accumulator.(i) <- accumulator.(i) -. hidden_weights.(i * 768 + 701) -. hidden_weights.(i * 768 + 711) +. hidden_weights.(i * 768 + !zobrist_from_white_king) +. hidden_weights.(i * 768 + !zobrist_from_long_white_rook)
+        accumulator.(i) <- accumulator.(i) -. hidden_weights.(i * 768 + to_long_white_king_zobrist) -. hidden_weights.(i * 768 + to_long_white_rook_zobrist) +. hidden_weights.(i * 768 + !zobrist_from_white_king) +. hidden_weights.(i * 768 + !zobrist_from_long_white_rook)
       done
     |3 ->
-      board.(6) <- 0;
+      board.(to_short_black_king) <- 0;
       board.(!from_black_king) <- (-6);
-      board.(5) <- 0;
+      board.(to_short_black_rook) <- 0;
       board.(!from_short_black_rook) <- (-4);
       for i = 0 to n - 1 do
-        accumulator.(i) <- accumulator.(i) -. hidden_weights.(i * 768 + 83) -. hidden_weights.(i * 768 + 69) +. hidden_weights.(i * 768 + !zobrist_from_black_king) +. hidden_weights.(i * 768 + !zobrist_from_short_black_rook)
+        accumulator.(i) <- accumulator.(i) -. hidden_weights.(i * 768 + to_short_black_king_zobrist) -. hidden_weights.(i * 768 + to_short_black_rook_zobrist) +. hidden_weights.(i * 768 + !zobrist_from_black_king) +. hidden_weights.(i * 768 + !zobrist_from_short_black_rook)
       done
     |_ ->
-      board.(2) <- 0;
+      board.(to_long_black_king) <- 0;
       board.(!from_black_king) <- (-6);
-      board.(3) <- 0;
+      board.(to_long_black_rook) <- 0;
       board.(!from_long_black_rook) <- (-4);
       for i = 0 to n - 1 do
-        accumulator.(i) <- accumulator.(i) -. hidden_weights.(i * 768 + 35) -. hidden_weights.(i * 768 + 45) +. hidden_weights.(i * 768 + !zobrist_from_black_king) +. hidden_weights.(i * 768 + !zobrist_from_long_black_rook)
+        accumulator.(i) <- accumulator.(i) -. hidden_weights.(i * 768 + to_long_black_king_zobrist) -. hidden_weights.(i * 768 + to_long_black_rook_zobrist) +. hidden_weights.(i * 768 + !zobrist_from_black_king) +. hidden_weights.(i * 768 + !zobrist_from_long_black_rook)
       done
   end
   |Enpassant {from; to_} -> begin

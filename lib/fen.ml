@@ -76,15 +76,15 @@ let fen position move_counter =
   else begin
     fen := !fen ^ " b "
   end;
-  if not (position.castling_rights.white_short || position.castling_rights.white_long || position.castling_rights.black_short || position.castling_rights.black_long) then begin
+  if not (position.castling_rights.white_castling_rights.short || position.castling_rights.white_castling_rights.long || position.castling_rights.black_castling_rights.short || position.castling_rights.black_castling_rights.long) then begin
     fen := !fen ^ "-"
   end
   else begin
     let castlings_representations = xfen_castlings position.board in
-    if position.castling_rights.white_short then fen := !fen ^ castlings_representations.(0);
-    if position.castling_rights.white_long then fen := !fen ^ castlings_representations.(1);
-    if position.castling_rights.black_short then fen := !fen ^ castlings_representations.(2);
-    if position.castling_rights.black_long then fen := !fen ^ castlings_representations.(3)
+    if position.castling_rights.white_castling_rights.short then fen := !fen ^ castlings_representations.(0);
+    if position.castling_rights.white_castling_rights.long then fen := !fen ^ castlings_representations.(1);
+    if position.castling_rights.black_castling_rights.short then fen := !fen ^ castlings_representations.(2);
+    if position.castling_rights.black_castling_rights.long then fen := !fen ^ castlings_representations.(3)
   end;
   fen := !fen ^ " " ^ (if position.ep_square <> (-1) then coord.(position.ep_square) ^ " " else "- ");
   fen := !fen ^ (string_of_int position.half_moves ^ " ");
@@ -210,10 +210,14 @@ let valid_castlings position castlings =
     end
   end;
   position.castling_rights <-{
-    white_short = !white_short;
-    white_long = !white_long;
-    black_short = !black_short;
-    black_long = !black_long
+    white_castling_rights = {
+      short = !white_short;
+      long = !white_long
+    };
+    black_castling_rights = {
+      short = !black_short;
+      long = !black_long
+    }
   };
   if !white_short || !black_short || !white_long || !black_long then begin
     let provisional_board = Array.make 64 0
@@ -243,7 +247,7 @@ let valid_castlings position castlings =
     (from_long_black, false, occupied_black_list, !black_long); (from_short_black, false, occupied_black_list, !black_short); (from_black_king, false, occupied_black_list, (!black_long || !black_short))];
     List.iter (fun (position, piece, possible) -> if possible then provisional_board.(position) <- piece)
     [(!from_white_king, 6, (!white_long || !white_short)); (!from_black_king, (-6), (!black_long || !black_short)); (!from_long_white, 4, !white_long); (!from_short_white, 4, !white_short); (!from_long_black, (-4), !black_long); (!from_short_black, (-4), !black_short)];
-    castling_update provisional_board
+    castling_init provisional_board
   end
 
 (*Fonction traduisant une position FEN en l'int array correspondant. Par défaut si non rensigné, le trait est au blancs, il n'y a plus de castlings, pas de capture en passant, aucun coup joué*)

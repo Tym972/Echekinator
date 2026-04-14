@@ -1,7 +1,7 @@
 (*Module implémentant le type Mouvement, les constantes et les fonctions de bases du programme*)
 
 (*Program version*)
-let project_name = "Echekinator 1.0.1"
+let project_name = "Echekinator 1.1"
 
 (*Type for chess moves*)
 type move =
@@ -236,11 +236,14 @@ let go_counter = ref 0
 
 let zugzwang = ref true
 
+type player_castling_rights = {
+  short : bool;
+  long : bool;
+}
+
 type castling_rights = {
-  white_short : bool;
-  white_long : bool;
-  black_short : bool;
-  black_long : bool
+  white_castling_rights : player_castling_rights;
+  black_castling_rights : player_castling_rights;
 }
 
 type king_positions = {
@@ -274,6 +277,15 @@ let from_short_white_rook = ref 63
 let from_long_white_rook = ref 56
 let from_short_black_rook = ref 7
 let from_long_black_rook = ref 0
+
+let to_short_white_king = 62
+let to_short_black_king = 6
+let to_long_white_king = 58
+let to_long_black_king = 2
+let to_short_white_rook = 61
+let to_long_white_rook = 59
+let to_short_black_rook = 5
+let to_long_black_rook = 3
 
 (*Cases de passage du roi pour le castlings*)
 let white_short_path = [|61; 62; 0; 0; 0; 0|]
@@ -348,3 +360,15 @@ let to_ move = match move with
 let initial_half_moves = ref 0
 
 let board_record = Array.make 100 0L
+
+let[@inline] xor3 a b c =
+  Int64.logxor a (Int64.logxor b c)
+
+let[@inline] xor4 a b c d =
+  Int64.logxor a (Int64.logxor b (Int64.logxor c d))
+
+let[@inline] logand3 a b c =
+  Int64.logand a (Int64.logand b c)
+
+let[@inline] logand4 a b c d =
+  Int64.logand a (Int64.logand b (Int64.logand c d))

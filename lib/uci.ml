@@ -93,10 +93,8 @@ let stacks =
               white_to_move = true;
               ep_square = (-1);
               castling_rights = {
-                white_short = true;
-                white_long = true;
-                black_short = true;
-                black_long = true
+                white_castling_rights = {short = true; long = true};
+                black_castling_rights = {short = true; long = true}
               };
               half_moves = 0;
               zobrist_position = zobrist_chessboard;
@@ -116,10 +114,8 @@ let position =
     white_to_move = true;
     ep_square = (-1);
     castling_rights = {
-      white_short = true;
-      white_long = true;
-      black_short = true;
-      black_long = true
+      white_castling_rights = {short = true; long = true};
+      black_castling_rights = {short = true; long = true}
     };
     half_moves = 0;
     zobrist_position = zobrist_chessboard;
@@ -163,11 +159,9 @@ let reset_position position move_counter =
   done;
   position.white_to_move <- true;
   position.ep_square <- (-1);
-  position.castling_rights <- {
-    white_short = true;
-    white_long = true;
-    black_short = true;
-    black_long = true
+  position.castling_rights <-  {
+    white_castling_rights = {short = true; long = true};
+    black_castling_rights = {short = true; long = true}
   };
   position.half_moves <- 0;
   position.zobrist_position <- zobrist_chessboard;
@@ -442,10 +436,9 @@ let setoption instructions =
                       white_to_move = true;
                       ep_square = (-1);
                       castling_rights = {
-                        white_short = true;
-                        white_long = true;
-                        black_short = true;
-                        black_long = true};
+                        white_castling_rights = {short = true; long = true};
+                        black_castling_rights = {short = true; long = true}
+                      };
                       half_moves = 0;
                       zobrist_position = 0L;
                       last_capture = 0;

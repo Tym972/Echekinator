@@ -1,13 +1,34 @@
 (*Module implémentant une fonction de hachage de*)
 open Board
 
+let [@inline] zobrist_index square piece =
+  square * 12 + piece - 1
+
 (*Constantes pour le calcul du hash zobrist et du vecteur NNUE*)
-let zobrist_from_white_king = ref 725
-let zobrist_from_black_king = ref 59
-let zobrist_from_short_white_rook = ref 759
-let zobrist_from_long_white_rook = ref 675
-let zobrist_from_short_black_rook = ref 93
-let zobrist_from_long_black_rook = ref 9
+let from_white_king_zobrist = ref (zobrist_index !from_white_king 6)
+let from_black_king_zobrist = ref (zobrist_index !from_black_king 12)
+let from_short_white_rook_zobrist = ref (zobrist_index !from_short_white_rook 4)
+let from_long_white_rook_zobrist = ref (zobrist_index !from_long_white_rook 4)
+let from_short_black_rook_zobrist = ref (zobrist_index !from_short_black_rook 10)
+let from_long_black_rook_zobrist = ref (zobrist_index !from_long_black_rook 10)
+
+let to_short_white_king_zobrist = zobrist_index to_short_white_king 6
+let to_long_white_king_zobrist = zobrist_index to_long_white_king 6
+let to_short_black_king_zobrist = zobrist_index to_short_black_king 12
+let to_long_black_king_zobrist = zobrist_index to_long_black_king 12
+let to_short_white_rook_zobrist = zobrist_index to_short_white_rook 4
+let to_long_white_rook_zobrist = zobrist_index to_long_white_rook 4
+let to_short_black_rook_zobrist = zobrist_index to_short_black_rook 10
+let to_long_black_rook_zobrist = zobrist_index to_long_black_rook 10
+
+let white_to_move_zobrist = 768
+
+let white_short_castling_zobrist = 769
+let white_long_castling_zobrist = 770
+let black_short_castling_zobrist = 771
+let black_long_castling_zobrist = 772
+
+let ep_zobrist = 773
 
 (*Création d'un tableau de nombres pseudo aléatoires. 12 * 64 cases
   pour chaque pièce de chaque case, + 1 case pour indiquer le trait + 4 cases
@@ -34,16 +55,16 @@ let zobrist position =
   if position.white_to_move then begin
     h := Int64.logxor !h tab_zobrist.(768)
   end;
-  if position.castling_rights.white_short then begin
+  if position.castling_rights.white_castling_rights.short then begin
     h := Int64.logxor !h tab_zobrist.(769)
   end;
-  if position.castling_rights.white_long then begin
+  if position.castling_rights.white_castling_rights.long then begin
     h := Int64.logxor !h tab_zobrist.(770)
   end;
-  if position.castling_rights.black_short then begin
+  if position.castling_rights.black_castling_rights.short then begin
     h := Int64.logxor !h tab_zobrist.(771)
   end;
-  if position.castling_rights.black_long then begin
+  if position.castling_rights.black_castling_rights.long then begin
     h := Int64.logxor !h tab_zobrist.(772)
   end;
   if position.ep_square <> (-1) then begin
@@ -57,10 +78,8 @@ let zobrist_chessboard =
     white_to_move = true;
     ep_square = (-1);
     castling_rights = {
-      white_short = true;
-      white_long = true;
-      black_short = true;
-      black_long = true
+      white_castling_rights = {short = true; long = true};
+      black_castling_rights = {short = true; long = true}
     };
     half_moves = 0;
     zobrist_position = 0L;

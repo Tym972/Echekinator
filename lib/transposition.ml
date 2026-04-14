@@ -63,7 +63,12 @@ let slots = ref (Int64.of_int ((!hash_size * 1024 * 1024) / entry_size))
 
 let clear tt =
   for i = 0 to Int64.to_int !slots - 1 do
-    Array1.set tt.depth i empty_depth
+    Array1.set tt.key i 0L;
+    Array1.set tt.depth i empty_depth;
+    Array1.set tt.lower_bound i (-max_int);
+    Array1.set tt.upper_bound i max_int;
+    Array1.set tt.encoded_move i 0;
+    Array1.set tt.generation i 0
   done
 
 let create_tt size =
@@ -179,7 +184,9 @@ let probe position =
   let old_key   = Array1.get !tt.key index in
   let old_best_move = Array1.get !tt.encoded_move index in
   let decoded_move = decode old_best_move in
-  if position.zobrist_position = old_key && verif position.board decoded_move then
+  if position.zobrist_position = old_key && verif position.board decoded_move then begin
     Array1.get !tt.depth index, Array1.get !tt.lower_bound index, Array1.get !tt.upper_bound index, decoded_move(*, old_static_eval*)
-  else
+  end
+  else begin
     empty_depth, - max_int, max_int, Null(*, (-infinity)*)
+  end

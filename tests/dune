@@ -16,6 +16,7 @@
  positions
  trad
  to_algebraic
+ bitboards
  nnue)
  (libraries 
  unix

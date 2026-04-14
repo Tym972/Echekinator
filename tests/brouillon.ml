@@ -1,6 +1,8 @@
 open Libs.Bitboards
 open Libs.Board
 
+let pieces =[|1; 2; 3; 4; 5; 6; -1; -2; -3; -4; -5; -6|]
+
 let b = [|0L; 0L; 0L; 0L; 0L; 0L; 0L; 0L; 0L; 0L; 0L; 0L |]
 
 let index_of_bitboard bitboard =

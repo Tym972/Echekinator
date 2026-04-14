@@ -1,0 +1,48 @@
+if piece = 6 then begin
+        if to_ = !from_short_opponent_rook && new_position.castling_rights.opponent_castling_rights.short then begin
+          new_position.castling_rights <- {
+            player_castling_rights = new_position.castling_rights.player_castling_rights;
+            opponent_castling_rights = {
+              short = false;
+              long = new_position.castling_rights.opponent_castling_rights.long;
+            }
+          };
+          new_position.zobrist_position <- Int64.logxor new_position.zobrist_position tab_zobrist.(771)
+        end
+        else if to_ = !from_long_opponent_rook && new_position.castling_rights.opponent_castling_rights.long then begin
+          new_position.castling_rights <- {
+            player_castling_rights = new_position.castling_rights.player_castling_rights;
+            opponent_castling_rights = {
+              short = new_position.castling_rights.opponent_castling_rights.short;
+              long = false;
+            }
+          };
+          new_position.zobrist_position <- Int64.logxor new_position.zobrist_position tab_zobrist.(772)
+        end
+        else begin
+          if new_position.castling_rights.player_castling_rights.short then begin
+            new_position.castling_rights <- {
+            player_castling_rights = {
+              short = false;
+              long = new_position.castling_rights.player_castling_rights.long;
+            };
+            opponent_castling_rights = new_position.castling_rights.opponent_castling_rights
+          };
+            new_position.zobrist_position <- Int64.logxor new_position.zobrist_position tab_zobrist.(769)
+          end;
+          if new_position.castling_rights.player_castling_rights.long then begin
+            new_position.castling_rights <- {
+            player_castling_rights = {
+              short = new_position.castling_rights.player_castling_rights.short;
+              long = false;
+            };
+            opponent_castling_rights = new_position.castling_rights.opponent_castling_rights
+          };
+            new_position.zobrist_position <- Int64.logxor new_position.zobrist_position tab_zobrist.(770)
+          end
+        end;
+        new_position.king_positions <- {
+          king_to_move = position.king_positions.king_not_to_move;
+          king_not_to_move = to_
+        }
+      end

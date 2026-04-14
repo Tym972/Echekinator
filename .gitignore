@@ -2,6 +2,5 @@ _build/
 /Results/
 config.json
 bitboards.ml
-/tests/
 magic_rook.txt
 magic_bishop.txt
