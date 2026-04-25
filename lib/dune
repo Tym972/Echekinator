@@ -2,6 +2,7 @@
  (name libs)
  (modules
   board
+  bitboards
   generator
   translation
   fen
@@ -11,7 +12,8 @@
   quiescence
   search
   evaluation
-  uci)
+  uci
+  bitboard_utilities)
  (libraries
   str
   unix

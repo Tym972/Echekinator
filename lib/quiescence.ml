@@ -7,14 +7,14 @@ open Transposition
 open Evaluation
 
 (*Fonction détectant les répétitions à partir d'une liste de code zobrist*)
-let repetition stack ply =
+let repetition state ply =
   let index = ref (ply - 2) in
-  let zobrist_position = stack.(ply).zobrist_position in
+  let zobrist_position = state.(ply).zobrist_position in
   let repeat = ref false in
-  let limit = max (ply - stack.(ply).half_moves) (- !initial_half_moves) in
+  let limit = max (ply - state.(ply).half_moves) (- !initial_half_moves) in
   while !index >= limit && not !repeat do
     if !index >= 0 then begin
-      if stack.(!index).zobrist_position = zobrist_position then begin
+      if state.(!index).zobrist_position = zobrist_position then begin
         repeat := true
       end
     end
@@ -28,7 +28,7 @@ let repetition stack ply =
   !repeat
 
 (*Fonction implémentant la recherche quiescente*)
-let rec quiescence_search stack thread depth ply alpha beta ispv =
+let rec quiescence_search position thread depth alpha beta ispv =
 
   (*Check search limit*)
   if stop_search.(thread) then begin
@@ -36,16 +36,18 @@ let rec quiescence_search stack thread depth ply alpha beta ispv =
   end
 
   else begin
-    let position = stack.(ply) in
-
+    let ply = position.ply in
+    let state = position.state_infos.(ply) in
+    
     (*Check repetion or fifty moves rule*)
-    if repetition stack ply || (position.half_moves = 100 && (not position.in_check || (let _, number_of_moves = legal_moves position in !number_of_moves <> 0))) then begin
+    if repetition position.state_infos ply || (state.half_moves = 100 && (not state.in_check || (let _, number_of_moves = legal_moves position in !number_of_moves <> 0))) then begin
       0
     end
 
     else begin
       let best_move = ref Null in
-      let hash_depth, hash_lower_bound, hash_upper_bound, hash_move(*, hash_static_eval*) = probe position in
+      let hash_depth, hash_lower_bound, hash_upper_bound, hash_move, hash_static_eval = probe position in
+      let static_eval = ref hash_static_eval in
       let no_cut = ref true in
       let best_score = ref (- max_int) in
       let alpha0 = ref alpha in
@@ -58,9 +60,10 @@ let rec quiescence_search stack thread depth ply alpha beta ispv =
       if !no_cut then begin
 
         (*Static eval*)
-        if not position.in_check then begin
-          best_score := hce position;
+        if not (state.in_check || hash_static_eval <> (- max_int)) then begin
+          static_eval := hce position
         end;
+        best_score := !static_eval;
 
         (*Stand pat verification then move loop*)
         if !best_score < beta then begin
@@ -71,8 +74,8 @@ let rec quiescence_search stack thread depth ply alpha beta ispv =
 
           let counter = ref 0 in
           let move_loop move =
-            make position stack.(ply + 1) move;
-            let score = - quiescence_search stack thread (depth - 1) (ply + 1) (- !beta0) (- !alpha0) ispv
+            make position move;
+            let score = - quiescence_search position thread (depth - 1) (- !beta0) (- !alpha0) ispv
             in if score > !best_score then begin
               best_score := score;
               if score > !alpha0 then begin
@@ -85,11 +88,11 @@ let rec quiescence_search stack thread depth ply alpha beta ispv =
                 no_cut := false
               end
             end;
-            unmake position.board move stack.(ply+ 1).last_capture;
+            unmake position move;
             incr counter
 
           (*If in check search for all moves*)
-          in if position.in_check then begin
+          in if state.in_check then begin
             let move_loop_in_check () =
               let legal_moves, number_of_legal_moves = legal_moves position in
               let i = ref 0 in
@@ -160,7 +163,7 @@ let rec quiescence_search stack thread depth ply alpha beta ispv =
           lower_bound := stored_value;
           upper_bound := stored_value
         end;
-        store thread position.zobrist_position depth !lower_bound !upper_bound !best_move (*hash_static_eval*) !go_counter
+        store thread state.zobrist_position depth !lower_bound !upper_bound !best_move !static_eval !go_counter
       end;
     !best_score
     end

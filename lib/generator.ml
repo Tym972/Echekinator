@@ -185,16 +185,16 @@ let queen_moves board square moves number_of_moves =
   done
 
 (*Fonction construisant une list des déplacements possible d'un roi*)
-let king_moves position moves number_of_moves =
-  let piece = position.board.(position.king_positions.king_to_move) in
-  let tab64_square = tab64.(position.king_positions.king_to_move) in
+let king_moves position state moves number_of_moves =
+  let piece = position.board.(state.king_to_move_position) in
+  let tab64_square = tab64.(state.king_to_move_position) in
   for i = 0 to 7 do
     let direction = king_vect.(i) in
     if tab120.(tab64_square + direction) <> (-1) then begin
       let attacker_square = tab120.(tab64_square + direction) in
       let attacker = position.board.(attacker_square) in
       if piece * attacker <= 0 then begin
-        add_move (Normal {piece = piece; from = position.king_positions.king_to_move; to_ = attacker_square}) moves number_of_moves
+        add_move (Normal {piece = piece; from = state.king_to_move_position; to_ = attacker_square}) moves number_of_moves
       end
     end
   done
@@ -290,8 +290,8 @@ let pawn_moves board square moves number_of_moves =
 let tabfun = [|pawn_moves; knight_moves; bishop_moves; rook_moves; queen_moves|]
 
 (*Fonction construisant une list des déplacements classique possibles d'un joueur*)
-let pseudo_legal_moves position king_moves_index moves number_of_moves =
-  king_moves position moves number_of_moves;
+let pseudo_legal_moves position state king_moves_index moves number_of_moves =
+  king_moves position state moves number_of_moves;
   king_moves_index := (0, !number_of_moves - 1);
   if position.white_to_move then begin
     let aux from arrive =
@@ -301,7 +301,7 @@ let pseudo_legal_moves position king_moves_index moves number_of_moves =
           (tabfun.(piece - 1) position.board i moves number_of_moves)
         end
       done
-    in List.iter (fun (a, b) -> aux a b) [63, position.king_positions.king_to_move + 1; position.king_positions.king_to_move - 1, 0]
+    in List.iter (fun (a, b) -> aux a b) [63, state.king_to_move_position + 1; state.king_to_move_position - 1, 0]
   end
   else begin
     let aux from to_ =
@@ -311,7 +311,7 @@ let pseudo_legal_moves position king_moves_index moves number_of_moves =
           (tabfun.(- piece - 1) position.board i moves number_of_moves)
         end
       done
-    in List.iter (fun (a, b) -> aux a b) [0, position.king_positions.king_to_move - 1; position.king_positions.king_to_move + 1, 63]
+    in List.iter (fun (a, b) -> aux a b) [0, state.king_to_move_position - 1; state.king_to_move_position + 1, 63]
   end
 
 let pin_generator piece square board moves number_of_moves pin_table =
@@ -420,8 +420,8 @@ let pin_generator piece square board moves number_of_moves pin_table =
 
 
 (*Fonction construisant une list des déplacements classique possibles d'un joueur*)
-let pin_moves position king_moves_index pinned_pieces pinned_moves_index moves number_of_moves pin_table =
-  king_moves position moves number_of_moves;
+let pin_moves position state king_moves_index pinned_pieces pinned_moves_index moves number_of_moves pin_table =
+  king_moves position state moves number_of_moves;
   king_moves_index := (0, !number_of_moves - 1);
   if position.white_to_move then begin
     let aux from to_ = 
@@ -437,7 +437,7 @@ let pin_moves position king_moves_index pinned_pieces pinned_moves_index moves n
         pin_generator piece square position.board moves number_of_moves pin_table;
         pinned_moves_index := (first_pinned_move_index, !number_of_moves - 1) :: !pinned_moves_index
       end
-    done in List.iter (fun (a, b) -> aux a b) [63, position.king_positions.king_to_move + 1; position.king_positions.king_to_move - 1, 0]
+    done in List.iter (fun (a, b) -> aux a b) [63, state.king_to_move_position + 1; state.king_to_move_position - 1, 0]
   end
   else begin
     let aux from to_ =
@@ -454,7 +454,7 @@ let pin_moves position king_moves_index pinned_pieces pinned_moves_index moves n
           pinned_moves_index := (first_pinned_move_index, !number_of_moves - 1) :: !pinned_moves_index
         end
       done
-    in List.iter (fun (a, b) -> aux a b) [0, position.king_positions.king_to_move - 1; position.king_positions.king_to_move + 1, 63]
+    in List.iter (fun (a, b) -> aux a b) [0, state.king_to_move_position - 1; state.king_to_move_position + 1, 63]
   end
 
 (*Fonction actualisant les variables relatives au castlings en fonction de la position de départ*)
@@ -668,49 +668,49 @@ let possible_long board white_to_move =
   end
 
 (*Fonction construisant une list des roques possible d'un joueur*)
-let castlings (position : position) moves number_of_moves =
+let castlings position state moves number_of_moves =
   if position.white_to_move then begin
     let pseudo_e2 = position.board.(!white_king_pin_1) in
     if not (!white_king_pinnable && (pseudo_e2 = (-1) || position.board.(!white_king_pin_2) = (-2))) then begin
-      if position.castling_rights.white_castling_rights.short && (!white_short_rook_in_h || position.board.(63) > (-4)) && List.for_all (fun square -> position.board.(square) = 0) !white_short_empties && not (castling_threats position.board 1 !white_king_pin_1 pseudo_e2 white_short_path !white_short_path_length white_short_bishop_vect white_castling_knights_vect 1) then
+      if state.white_short_castling && (!white_short_rook_in_h || position.board.(63) > (-4)) && List.for_all (fun square -> position.board.(square) = 0) !white_short_empties && not (castling_threats position.board 1 !white_king_pin_1 pseudo_e2 white_short_path !white_short_path_length white_short_bishop_vect white_castling_knights_vect 1) then
         add_move (Castling {sort = 1}) moves number_of_moves
       end;
-      if position.castling_rights.white_castling_rights.long && (!white_long_rook_in_a || possible_long position.board true) && List.for_all (fun square -> position.board.(square) = 0) !white_long_empties && not (castling_threats position.board 1 !white_king_pin_1 pseudo_e2 white_long_path !white_long_path_length white_long_bishop_vect white_castling_knights_vect !white_long_directions) then
+      if state.white_long_castling && (!white_long_rook_in_a || possible_long position.board true) && List.for_all (fun square -> position.board.(square) = 0) !white_long_empties && not (castling_threats position.board 1 !white_king_pin_1 pseudo_e2 white_long_path !white_long_path_length white_long_bishop_vect white_castling_knights_vect !white_long_directions) then
         add_move (Castling {sort = 2}) moves number_of_moves
   end
   else begin
     let pseudo_e7 = - position.board.(!black_king_pin_1) in
     if not (!black_king_pinnable && (pseudo_e7 = (-1) || position.board.(!black_king_pin_2) = 2)) then begin
-      if  position.castling_rights.black_castling_rights.short && (!black_short_rook_in_h || position.board.(7) < 4) && List.for_all (fun square -> position.board.(square) = 0) !black_short_empties && not (castling_threats position.board (-1) !black_king_pin_1 pseudo_e7 black_short_path !black_short_path_length black_short_bishop_vect black_castlings_knights_vect 1) then
+      if  state.black_short_castling && (!black_short_rook_in_h || position.board.(7) < 4) && List.for_all (fun square -> position.board.(square) = 0) !black_short_empties && not (castling_threats position.board (-1) !black_king_pin_1 pseudo_e7 black_short_path !black_short_path_length black_short_bishop_vect black_castlings_knights_vect 1) then
         add_move (Castling {sort = 3}) moves number_of_moves
       end;
-      if  position.castling_rights.black_castling_rights.long && (!black_long_rook_in_a || possible_long position.board false) && List.for_all (fun square -> position.board.(square) = 0) !black_long_empties && not (castling_threats position.board (-1) !black_king_pin_1 pseudo_e7 black_long_path !black_long_path_length black_long_bishop_vect black_castlings_knights_vect !black_long_directions)then
+      if  state.black_long_castling && (!black_long_rook_in_a || possible_long position.board false) && List.for_all (fun square -> position.board.(square) = 0) !black_long_empties && not (castling_threats position.board (-1) !black_king_pin_1 pseudo_e7 black_long_path !black_long_path_length black_long_bishop_vect black_castlings_knights_vect !black_long_directions)then
         add_move (Castling {sort = 4}) moves number_of_moves
     end
 
 (*Fonction construisant une list des prises en passant possible d'un joueur*)
-let enpassant (position : position) moves number_of_moves =
+let enpassant position state moves number_of_moves =
   if position.white_to_move then begin
-    if position.ep_square <> (-1) then begin
-      let right = position.ep_square + 9
-      in if (position.ep_square <> 23 && position.board.(right) = 1) then begin
-        add_move (Enpassant {from = right; to_ = position.ep_square}) moves number_of_moves
+    if state.ep_square <> (-1) then begin
+      let right = state.ep_square + 9
+      in if (state.ep_square <> 23 && position.board.(right) = 1) then begin
+        add_move (Enpassant {from = right; to_ = state.ep_square}) moves number_of_moves
       end;
-      let left = position.ep_square + 7
-      in if (position.ep_square <> 16 && position.board.(left) = 1) then begin
-        add_move (Enpassant {from = left; to_ = position.ep_square}) moves number_of_moves
+      let left = state.ep_square + 7
+      in if (state.ep_square <> 16 && position.board.(left) = 1) then begin
+        add_move (Enpassant {from = left; to_ = state.ep_square}) moves number_of_moves
       end
     end
   end
   else begin
-    if position.ep_square <> (-1) then begin
-      let right = position.ep_square - 7
-      in if (position.ep_square <> 47 && position.board.(right) = (-1)) then begin
-        add_move (Enpassant {from = right; to_ = position.ep_square}) moves number_of_moves
+    if state.ep_square <> (-1) then begin
+      let right = state.ep_square - 7
+      in if (state.ep_square <> 47 && position.board.(right) = (-1)) then begin
+        add_move (Enpassant {from = right; to_ = state.ep_square}) moves number_of_moves
       end;
-      let left = position.ep_square - 9
-      in if (position.ep_square <> 40 && position.board.(left) = (-1)) then begin
-        add_move (Enpassant {from = left; to_ = position.ep_square}) moves number_of_moves
+      let left = state.ep_square - 9
+      in if (state.ep_square <> 40 && position.board.(left) = (-1)) then begin
+        add_move (Enpassant {from = left; to_ = state.ep_square}) moves number_of_moves
       end
     end
   end
@@ -742,185 +742,7 @@ let make_light board move capture = match move with
   end
   |Null -> ()
 
-let [@inline] update_castlings position castling =
-  let cr = position.castling_rights in
-  let wcr = cr.white_castling_rights in
-  let bcr = cr.black_castling_rights in
-  match castling with
-  |1 -> 
-    position.zobrist_position <- Int64.logxor position.zobrist_position tab_zobrist.(white_short_castling_zobrist);
-    position.castling_rights <- {cr with white_castling_rights = {short = false; long = wcr.long}}
-  |2 ->
-    position.zobrist_position <- Int64.logxor position.zobrist_position tab_zobrist.(white_long_castling_zobrist);
-    position.castling_rights <- {cr with white_castling_rights = {short = wcr.short; long = false}}
-  |3 -> 
-    position.zobrist_position <- Int64.logxor position.zobrist_position tab_zobrist.(black_short_castling_zobrist);
-    position.castling_rights <- {cr with black_castling_rights = {short = false; long = bcr.long}}
-  |_ ->
-    position.zobrist_position <- Int64.logxor position.zobrist_position tab_zobrist.(black_long_castling_zobrist);
-    position.castling_rights <- {cr with black_castling_rights = {short = bcr.short; long = false}}
-
-let [@inline] update_king_position position king_to_move king_not_to_move =
-  position.king_positions <- {king_to_move = king_to_move; king_not_to_move = king_not_to_move}
-
-let no_castling_allowed = {short = false; long = false}
-
-(*Fonction permettant de jouer un move sur l'échiquier*)
-let make position new_position move =
-  new_position.white_to_move <- not position.white_to_move;
-  new_position.castling_rights <- {
-    white_castling_rights = position.castling_rights.white_castling_rights;
-    black_castling_rights = position.castling_rights.black_castling_rights
-  };
-  new_position.zobrist_position <- Int64.logxor position.zobrist_position tab_zobrist.(white_to_move_zobrist);
-  if position.ep_square <> (-1) then begin
-    new_position.zobrist_position <- Int64.logxor new_position.zobrist_position tab_zobrist.(ep_zobrist + (position.ep_square mod 8));
-  end;
-  new_position.ep_square <- (-1);
-  begin match move with
-    |Normal {piece; from; to_} -> begin
-      position.board.(from) <- 0;
-      new_position.last_capture <- position.board.(to_);
-      position.board.(to_) <- piece;
-      let [@inline] aux_normal oponent_short_castling from_short_oponent_rook oponent_short_castling_right 
-      oponent_long_castling from_long_oponent_rook oponent_long_castling_right 
-      player_short_castling_right player_short_castling player_long_castling_right player_long_castling =
-        if to_ = from_short_oponent_rook && oponent_short_castling_right then begin
-          update_castlings new_position oponent_short_castling
-        end
-        else if to_ = from_long_oponent_rook && oponent_long_castling_right then begin
-          update_castlings new_position oponent_long_castling
-        end
-        else begin
-          if player_short_castling_right then begin
-            update_castlings new_position player_short_castling
-          end;
-          if player_long_castling_right then begin
-            update_castlings new_position player_long_castling
-          end
-        end;
-        update_king_position new_position position.king_positions.king_not_to_move to_
-      in if piece = 6 then begin
-        aux_normal 3 !from_short_black_rook new_position.castling_rights.black_castling_rights.short 
-        4 !from_long_black_rook new_position.castling_rights.black_castling_rights.long 
-        new_position.castling_rights.white_castling_rights.short 1 new_position.castling_rights.white_castling_rights.long 2
-      end
-      else if piece = (-6) then begin
-        aux_normal 1 !from_short_white_rook new_position.castling_rights.white_castling_rights.short
-        2 !from_long_white_rook new_position.castling_rights.white_castling_rights.long
-        new_position.castling_rights.black_castling_rights.short 3 new_position.castling_rights.black_castling_rights.long 4
-      end
-      else begin
-        if new_position.castling_rights.white_castling_rights.short && (from = !from_short_white_rook || to_ = !from_short_white_rook) then begin
-          update_castlings new_position 1
-        end
-        else if new_position.castling_rights.white_castling_rights.long && (from = !from_long_white_rook || to_ = !from_long_white_rook) then begin
-          update_castlings new_position 2
-        end;
-        if new_position.castling_rights.black_castling_rights.short && (from = !from_short_black_rook || to_ = !from_short_black_rook) then begin
-          update_castlings new_position 3
-        end
-        else if new_position.castling_rights.black_castling_rights.long && (from = !from_long_black_rook || to_ = !from_long_black_rook) then begin
-          update_castlings new_position 4
-        end;
-        update_king_position new_position position.king_positions.king_not_to_move position.king_positions.king_to_move
-      end;
-      if (abs piece = 1) && (abs (from - to_) = 16) && ((from mod 8 <> 0 && position.board.(to_ - 1) = - piece) || (from mod 8 <> 7 && position.board.(to_ + 1) = - piece)) then begin
-        new_position.ep_square <- from + (if piece > 0 then - 8 else 8);
-        new_position.zobrist_position <- Int64.logxor new_position.zobrist_position tab_zobrist.(ep_zobrist + (from mod 8))
-      end;
-      let piece_index, capture_index = if piece > 0 then (piece - 1), (5 - new_position.last_capture) else (5 - piece), (new_position.last_capture - 1) in
-      if new_position.last_capture = 0 then begin
-        new_position.zobrist_position <- xor3 new_position.zobrist_position tab_zobrist.(12 * from + piece_index) tab_zobrist.(12 * to_ + piece_index)
-      end
-      else begin
-        new_position.zobrist_position <- xor4 new_position.zobrist_position tab_zobrist.(12 * from + piece_index) tab_zobrist.(12 * to_ + piece_index) tab_zobrist.(12 * to_ + capture_index)
-      end;
-      if (abs piece = 1 || new_position.last_capture <> 0) then begin
-        new_position.half_moves <- 0
-      end
-      else begin
-        new_position.half_moves <- position.half_moves + 1 
-      end
-    end
-    |Castling {sort} -> begin
-      new_position.last_capture <- 0;
-      let [@inline] make_castling position player_sign new_castling_rights other_castling_possible from_king from_rook to_king to_rook castling_zobrist other_castling_zobrist from_king_zobrist from_rook_zobrist to_king_zobrist to_rook_zobrist king_not_to_move =
-        position.board.(from_king) <- 0;
-        position.board.(from_rook) <- 0;
-        position.board.(to_king) <- 6 * player_sign;
-        position.board.(to_rook) <- 4 * player_sign;
-        if other_castling_possible then begin
-          position.zobrist_position <- Int64.logxor position.zobrist_position (Int64.logxor tab_zobrist.(castling_zobrist) (Int64.logxor tab_zobrist.(other_castling_zobrist) (Int64.logxor tab_zobrist.(from_king_zobrist) (Int64.logxor tab_zobrist.(to_king_zobrist) (Int64.logxor tab_zobrist.(from_rook_zobrist) tab_zobrist.(to_rook_zobrist))))))
-        end
-        else begin
-          position.zobrist_position <- Int64.logxor position.zobrist_position (Int64.logxor tab_zobrist.(castling_zobrist) (Int64.logxor tab_zobrist.(from_king_zobrist) (Int64.logxor tab_zobrist.(to_king_zobrist) (Int64.logxor tab_zobrist.(from_rook_zobrist) tab_zobrist.(to_rook_zobrist)))))
-        end;
-        position.castling_rights <- new_castling_rights;
-        update_king_position position king_not_to_move to_king
-      in begin match sort with
-        |1 -> make_castling new_position 1 {
-            white_castling_rights = no_castling_allowed;
-            black_castling_rights = position.castling_rights.black_castling_rights
-            } position.castling_rights.white_castling_rights.long !from_white_king !from_short_white_rook to_short_white_king to_short_white_rook white_short_castling_zobrist white_long_castling_zobrist !from_white_king_zobrist !from_short_white_rook_zobrist to_short_white_king_zobrist to_short_white_rook_zobrist position.king_positions.king_not_to_move
-        |2 -> make_castling new_position 1 {
-            white_castling_rights = no_castling_allowed;
-            black_castling_rights = position.castling_rights.black_castling_rights
-            } position.castling_rights.white_castling_rights.short !from_white_king !from_long_white_rook to_long_white_king to_long_white_rook white_long_castling_zobrist white_short_castling_zobrist !from_white_king_zobrist !from_long_white_rook_zobrist to_long_white_king_zobrist to_long_white_rook_zobrist position.king_positions.king_not_to_move
-        |3 -> make_castling new_position (-1) {
-            white_castling_rights = position.castling_rights.white_castling_rights;
-            black_castling_rights = no_castling_allowed
-            } position.castling_rights.black_castling_rights.long !from_black_king !from_short_black_rook to_short_black_king to_short_black_rook black_short_castling_zobrist black_long_castling_zobrist !from_black_king_zobrist !from_short_black_rook_zobrist to_short_black_king_zobrist to_short_black_rook_zobrist position.king_positions.king_not_to_move
-        |_ -> make_castling new_position (-1) {
-            white_castling_rights = position.castling_rights.white_castling_rights;
-            black_castling_rights = no_castling_allowed
-            } position.castling_rights.black_castling_rights.short !from_black_king !from_long_black_rook to_long_black_king to_long_black_rook black_long_castling_zobrist black_short_castling_zobrist !from_black_king_zobrist !from_long_black_rook_zobrist to_long_black_king_zobrist to_long_black_rook_zobrist position.king_positions.king_not_to_move
-      end;
-      new_position.half_moves <- position.half_moves + 1 
-    end
-    |Enpassant {from; to_} -> begin
-      let player_pawn, from_index, to_index, capture_index =
-        if from < 32 then
-          1, 12 * from, 12* to_, (12 * (to_ + 8) + 6)
-        else
-          (-1), 12 * from + 6, 12 * to_ + 6, (12 * (to_ - 8))
-      in position.board.(from) <- 0;
-      new_position.last_capture <- - player_pawn;
-      position.board.(to_) <- player_pawn;
-      position.board.(to_ + player_pawn * 8) <- 0;
-      new_position.zobrist_position <- xor4 new_position.zobrist_position tab_zobrist.(from_index) tab_zobrist.(to_index) tab_zobrist.(capture_index);
-      new_position.half_moves <- 0;
-      update_king_position new_position position.king_positions.king_not_to_move position.king_positions.king_to_move
-    end
-    |Promotion {from; to_; promotion} -> begin
-      position.board.(from) <- 0;
-      new_position.last_capture <- position.board.(to_);
-      position.board.(to_) <- promotion;
-      let aux_promotion castling_right from_rook castling =
-        if castling_right && to_ = from_rook then begin
-          update_castlings new_position castling
-        end
-      in aux_promotion new_position.castling_rights.white_castling_rights.short !from_short_white_rook 1;
-      aux_promotion new_position.castling_rights.white_castling_rights.long !from_long_white_rook 2;
-      aux_promotion new_position.castling_rights.black_castling_rights.short !from_short_black_rook 3;
-      aux_promotion new_position.castling_rights.black_castling_rights.long !from_long_black_rook 4;
-      let pawn_index, promotion_index, capture_index = if promotion > 0 then 0, (promotion - 1), (5 - new_position.last_capture) else 6, (5 - promotion), (new_position.last_capture - 1) in
-      if new_position.last_capture = 0 then begin
-        new_position.zobrist_position <- xor3 new_position.zobrist_position tab_zobrist.(12 * from + pawn_index) tab_zobrist.(12 * to_ + promotion_index)
-      end
-      else begin
-        new_position.zobrist_position <- xor4 new_position.zobrist_position tab_zobrist.(12 * from + pawn_index) tab_zobrist.(12 * to_ + promotion_index) tab_zobrist.(12 * to_ + capture_index)
-      end;
-      new_position.half_moves <- 0;
-      update_king_position new_position position.king_positions.king_not_to_move position.king_positions.king_to_move
-    end
-    |Null ->
-      new_position.half_moves <- position.half_moves + 1;
-      update_king_position new_position position.king_positions.king_not_to_move position.king_positions.king_to_move
-  end;
-  new_position.in_check <- threatened position.board new_position.king_positions.king_to_move
-
-let unmake board move last_capture =
+let unmake_light board move last_capture =
   begin match move with
     |Normal {piece; from; to_} -> begin
       board.(from) <- piece;
@@ -928,10 +750,10 @@ let unmake board move last_capture =
     end
     |Castling {sort} -> begin
       match sort with
-      |1 -> board.(to_short_white_king) <- 0; board.(to_short_white_rook) <- 0; board.(!from_short_white_rook) <- 4; board.(!from_white_king) <- 6
-      |2 -> board.(to_long_white_king) <- 0; board.(to_long_white_rook) <- 0; board.(!from_long_white_rook) <- 4; board.(!from_white_king) <- 6
-      |3 -> board.(to_short_black_king) <- 0; board.(to_short_black_rook) <- 0; board.(!from_short_black_rook) <- (-4); board.(!from_black_king) <- (-6)
-      |_ -> board.(to_long_black_king) <- 0; board.(to_long_black_rook) <- 0; board.(!from_long_black_rook) <- (-4); board.(!from_black_king) <- (-6)
+      |1 -> board.(62) <- 0; board.(61) <- 0; board.(!from_short_white_rook) <- 4; board.(!from_white_king) <- 6
+      |2 -> board.(58) <- 0; board.(59) <- 0; board.(!from_long_white_rook) <- 4; board.(!from_white_king) <- 6
+      |3 -> board.(6) <- 0; board.(5) <- 0; board.(!from_short_black_rook) <- (-4); board.(!from_black_king) <- (-6)
+      |_ -> board.(2) <- 0; board.(3) <- 0; board.(!from_long_black_rook) <- (-4); board.(!from_black_king) <- (-6)
     end
     |Enpassant {from; to_} -> begin
       if from < 32 then begin
@@ -951,6 +773,232 @@ let unmake board move last_capture =
     end
     |Null -> ()
   end
+
+let [@inline] update_castlings state castling =
+  match castling with
+  |1 -> 
+    state.zobrist_position <- Int64.logxor state.zobrist_position tab_zobrist.(white_short_castling_zobrist);
+    state.white_short_castling <- false
+  |2 ->
+    state.zobrist_position <- Int64.logxor state.zobrist_position tab_zobrist.(white_long_castling_zobrist);
+    state.white_long_castling <- false
+  |3 -> 
+    state.zobrist_position <- Int64.logxor state.zobrist_position tab_zobrist.(black_short_castling_zobrist);
+    state.black_short_castling <- false
+  |_ ->
+    state.zobrist_position <- Int64.logxor state.zobrist_position tab_zobrist.(black_long_castling_zobrist);
+    state.black_long_castling <- false
+
+let [@inline] update_king_positions state king_to_move king_not_to_move =
+  state.king_to_move_position <- king_to_move;
+  state.king_not_to_move_position <- king_not_to_move 
+
+(*Fonction permettant de jouer un move sur l'échiquier*)
+let make position move =
+  let state = position.state_infos.(position.ply) in
+  let new_state = position.state_infos.(position.ply + 1) in
+  position.white_to_move <- not position.white_to_move;
+  new_state.white_short_castling <- state.white_short_castling;
+  new_state.white_long_castling <- state.white_long_castling;
+  new_state.black_short_castling <- state.black_short_castling;
+  new_state.black_long_castling <- state.black_long_castling;
+  new_state.zobrist_position <- Int64.logxor state.zobrist_position tab_zobrist.(white_to_move_zobrist);
+  if state.ep_square <> (-1) then begin
+    new_state.zobrist_position <- Int64.logxor new_state.zobrist_position tab_zobrist.(ep_zobrist + (state.ep_square mod 8));
+  end;
+  new_state.ep_square <- (-1);
+  begin match move with
+    |Normal {piece; from; to_} -> begin
+      position.board.(from) <- 0;
+      new_state.captured_piece <- position.board.(to_);
+      position.board.(to_) <- piece;
+      let [@inline] king_aux oponent_short_castling from_short_oponent_rook oponent_short_castling_right 
+      oponent_long_castling from_long_oponent_rook oponent_long_castling_right 
+      player_short_castling_right player_short_castling player_long_castling_right player_long_castling =
+        if to_ = from_short_oponent_rook && oponent_short_castling_right then begin
+          update_castlings new_state oponent_short_castling
+        end
+        else if to_ = from_long_oponent_rook && oponent_long_castling_right then begin
+          update_castlings new_state oponent_long_castling
+        end
+        else begin
+          if player_short_castling_right then begin
+            update_castlings new_state player_short_castling
+          end;
+          if player_long_castling_right then begin
+            update_castlings new_state player_long_castling
+          end
+        end;
+        update_king_positions new_state state.king_not_to_move_position to_
+      in if piece = 6 then begin
+        king_aux 3 !from_short_black_rook state.black_short_castling 
+        4 !from_long_black_rook state.black_long_castling 
+        state.white_short_castling 1 state.white_long_castling 2
+      end
+      else if piece = (-6) then begin
+        king_aux 1 !from_short_white_rook state.white_short_castling
+        2 !from_long_white_rook state.white_long_castling
+        state.black_short_castling 3 state.black_long_castling 4
+      end
+      else begin
+        if state.white_short_castling && (from = !from_short_white_rook || to_ = !from_short_white_rook) then begin
+          update_castlings new_state 1
+        end
+        else if state.white_long_castling && (from = !from_long_white_rook || to_ = !from_long_white_rook) then begin
+          update_castlings new_state 2
+        end;
+        if state.black_short_castling && (from = !from_short_black_rook || to_ = !from_short_black_rook) then begin
+          update_castlings new_state 3
+        end
+        else if state.black_long_castling && (from = !from_long_black_rook || to_ = !from_long_black_rook) then begin
+          update_castlings new_state 4
+        end;
+        update_king_positions new_state state.king_not_to_move_position state.king_to_move_position
+      end;
+      if (abs piece = 1) && (abs (from - to_) = 16) && ((from mod 8 <> 0 && position.board.(to_ - 1) = - piece) || (from mod 8 <> 7 && position.board.(to_ + 1) = - piece)) then begin
+        new_state.ep_square <- from + (if piece > 0 then - 8 else 8);
+        new_state.zobrist_position <- Int64.logxor new_state.zobrist_position tab_zobrist.(ep_zobrist + (from mod 8))
+      end;
+      let piece_index, capture_index = if piece > 0 then (piece - 1), (5 - new_state.captured_piece) else (5 - piece), (new_state.captured_piece - 1) in
+      if new_state.captured_piece = 0 then begin
+        new_state.zobrist_position <- xor3 new_state.zobrist_position tab_zobrist.(12 * from + piece_index) tab_zobrist.(12 * to_ + piece_index)
+      end
+      else begin
+        new_state.zobrist_position <- xor4 new_state.zobrist_position tab_zobrist.(12 * from + piece_index) tab_zobrist.(12 * to_ + piece_index) tab_zobrist.(12 * to_ + capture_index)
+      end;
+      if (abs piece = 1 || new_state.captured_piece <> 0) then begin
+        new_state.half_moves <- 0
+      end
+      else begin
+        new_state.half_moves <- state.half_moves + 1 
+      end
+    end
+    |Castling {sort} -> begin
+      new_state.captured_piece <- 0;
+      let [@inline] make_castling position player_sign other_castling_possible from_king from_rook to_king to_rook castling_zobrist other_castling_zobrist from_king_zobrist from_rook_zobrist to_king_zobrist to_rook_zobrist king_not_to_move =
+        position.board.(from_king) <- 0;
+        position.board.(from_rook) <- 0;
+        position.board.(to_king) <- 6 * player_sign;
+        position.board.(to_rook) <- 4 * player_sign;
+        if other_castling_possible then begin
+          new_state.zobrist_position <- Int64.logxor new_state.zobrist_position (Int64.logxor tab_zobrist.(castling_zobrist) (Int64.logxor tab_zobrist.(other_castling_zobrist) (Int64.logxor tab_zobrist.(from_king_zobrist) (Int64.logxor tab_zobrist.(to_king_zobrist) (Int64.logxor tab_zobrist.(from_rook_zobrist) tab_zobrist.(to_rook_zobrist))))))
+        end
+        else begin
+          new_state.zobrist_position <- Int64.logxor new_state.zobrist_position (Int64.logxor tab_zobrist.(castling_zobrist) (Int64.logxor tab_zobrist.(from_king_zobrist) (Int64.logxor tab_zobrist.(to_king_zobrist) (Int64.logxor tab_zobrist.(from_rook_zobrist) tab_zobrist.(to_rook_zobrist)))))
+        end;
+        update_king_positions new_state king_not_to_move to_king
+      in begin match sort with
+        |1 ->
+          make_castling position 1 state.white_long_castling !from_white_king !from_short_white_rook to_short_white_king to_short_white_rook white_short_castling_zobrist white_long_castling_zobrist !from_white_king_zobrist !from_short_white_rook_zobrist to_short_white_king_zobrist to_short_white_rook_zobrist state.king_not_to_move_position;
+          new_state.white_short_castling <- false;
+           new_state.white_long_castling <- false
+        |2 ->
+          make_castling position 1 state.white_short_castling !from_white_king !from_long_white_rook to_long_white_king to_long_white_rook white_long_castling_zobrist white_short_castling_zobrist !from_white_king_zobrist !from_long_white_rook_zobrist to_long_white_king_zobrist to_long_white_rook_zobrist state.king_not_to_move_position;
+          new_state.white_long_castling <- false;
+          new_state.white_short_castling <- false
+        |3 ->
+          make_castling position (-1) state.black_long_castling !from_black_king !from_short_black_rook to_short_black_king to_short_black_rook black_short_castling_zobrist black_long_castling_zobrist !from_black_king_zobrist !from_short_black_rook_zobrist to_short_black_king_zobrist to_short_black_rook_zobrist state.king_not_to_move_position;
+          new_state.black_short_castling <- false;
+          new_state.black_long_castling <- false
+        |_ ->
+          make_castling position (-1) state.black_short_castling !from_black_king !from_long_black_rook to_long_black_king to_long_black_rook black_long_castling_zobrist black_short_castling_zobrist !from_black_king_zobrist !from_long_black_rook_zobrist to_long_black_king_zobrist to_long_black_rook_zobrist state.king_not_to_move_position;
+          new_state.black_long_castling <- false;
+          new_state.black_short_castling <- false
+      end;
+      new_state.half_moves <- state.half_moves + 1 
+    end
+    |Enpassant {from; to_} -> begin
+      let player_pawn, from_index, to_index, capture_index =
+        if from < 32 then
+          1, 12 * from, 12* to_, (12 * (to_ + 8) + 6)
+        else
+          (-1), 12 * from + 6, 12 * to_ + 6, (12 * (to_ - 8))
+      in position.board.(from) <- 0;
+      new_state.captured_piece <- - player_pawn;
+      position.board.(to_) <- player_pawn;
+      position.board.(to_ + player_pawn * 8) <- 0;
+      new_state.zobrist_position <- xor4 new_state.zobrist_position tab_zobrist.(from_index) tab_zobrist.(to_index) tab_zobrist.(capture_index);
+      new_state.half_moves <- 0;
+      update_king_positions new_state state.king_not_to_move_position state.king_to_move_position
+    end
+    |Promotion {from; to_; promotion} -> begin
+      position.board.(from) <- 0;
+      new_state.captured_piece <- position.board.(to_);
+      position.board.(to_) <- promotion;
+      let [@inline] aux_promotion castling_right from_rook castling =
+        if castling_right && to_ = from_rook then begin
+          update_castlings new_state castling
+        end
+      in aux_promotion state.white_short_castling !from_short_white_rook 1;
+      aux_promotion state.white_long_castling !from_long_white_rook 2;
+      aux_promotion state.black_short_castling !from_short_black_rook 3;
+      aux_promotion state.black_long_castling !from_long_black_rook 4;
+      let pawn_index, promotion_index, capture_index = if promotion > 0 then 0, (promotion - 1), (5 - new_state.captured_piece) else 6, (5 - promotion), (new_state.captured_piece - 1) in
+      if new_state.captured_piece = 0 then begin
+        new_state.zobrist_position <- xor3 new_state.zobrist_position tab_zobrist.(12 * from + pawn_index) tab_zobrist.(12 * to_ + promotion_index)
+      end
+      else begin
+        new_state.zobrist_position <- xor4 new_state.zobrist_position tab_zobrist.(12 * from + pawn_index) tab_zobrist.(12 * to_ + promotion_index) tab_zobrist.(12 * to_ + capture_index)
+      end;
+      new_state.half_moves <- 0;
+      update_king_positions new_state state.king_not_to_move_position state.king_to_move_position
+    end
+    |Null ->
+      new_state.half_moves <- state.half_moves + 1;
+      update_king_positions new_state state.king_not_to_move_position state.king_to_move_position
+  end;
+  new_state.in_check <- threatened position.board new_state.king_to_move_position;
+  position.ply <- position.ply + 1
+
+let unmake position move =
+  begin match move with
+    |Normal {piece; from; to_} -> begin
+      position.board.(from) <- piece;
+      position.board.(to_) <- position.state_infos.(position.ply).captured_piece
+    end
+    |Castling {sort} -> begin
+      match sort with
+      |1 ->
+        position.board.(to_short_white_king) <- 0;
+        position.board.(to_short_white_rook) <- 0;
+        position.board.(!from_short_white_rook) <- 4;
+        position.board.(!from_white_king) <- 6
+      |2 ->
+        position.board.(to_long_white_king) <- 0;
+        position.board.(to_long_white_rook) <- 0;
+        position.board.(!from_long_white_rook) <- 4;
+        position.board.(!from_white_king) <- 6
+      |3 ->
+        position.board.(to_short_black_king) <- 0;
+        position.board.(to_short_black_rook) <- 0;
+        position.board.(!from_short_black_rook) <- (-4);
+        position.board.(!from_black_king) <- (-6)
+      |_ ->
+        position.board.(to_long_black_king) <- 0;
+        position.board.(to_long_black_rook) <- 0;
+        position.board.(!from_long_black_rook) <- (-4);
+        position.board.(!from_black_king) <- (-6)
+    end
+    |Enpassant {from; to_} -> begin
+      if from < 32 then begin
+        position.board.(from) <- 1;
+        position.board.(to_) <- 0;
+        position.board.(to_ + 8) <- (-1)
+      end
+      else begin
+        position.board.(from) <- (-1);
+        position.board.(to_) <- 0;
+        position.board.(to_ - 8) <- 1
+      end
+    end
+    |Promotion {from; to_; promotion} -> begin  
+      position.board.(from) <- if promotion > 0 then 1 else (-1);
+      position.board.(to_) <- position.state_infos.(position.ply).captured_piece
+    end
+    |Null -> ()
+  end;
+  position.white_to_move <- not position.white_to_move;
+  position.ply <- position.ply - 1
 
 (*Fonction permettant de jouer un move sur l'échiquier*)
 (*let make_acc board move = match move with
@@ -1232,15 +1280,15 @@ let pin board chessman white_to_move tab64_square direction distance =
   let pinned = ref false in
   let distance = ref (distance + 1) in
   let iterate = ref true in
-  let opponent_queen = queen (not white_to_move) in
+  let oponent_queen = queen (not white_to_move) in
   while (!iterate && tab120.(tab64_square + (!distance * direction)) <> (-1)) do
     let attacker_square = tab120.(tab64_square + (!distance * direction)) in
     let attacker = board.(attacker_square) in
-    if opponent_queen * attacker < 0 then begin
+    if oponent_queen * attacker < 0 then begin
       iterate :=  false
     end
-    else if opponent_queen * attacker > 0 then begin 
-      if attacker = chessman || attacker = opponent_queen then begin
+    else if oponent_queen * attacker > 0 then begin 
+      if attacker = chessman || attacker = oponent_queen then begin
         pinned:= true;
       end;
       iterate :=  false
@@ -1252,7 +1300,7 @@ let pin board chessman white_to_move tab64_square direction distance =
 (*Fonction donnant les cases des pièces clouées (indépendanmment de leur possibilité de mouvement) en considérant que le roi est dans la square en argument*)
 let pinned_squares position pin_table =
   let list = ref [] in
-  let tab64_square = tab64.(position.king_positions.king_to_move) in
+  let tab64_square = tab64.(position.state_infos.(position.ply).king_to_move_position) in
   let player_sign = if position.white_to_move then 1 else (-1) in
   let aux vect piece =
     for i = 0 to 3 do
@@ -1285,49 +1333,50 @@ let legal_moves position =
   let king_moves_index = ref (0,0) in
   let to_remove = ref [] in
   let pin_table = Array.make 64 0 in
+  let state = position.state_infos.(position.ply) in
   let aux move move_index king_position =
     let capture = ref 0 in
     make_light position.board move capture;
     if threatened position.board king_position then begin
       to_remove := move_index :: !to_remove
     end;
-    unmake position.board move !capture;
-  in if position.in_check then begin
-    pseudo_legal_moves position king_moves_index moves number_of_moves;
+    unmake_light position.board move !capture;
+  in if state.in_check then begin
+    pseudo_legal_moves position state king_moves_index moves number_of_moves;
     for i = fst !king_moves_index to snd !king_moves_index do
       let king_move = moves.(i) in
       aux king_move i (to_ king_move)
     done;
     for i = snd !king_moves_index + 1 to !number_of_moves - 1 do
       let other_move = moves.(i) in
-      aux other_move i position.king_positions.king_to_move
+      aux other_move i state.king_to_move_position
     done
   end
   else begin
     let pinned_pieces = pinned_squares position pin_table in
     if pinned_pieces = [] then begin
-      pseudo_legal_moves position king_moves_index moves number_of_moves;
+      pseudo_legal_moves position state king_moves_index moves number_of_moves;
       for i = fst !king_moves_index to snd !king_moves_index do
         let king_move = moves.(i) in
         aux king_move i (to_ king_move)
       done;
-      castlings position moves number_of_moves
+      castlings position state moves number_of_moves
     end
     else begin
       let pinned_moves_index = ref [] in
-      pin_moves position king_moves_index pinned_pieces pinned_moves_index moves number_of_moves pin_table;
+      pin_moves position state king_moves_index pinned_pieces pinned_moves_index moves number_of_moves pin_table;
       for i = fst !king_moves_index to snd !king_moves_index do
         let king_move = moves.(i) in
         aux king_move i (to_ king_move)
       done;
-      castlings position moves number_of_moves
+      castlings position state moves number_of_moves
     end
   end;
   let index_first_ep = !number_of_moves in
-  enpassant position moves number_of_moves;
+  enpassant position state moves number_of_moves;
   for i = index_first_ep to !number_of_moves - 1 do
     let prise_en_passant = moves.(i) in
-    aux prise_en_passant i position.king_positions.king_to_move
+    aux prise_en_passant i state.king_to_move_position
   done;
   List.iter (fun index -> remove_move index moves number_of_moves) !to_remove;
   moves, number_of_moves
@@ -1697,16 +1746,17 @@ let captures position =
   let player_king = king position.white_to_move in
   let king_position = index_array position.board player_king in
   let pin_table = Array.make 64 0 in
+  let state = position.state_infos.(position.ply) in
   let aux move king_position =
     let capture = ref 0 in
     make_light position.board move capture;
     if not (threatened position.board king_position) then begin
       move_list := move :: !move_list
     end;
-    unmake position.board move !capture
+    unmake_light position.board move !capture
   in let ep_array = Array.make 2 Null in
   let number_of_ep = ref 0 in
-  enpassant position ep_array number_of_ep;
+  enpassant position state ep_array number_of_ep;
   for i = 0 to !number_of_ep - 1 do
     aux ep_array.(i) king_position
   done;

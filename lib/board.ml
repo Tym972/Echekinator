@@ -236,33 +236,6 @@ let go_counter = ref 0
 
 let zugzwang = ref true
 
-type player_castling_rights = {
-  short : bool;
-  long : bool;
-}
-
-type castling_rights = {
-  white_castling_rights : player_castling_rights;
-  black_castling_rights : player_castling_rights;
-}
-
-type king_positions = {
-  king_to_move : int;
-  king_not_to_move : int
-}
-
-type position = {
-  board : int array;
-  mutable white_to_move : bool;
-  mutable ep_square : int;
-  mutable castling_rights : castling_rights;
-  mutable half_moves : int;
-  mutable zobrist_position : int64;
-  mutable last_capture : int;
-  mutable king_positions : king_positions;
-  mutable in_check : bool
-}
-
 let start_time = ref (Mtime_clock.counter ())
 let soft_bound = ref Mtime.Span.max_span
 let hard_bound = ref Mtime.Span.max_span
@@ -367,8 +340,65 @@ let[@inline] xor3 a b c =
 let[@inline] xor4 a b c d =
   Int64.logxor a (Int64.logxor b (Int64.logxor c d))
 
+let[@inline] xor6 a b c d e f =
+  Int64.logxor a (Int64.logxor b (Int64.logxor c (Int64.logxor d (Int64.logxor e f))))
+
+let[@inline] xor7 a b c d e f g =
+  Int64.logxor a (Int64.logxor b (Int64.logxor c (Int64.logxor d (Int64.logxor e (Int64.logxor f g)))))
+
 let[@inline] logand3 a b c =
   Int64.logand a (Int64.logand b c)
 
 let[@inline] logand4 a b c d =
   Int64.logand a (Int64.logand b (Int64.logand c d))
+
+type state_info = {
+  mutable ep_square : int; 
+  mutable white_short_castling : bool;
+  mutable white_long_castling : bool;
+  mutable black_short_castling : bool;
+  mutable black_long_castling : bool;
+  mutable half_moves : int;
+  mutable zobrist_position : int64;
+  mutable captured_piece : int;
+  mutable king_to_move_position : int;
+  mutable king_not_to_move_position : int;
+  mutable in_check : bool
+}
+
+let chessboard_state = {
+  ep_square = (-1);
+  white_short_castling = true;
+  white_long_castling = true;
+  black_short_castling = true;
+  black_long_castling = true;
+  half_moves = 0;
+  zobrist_position = 0L;
+  captured_piece = 0;
+  king_to_move_position = 0;
+  king_not_to_move_position = 0;
+  in_check = false
+}
+
+type position = {
+  board : int array;
+  mutable white_to_move : bool;
+  mutable ply : int;
+  state_infos : state_info array
+}
+
+let create_empty_state () = {
+  ep_square = -1;
+  white_short_castling = true;
+  white_long_castling = true;
+  black_short_castling = true;
+  black_long_castling = true;
+  half_moves = 0;
+  zobrist_position = 0L;
+  captured_piece = 0;
+  king_to_move_position = !from_white_king;
+  king_not_to_move_position = !from_black_king;
+  in_check = false
+}
+
+let state_info_array = Array.init (max_depth + 40) (fun _ -> create_empty_state ())

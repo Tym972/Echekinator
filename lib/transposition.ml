@@ -47,12 +47,13 @@ type tt = {
   lower_bound  : (int, int_elt, c_layout) Array1.t;
   upper_bound  : (int, int_elt, c_layout) Array1.t;
   encoded_move   : (int, int_elt, c_layout) Array1.t;
+  static_eval : (int, int_elt, c_layout) Array1.t;
   generation    : (int, int_elt, c_layout) Array1.t;
 }
 
 let empty_depth = (-40)
 
-let entry_size = 6 * 8
+let entry_size = 7 * 8
 
 (*Variables for Hash size in MB*)
 let hash_size = ref 16
@@ -68,6 +69,7 @@ let clear tt =
     Array1.set tt.lower_bound i (-max_int);
     Array1.set tt.upper_bound i max_int;
     Array1.set tt.encoded_move i 0;
+    Array1.set tt.static_eval i (-max_int);
     Array1.set tt.generation i 0
   done
 
@@ -79,6 +81,7 @@ let create_tt size =
     lower_bound = Array1.create Int C_layout size;
     upper_bound = Array1.create Int C_layout size;
     encoded_move  = Array1.create Int C_layout size;
+    static_eval = Array1.create Int C_layout size;
     generation   = Array1.create Int C_layout size;
   }
   in clear tt;
@@ -121,7 +124,7 @@ let score_node lower_bound upper_bound =
   end
   else 0
 
-let store thread key depth lower_bound upper_bound move (*static_eval*) generation =
+let store thread key depth lower_bound upper_bound move static_eval generation =
   let index = Int64.to_int (Int64.rem key !slots) in
   let encoded_move = encode move in
   let old_key   = Array1.get !tt.key index in
@@ -135,6 +138,7 @@ let store thread key depth lower_bound upper_bound move (*static_eval*) generati
     Array1.set !tt.lower_bound index lower_bound;
     Array1.set !tt.upper_bound index upper_bound;
     Array1.set !tt.encoded_move index encoded_move;
+    Array1.set !tt.static_eval index static_eval;
     Array1.set !tt.generation index generation;
     Array1.set !tt.key index key;
     transposition_counter.(thread) <- transposition_counter.(thread) + 1
@@ -156,6 +160,7 @@ let store thread key depth lower_bound upper_bound move (*static_eval*) generati
     Array1.set !tt.lower_bound index !stored_lower_bound;
     Array1.set !tt.upper_bound index !stored_upper_bound;
     Array1.set !tt.encoded_move index !stored_move;
+    Array1.set !tt.static_eval index static_eval;
     Array1.set !tt.generation index generation;
     Array1.set !tt.key index key
   end
@@ -164,6 +169,7 @@ let store thread key depth lower_bound upper_bound move (*static_eval*) generati
     Array1.set !tt.lower_bound index old_lower_bound;
     Array1.set !tt.upper_bound index old_upper_bound;
     Array1.set !tt.encoded_move index encoded_move;
+    Array1.set !tt.static_eval index static_eval;
     Array1.set !tt.generation index generation;
     Array1.set !tt.key index key
   end
@@ -180,13 +186,13 @@ let verif board move = match move with
   |Null -> true
 
 let probe position =
-  let index = Int64.to_int (Int64.rem position.zobrist_position !slots) in
-  let old_key   = Array1.get !tt.key index in
+  let index = Int64.to_int (Int64.rem position.state_infos.(position.ply).zobrist_position !slots) in
+  let old_key = Array1.get !tt.key index in
   let old_best_move = Array1.get !tt.encoded_move index in
   let decoded_move = decode old_best_move in
-  if position.zobrist_position = old_key && verif position.board decoded_move then begin
-    Array1.get !tt.depth index, Array1.get !tt.lower_bound index, Array1.get !tt.upper_bound index, decoded_move(*, old_static_eval*)
+  if position.state_infos.(position.ply).zobrist_position = old_key && verif position.board decoded_move then begin
+    Array1.get !tt.depth index, Array1.get !tt.lower_bound index, Array1.get !tt.upper_bound index, decoded_move, Array1.get !tt.static_eval index
   end
   else begin
-    empty_depth, - max_int, max_int, Null(*, (-infinity)*)
+    empty_depth, - max_int, max_int, Null, (- max_int)
   end

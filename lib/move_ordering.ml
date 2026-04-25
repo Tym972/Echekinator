@@ -178,7 +178,7 @@ let rec see board square =
     let capture = ref 0 in
     make_light board move capture;
     value := max 0 (tabvalue.(abs !capture) - see board square);
-    unmake board move !capture;
+    unmake_light board move !capture;
   end;
   !value
 
@@ -186,7 +186,7 @@ let see_forced board move =
   let capture = ref 0 in
   make_light board move capture;
   let note = tabvalue.(abs !capture) - see board (to_ move) in
-  unmake board move !capture;
+  unmake_light board move !capture;
   note
 
 (*let get_attackers board square tab64_square first_attacker first_capture first_attacker_square =
@@ -413,28 +413,9 @@ let aux_history white_to_move move =
   
 (*let g move = match move with |Normal _ -> true |_ -> false*)
 
-let move_ordering ordering_tables (position : position) player_moves number_of_moves ply hash_move ordering_array =
+let move_ordering ordering_tables position player_moves number_of_moves ply hash_move ordering_array =
   let hash_move_index = ref (-1) in
   let score move move_index =
-    (*let _ =
-    if g move then begin
-      if false then
-        new_see board move
-      else
-        see_forced board move white_to_move
-    end
-    else
-      0
-    in*)
-    (*if g move then begin
-      let a = see_forced board move white_to_move in
-      let b = new_see board move in
-      if a <> b then begin
-        print_board board;
-        print_endline (coord.(from move) ^ coord.(to_ move));
-        print_endline (string_of_int a ^ " " ^ string_of_int b)
-      end
-    end;*)
     if move = hash_move then begin
       hash_move_index := move_index;
     end

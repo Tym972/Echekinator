@@ -1,48 +1,118 @@
-if piece = 6 then begin
-        if to_ = !from_short_opponent_rook && new_position.castling_rights.opponent_castling_rights.short then begin
-          new_position.castling_rights <- {
-            player_castling_rights = new_position.castling_rights.player_castling_rights;
-            opponent_castling_rights = {
-              short = false;
-              long = new_position.castling_rights.opponent_castling_rights.long;
-            }
-          };
-          new_position.zobrist_position <- Int64.logxor new_position.zobrist_position tab_zobrist.(771)
-        end
-        else if to_ = !from_long_opponent_rook && new_position.castling_rights.opponent_castling_rights.long then begin
-          new_position.castling_rights <- {
-            player_castling_rights = new_position.castling_rights.player_castling_rights;
-            opponent_castling_rights = {
-              short = new_position.castling_rights.opponent_castling_rights.short;
-              long = false;
-            }
-          };
-          new_position.zobrist_position <- Int64.logxor new_position.zobrist_position tab_zobrist.(772)
-        end
-        else begin
-          if new_position.castling_rights.player_castling_rights.short then begin
-            new_position.castling_rights <- {
-            player_castling_rights = {
-              short = false;
-              long = new_position.castling_rights.player_castling_rights.long;
-            };
-            opponent_castling_rights = new_position.castling_rights.opponent_castling_rights
-          };
-            new_position.zobrist_position <- Int64.logxor new_position.zobrist_position tab_zobrist.(769)
-          end;
-          if new_position.castling_rights.player_castling_rights.long then begin
-            new_position.castling_rights <- {
-            player_castling_rights = {
-              short = new_position.castling_rights.player_castling_rights.short;
-              long = false;
-            };
-            opponent_castling_rights = new_position.castling_rights.opponent_castling_rights
-          };
-            new_position.zobrist_position <- Int64.logxor new_position.zobrist_position tab_zobrist.(770)
-          end
-        end;
-        new_position.king_positions <- {
-          king_to_move = position.king_positions.king_not_to_move;
-          king_not_to_move = to_
-        }
-      end
+(*let make_light position move =
+  let state = position.state.(position.ply) in
+  let new_state = position.state.(position.ply + 1) in
+  let white_to_move = position.white_to_move in
+  let pieces_bitboard = position.pieces in
+  let from = get_move_from move in
+  let to_ = get_move_to move in
+  let piece = get_move_piece move in
+  let promotion_piece = get_move_promotion move in
+  let castling_rights = state.castling_rights in
+  let player_pieces = pieces_rep.(white_to_move) in
+  let oponent_pieces = pieces_rep.(white_to_move lxor 1) in
+  let captured_piece = get_captured_piece move pieces_bitboard oponent_pieces to_ in
+  new_state.captured_piece <- captured_piece;
+  position.white_to_move <- white_to_move lxor 1;
+  new_state.castling_rights <- castling_rights;
+  new_state.zobrist <- Int64.logxor state.zobrist tab_zobrist.(white_to_move_zobrist);
+  if state.ep_square <> (-1) then begin
+    new_state.zobrist <- Int64.logxor new_state.zobrist tab_zobrist.(ep_zobrist + (state.ep_square land 7));
+  end;
+  
+  (*Pawn moves*)
+  if is_pawn piece then begin
+
+    (*Double push*)
+    if get_move_double_push move <> 0 then begin
+      quiet_bitboard_update position white_to_move pieces_bitboard piece from to_;
+    end
+
+    (*Prise en passant*)
+    else if get_move_enpassant move <> 0 then begin
+      let captured_pawn_square = (to_ - push_vects.(white_to_move)) in
+      capture_bitboard_update position white_to_move pieces_bitboard piece from to_ captured_piece captured_pawn_square
+    end
+
+    (*Promotion*)
+    else if promotion_piece <> 0 then begin
+      update_aux position new_state white_to_move pieces_bitboard piece from to_ captured_piece to_ promotion_piece
+    end
+
+    (*Single push or normal capture*)
+    else begin
+      update_aux position new_state white_to_move pieces_bitboard piece from to_ captured_piece to_ piece
+    end
+  end
+
+  (*Castling*)
+  else if get_move_castling move <> 0 then begin
+    let player_rook = player_pieces.(rook) in
+    let player_king = player_pieces.(king) in
+    let sweet_info = sweet_castling_info.(piece) in
+    let from_rook = sweet_info.from_rook in
+    let to_rook = sweet_info.to_rook in
+    pieces_bitboard.(player_king) <- swaped_piece_bitboard pieces_bitboard.(player_king) from to_;
+    pieces_bitboard.(player_rook) <- swaped_piece_bitboard pieces_bitboard.(player_rook) from_rook to_rook
+  end
+
+  (*Normal move*)
+  else if from + to_ <> 0 then begin
+    update_aux position new_state white_to_move pieces_bitboard piece from to_ captured_piece to_ piece
+  end;
+  position.ply <- position.ply + 1
+
+let [@inline] unmake_aux position white_to_move pieces_bitboard piece from to_ captured_piece =
+  if captured_piece = 0 then begin
+    quiet_bitboard_update position white_to_move pieces_bitboard piece from to_
+  end
+  else begin
+    capture_bitboard_update position white_to_move pieces_bitboard piece from to_ captured_piece to_
+  end
+
+let unmake_light position move =
+  let white_to_move = position.white_to_move in
+  let pieces_bitboard = position.pieces in
+  let player_pieces = pieces_rep.(white_to_move) in
+  position.white_to_move <- position.white_to_move lxor 1;
+  let from = get_move_from move in
+  let to_ = get_move_to move in
+  let piece = get_move_piece move in
+  let promotion_piece = get_move_promotion move in
+  let captured_piece = position.state.(position.ply).captured_piece in
+
+  (*Pawn moves*)
+  if is_pawn piece then begin
+
+    (*En passant*)
+    if get_move_enpassant move <> 0 then begin
+      let captured_pawn_square = (to_ - push_vects.(white_to_move)) in
+      capture_bitboard_update position white_to_move pieces_bitboard piece from to_ captured_piece captured_pawn_square
+    end
+
+    (*Promotion*)
+    else if promotion_piece <> 0 then begin
+      unmake_aux position (white_to_move lxor 1) pieces_bitboard piece from to_ captured_piece;
+    end
+
+    (*Push or normal capture*)
+    else begin
+      unmake_aux position (white_to_move lxor 1) pieces_bitboard piece from to_ captured_piece
+    end
+  end
+
+  (*Castling*)
+  else if get_move_castling move <> 0 then begin
+    let player_rook = player_pieces.(rook) in
+    let player_king = player_pieces.(king) in
+    let sweet_info = sweet_castling_info.(piece) in
+    let from_rook = sweet_info.from_rook in
+    let to_rook = sweet_info.to_rook in
+    pieces_bitboard.(player_king) <- swaped_piece_bitboard pieces_bitboard.(player_king) to_ from;
+    pieces_bitboard.(player_rook) <- swaped_piece_bitboard pieces_bitboard.(player_rook) to_rook from_rook;
+  end
+
+  (*Normal move*)
+  else if from + to_ <> 0 then begin
+    unmake_aux position (white_to_move lxor 1) pieces_bitboard piece from to_ captured_piece
+  end;
+  position.ply <- position.ply - 1*)

@@ -1,23 +1,21 @@
 (tests
  (names
  perft
- zobrist
  see
  brouillon
- trad
  nnue
+ magics
  bitboards)
  (modules
  perft
- zobrist
  see
  brouillon
  config
  positions
- trad
  to_algebraic
  bitboards
- nnue)
+ nnue
+ magics)
  (libraries 
  unix
  threads

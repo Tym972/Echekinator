@@ -12,6 +12,7 @@ let from_long_white_rook_zobrist = ref (zobrist_index !from_long_white_rook 4)
 let from_short_black_rook_zobrist = ref (zobrist_index !from_short_black_rook 10)
 let from_long_black_rook_zobrist = ref (zobrist_index !from_long_black_rook 10)
 
+(*On s'en bat les couilles*)
 let to_short_white_king_zobrist = zobrist_index to_short_white_king 6
 let to_long_white_king_zobrist = zobrist_index to_long_white_king 6
 let to_short_black_king_zobrist = zobrist_index to_short_black_king 12
@@ -42,6 +43,7 @@ let () =
 
 (*Fonction de hachage*)
 let zobrist position =
+  let state = position.state_infos.(position.ply) in
   let h = ref 0L in
   for i = 0 to 63 do
     let piece = position.board.(i) in
@@ -55,38 +57,27 @@ let zobrist position =
   if position.white_to_move then begin
     h := Int64.logxor !h tab_zobrist.(768)
   end;
-  if position.castling_rights.white_castling_rights.short then begin
+  if state.white_short_castling then begin
     h := Int64.logxor !h tab_zobrist.(769)
   end;
-  if position.castling_rights.white_castling_rights.long then begin
+  if state.white_long_castling then begin
     h := Int64.logxor !h tab_zobrist.(770)
   end;
-  if position.castling_rights.black_castling_rights.short then begin
+  if state.black_short_castling then begin
     h := Int64.logxor !h tab_zobrist.(771)
   end;
-  if position.castling_rights.black_castling_rights.long then begin
+  if state.black_long_castling then begin
     h := Int64.logxor !h tab_zobrist.(772)
   end;
-  if position.ep_square <> (-1) then begin
-    h := Int64.logxor !h tab_zobrist.(773 + (position.ep_square mod 8))
+  if state.ep_square <> (-1) then begin
+    h := Int64.logxor !h tab_zobrist.(773 + (state.ep_square mod 8))
   end;
   !h
 
 let zobrist_chessboard =
   zobrist {
-    board = Array.copy chessboard;
+    board = chessboard;
     white_to_move = true;
-    ep_square = (-1);
-    castling_rights = {
-      white_castling_rights = {short = true; long = true};
-      black_castling_rights = {short = true; long = true}
-    };
-    half_moves = 0;
-    zobrist_position = 0L;
-    last_capture = 0;
-    king_positions = {
-      king_to_move = !from_white_king;
-      king_not_to_move = !from_black_king
-    };
-    in_check = false
+    ply = 0;
+    state_infos = state_info_array
   }

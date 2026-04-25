@@ -2,5 +2,6 @@ _build/
 /Results/
 config.json
 bitboards.ml
+bitboard_utilities.ml
 magic_rook.txt
 magic_bishop.txt

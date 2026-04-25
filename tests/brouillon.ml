@@ -1,5 +1,28 @@
-open Libs.Bitboards
-open Libs.Board
+open Libs.Bitboards open Libs.Generator
+open Libs.Board open Libs.Uci
+
+let r = [|0L;second_row; 66L; 36L; 129L; 0xFF00L; 8L|]
+let p = (ref (0, 0)) 
+
+let g n =
+  let time = ref (Sys.time ()) in
+  let t1 = ref 0. in
+  let t2 = ref 0. in
+  let _ = ref 0L in
+  let _ = ref 0 in
+  for i = 0 to n do
+    let _ = castling_infos.(i mod 2) in
+    let _ = Int64.logand (generate_all_attacks r Int64.max_int 1 ) 0xb37bd32baf73cd5eL in ()
+  done;
+  t1 := Sys.time () -. !time;
+  time := Sys.time ();
+  for _ = 0 to n do
+    p := 0,0;
+    number_of_moves := 0;
+    let _ = threatened position.board 10 in ()
+  done;
+  t2 := Sys.time () -. !time;
+  print_endline (Printf.sprintf "t1 : %f \n t2 : %f" !t1 !t2)
 
 let pieces =[|1; 2; 3; 4; 5; 6; -1; -2; -3; -4; -5; -6|]
 
@@ -14,17 +37,7 @@ let index_of_bitboard bitboard =
   end;
   !index
 
-let mailbox_of_bitboard bitboard =
-  let mailbox = Array.make 64 0 in
-  let rec aux_1 mailbox index piece = match index with
-  |[] -> ()
-  |h::t ->
-    mailbox.(h) <- piece;
-    aux_1 mailbox t piece
-  in for i = 0 to 11 do
-    aux_1 mailbox (index_of_bitboard bitboard.(i)) pieces.(i)
-  done;
-  mailbox
+
 
 let bitboard_of_mailbox mailbox =
   let bitboard = [|0L; 0L; 0L; 0L; 0L; 0L; 0L; 0L; 0L; 0L; 0L; 0L|]
@@ -39,13 +52,15 @@ let bitboard_of_mailbox mailbox =
   done;
   bitboard
 
+let million = 1000000
+
 let () =
   let _ = bitboard_of_mailbox in
-  if true then begin
+  if false then begin
     let aux bitboard =
       let n = (Array.length bitboard) in
       for i = 0 to n - 1 do
-      b.(1) <- set 0L i;
+        b.(1) <- single_bitboards_tab.(i);
         b.(2) <- (Int64.logor 0L bitboard.(i));
         print_board (mailbox_of_bitboard b);
       done;
@@ -53,8 +68,8 @@ let () =
     in aux white_pawn_attacks_table
   end;
   if false then begin
-    let bibi = (bishop_masks, bishop_blockers, bishop_moves, bishop_shifts, bishop_magics, bishop_table) in
-    let roro = (rook_masks, rook_blockers, rook_moves, rook_shifts, rook_magics, rook_table) in
+    let bibi = (bishop_masks, bishop_blockers, Libs.Bitboards.bishop_moves, bishop_shifts, bishop_magics, bishop_table) in
+    let roro = (rook_masks, rook_blockers, Libs.Bitboards.rook_moves, rook_shifts, rook_magics, rook_table) in
     let tab = [|bibi; roro|] in
     let aux (masks, blockers, moves, shifts, magics, table) =
       for square = 34 to 34 do
@@ -68,6 +83,9 @@ let () =
         print_board (mailbox_of_bitboard b)
       done;
     in aux tab.(1)
+  end;
+  if true then begin
+    g (1 * million)
   end
 
 (*position fen r3kb1r/ppp1qpp1/2np1n1p/1B2p3/3PP1b1/2N1BN2/PPP2PPP/R2QK2R b KQkq - 4 8 moves e5d4 e3d4 f6e4 c3d5 e7d7 d1e2 g4f5 b5d3 e8c8 e1c1 c6d4 f3d4 d8e8 d4f5 d7f5 h1e1 f5d5 d3e4 d5g5 c1b1 c8b8 e2f3 g5e7 e1e3 e7f6 e3b3 b7b6 e4c6 e8e7 f3f6 g7f6 c6d5 h8g8 b3d3 g8g5 d3d2 g5e5 f2f3 f8g7 h2h3 f6f5 c2c3 e5e1 a2a3 b6b5 b1c2 f7f6 f3f4 a7a6 d1e1 e7e1 d5f3 e1f1 d2d5 f1f2 c2b1 f2f1 b1c2 f1e1 b2b4 e1a1 d5f5 a1h1 f5d5 h1h2 c2b1 h2h1 d5d1 h1d1 f3d1 f6f5 d1c2 g7c3 c2f5 c7c5 b4c5 d6c5 b1c2 c3d4 f5d7 c5c4 d7c6 c4c3 c2d3 d4f6 f4f5 f6e5 d3c2 b8c7 c6d5 a6a5 h3h4 c7d6 d5f7 a5a4 f7e8 d6c5 h4h5 b5b4 a3b4 c5b4 e8f7 a4a3 f7e6 b4c5 e6f7 c5b4
@@ -474,15 +492,21 @@ let quiescence_moves position =
   quiescence_moves, number_of_quiescence_moves*)
 
 begin
-            let fichier_sortie = open_out_gen [Open_creat; Open_text; Open_append] 0o666 "Harry.txt" in
-            let ma_chaine =
-              Printf.sprintf
-                "fen : %s; zobrist : %i; node_counter : %i; best_score : %i; alpha : %i; beta : %i; depth : %i; bestmove : %s\n"
-                (Fen.fen position 0) position.zobrist_position node_counter.(0) !best_score alpha beta depth
-                (Translation.uci_of_mouvement !best_move)
-            in output_string fichier_sortie ma_chaine;
-            close_out fichier_sortie
-          end;
+  let fichier_sortie = open_out_gen [Open_creat; Open_text; Open_append] 0o666 "Harry.txt" in
+  let ma_chaine =
+    Printf.sprintf
+      "fen : %s; zobrist : %s; node_counter : %i; best_score : %i; alpha : %i; beta : %i; depth : %i; bestmove : %s; vrai zobrist : %s\n"
+      (Fen.fen position 0) (Int64.to_string state.zobrist_position) node_counter.(0) !best_score alpha beta depth
+      (Translation.uci_of_mouvement !best_move) (Int64.to_string (zobrist position ))
+  in output_string fichier_sortie ma_chaine;
+  close_out fichier_sortie
+end;
+
+begin
+  let fichier_sortie = open_out_gen [Open_creat; Open_text; Open_append] 0o666 "Harry.txt" in
+  in output_string fichier_sortie (!display ^"\n");
+  close_out fichier_sortie
+end;
 
 
 

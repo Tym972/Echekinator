@@ -23,9 +23,11 @@ let zugzwang board white_to_move =
 
 (*open Evaluation*)
 
-let rec pvs stack ordering_tables thread depth ply alpha beta ispv =
+let rec pvs position ordering_tables thread depth alpha beta ispv =
+  let ply = position.ply in
+  let state = position.state_infos.(ply) in
   let main_thread = thread = 0 in
-  let position = stack.(ply) in
+  let grossiere_erreur = state.in_check in
   node_counter.(thread) <- node_counter.(thread) + 1;
   if node_counter.(0) mod 1000 = 0 then begin
     if Mtime.Span.compare (Mtime_clock.count !start_time) !hard_bound > 0 then begin
@@ -43,7 +45,7 @@ let rec pvs stack ordering_tables thread depth ply alpha beta ispv =
 
   (*Quiescense search*)
   else if depth = 0 then begin
-    quiescence_search stack thread depth ply alpha beta ispv 
+    quiescence_search position thread depth alpha beta ispv 
   end
 
   (*Normal search*)
@@ -57,7 +59,7 @@ let rec pvs stack ordering_tables thread depth ply alpha beta ispv =
     end; *)
 
     (*Check repetion or fifty moves rule*)
-    if repetition stack ply || (position.half_moves = 100 && (not position.in_check || (let _, number_of_moves = legal_moves position in !number_of_moves <> 0))) then begin
+    if repetition position.state_infos ply || (state.half_moves = 100 && (not state.in_check || (let _, number_of_moves = legal_moves position in !number_of_moves <> 0))) then begin
       if main_thread && ispv then begin
         pv_length.(ply) <- 0
       end;
@@ -75,19 +77,10 @@ let rec pvs stack ordering_tables thread depth ply alpha beta ispv =
       
       else begin
         let best_move = ref Null in
-        let hash_depth, hash_lower_bound, hash_upper_bound, hash_move(*, hash_static_eval*) = probe position in
+        let hash_depth, hash_lower_bound, hash_upper_bound, hash_move, hash_static_eval = probe position in
+        let static_eval = ref hash_static_eval in
         let no_cut = ref true in
         let best_score = ref (- max_int) in
-
-        (*let static_eval =
-          if hash_static_eval > (-infinity) then begin
-            hash_static_eval
-          end
-          else begin
-            evaluation board white_to_move
-            (*let _ = evaluate () in*)
-          end
-        in*)
 
         (*Use TT informations*)
         if not (ispv || depth > hash_depth) then begin
@@ -97,19 +90,21 @@ let rec pvs stack ordering_tables thread depth ply alpha beta ispv =
         if !no_cut then begin
           
           (*Reverse futility pruning and null move pruning*)
-          if not (position.in_check || ispv || is_loss !beta0 || zugzwang position.board position.white_to_move) then begin
-            let static_eval = hce position in
+          if not (state.in_check || ispv || is_loss !beta0 || zugzwang position.board position.white_to_move) then begin
+            if hash_static_eval = (-max_int) then begin
+              static_eval := hce position
+            end;
             (*let _ = evaluate () in*)
             if depth < 3 then begin
               let margin = 100 * depth in
-              if static_eval - margin >= !beta0 then begin
-                best_score := static_eval - margin;
+              if !static_eval - margin >= !beta0 then begin
+                best_score := !static_eval - margin;
                 no_cut := false
               end
             end
-            else if static_eval >= !beta0 then begin
-              make position stack.(ply + 1) Null;
-              let score = - pvs stack ordering_tables thread (depth - 3) (ply + 1) (- !beta0) (- !beta0 + 1) false
+            else if !static_eval >= !beta0 then begin
+              make position Null;
+              let score = - pvs position ordering_tables thread (depth - 3) (- !beta0) (- !beta0 + 1) false
               in if score >= !beta0 then begin
                 if is_win score then begin
                   best_score := beta  
@@ -118,18 +113,20 @@ let rec pvs stack ordering_tables thread depth ply alpha beta ispv =
                   best_score := score
                 end;
                 no_cut := false
-              end
+              end;
+              unmake position Null
             end
           end;
 
           (*Move loop*)
           if !no_cut then begin
             let counter = ref 0 in
+            let new_state = position.state_infos.(ply + 1) in
             let move_loop move =
-              make position stack.(ply + 1) move;
+              make position move;
               let score =
                 if !counter = 0 then begin
-                  - pvs stack ordering_tables thread (depth - 1) (ply + 1) (- !beta0) (- !alpha0) ispv
+                  - pvs position ordering_tables thread (depth - 1) (- !beta0) (- !alpha0) ispv
                 end
                 else begin
                   let score_lmr =
@@ -138,21 +135,21 @@ let rec pvs stack ordering_tables thread depth ply alpha beta ispv =
                       let float_counter = float_of_int (!counter - 1) in
                       min
                         (int_of_float begin
-                          if isquiet move stack.(ply + 1).last_capture then
+                          if isquiet move new_state.captured_piece then
                             1.35 +. log (float_depth) *. log (float_counter) /. 2.75
                           else
                             0.20 +. log (float_depth) *. log (float_counter) /. 3.35
                         end)
                         (depth - 1)
-                    in if not (position.in_check || depth < 3 || reduction = 0) then begin
-                      - pvs stack ordering_tables thread (depth - 1 - reduction) (ply + 1) (- !alpha0 - 1) (- !alpha0) false
+                    in if not (grossiere_erreur || depth < 3 || reduction = 0) then begin
+                      - pvs position ordering_tables thread (depth - 1 - reduction) (- !alpha0 - 1) (- !alpha0) false
                     end
                     else
                       !alpha0 + 1
                   in if score_lmr > !alpha0 then begin
-                    let score_0 = - pvs stack ordering_tables thread (depth - 1) (ply + 1) (- !alpha0 - 1) (- !alpha0) false
+                    let score_0 = - pvs position ordering_tables thread (depth - 1) (- !alpha0 - 1) (- !alpha0) false
                     in if (score_0 > !alpha0 && ispv) then begin
-                      - pvs stack ordering_tables thread (depth - 1) (ply + 1) (- !beta0) (- !alpha0) ispv
+                      - pvs position ordering_tables thread (depth - 1) (- !beta0) (- !alpha0) ispv
                     end
                     else begin
                       score_0
@@ -178,14 +175,14 @@ let rec pvs stack ordering_tables thread depth ply alpha beta ispv =
                 end;
                 if score >= !beta0 then begin
                   no_cut := false;
-                  if isquiet move stack.(ply + 1).last_capture then begin
-                    ordering_tables.history_moves.(aux_history position.white_to_move move) <- depth * depth;
+                  if isquiet move new_state.captured_piece then begin
+                    ordering_tables.history_moves.(aux_history (not position.white_to_move) move) <- depth * depth;
                     ordering_tables.killer_moves.(2 * ply + 1) <- ordering_tables.killer_moves.(2 * ply);
                     ordering_tables.killer_moves.(2 * ply) <- !best_move
                   end
                 end
               end;
-              unmake position.board move stack.(ply + 1).last_capture;
+              unmake position move;
               incr counter
             in if hash_move <> Null then begin
               move_loop hash_move;
@@ -210,7 +207,7 @@ let rec pvs stack ordering_tables thread depth ply alpha beta ispv =
               if main_thread && ispv then begin
                 pv_length.(ply) <- 0
               end;
-              if position.in_check then begin
+              if state.in_check then begin
                 best_score := ply - 99999
               end 
               else begin
@@ -247,7 +244,7 @@ let rec pvs stack ordering_tables thread depth ply alpha beta ispv =
             lower_bound := stored_value;
             upper_bound := stored_value
           end;
-          store thread position.zobrist_position depth !lower_bound !upper_bound !best_move (*hash_static_eval*) !go_counter
+          store thread state.zobrist_position depth !lower_bound !upper_bound !best_move !static_eval !go_counter
         end;
       !best_score
       end
@@ -269,22 +266,24 @@ let results =
     { pvs = Array.make !multipv { depth = 0; score = 0; pv = [] } })
   )
 
-let root_search stack ordering_tables thread depth alpha beta first_move legal_moves number_of_legal_moves multi =
+let root_search position ordering_tables thread depth alpha beta first_move legal_moves number_of_legal_moves multi =
+  let state = position.state_infos.(0) in
+  let new_state = position.state_infos.(1) in
+  let grossiere_erreur = state.in_check in
   let main_thread = thread = 0 in
-  let position = stack.(0) in
   node_counter.(thread) <- node_counter.(thread) + 1;
   let no_cut = ref true in
   let alpha0 = ref alpha in
   let beta0 = ref beta in
   let best_score = ref (- max_int) in
   let best_move = ref Null in
-  (*let static_eval = evaluation board white_to_move in*)
+  let static_eval = hce position in
   let counter = ref 0 in
   let move_loop move =
-    make position stack.(1) move;
+    make position move;
     let score =
       if !counter = 0 then begin
-        - pvs stack ordering_tables thread (depth - 1) 1 (- !beta0) (- !alpha0) true
+        - pvs position ordering_tables thread (depth - 1) (- !beta0) (- !alpha0) true
       end
       else begin
         let score_lmr =
@@ -293,21 +292,21 @@ let root_search stack ordering_tables thread depth alpha beta first_move legal_m
             let float_counter = float_of_int (!counter - 1) in
             min
               (int_of_float begin
-                if isquiet move stack.(1).last_capture then
+                if isquiet move new_state.captured_piece then
                   1.35 +. log (float_depth) *. log (float_counter) /. 2.75
                 else
                   0.20 +. log (float_depth) *. log (float_counter) /. 3.35
               end)
               (depth - 1)
-          in if not (position.in_check || depth < 3 || reduction = 0) then begin
-            - pvs stack ordering_tables thread (depth - 1 - reduction) 1 (- !alpha0 - 1) (- !alpha0) false
+          in if not (grossiere_erreur || depth < 3 || reduction = 0) then begin
+            - pvs position ordering_tables thread (depth - 1 - reduction) (- !alpha0 - 1) (- !alpha0) false
           end
           else
             !alpha0 + 1
         in if score_lmr > !alpha0 then begin
-          let score_0 = - pvs stack ordering_tables thread (depth - 1) 1 (- !alpha0 - 1) (- !alpha0) false
+          let score_0 = - pvs position ordering_tables thread (depth - 1) (- !alpha0 - 1) (- !alpha0) false
           in if (score_0 > !alpha0) then begin 
-            - pvs stack ordering_tables thread (depth - 1) 1 (- !beta0) (- !alpha0) true
+            - pvs position ordering_tables thread (depth - 1) (- !beta0) (- !alpha0) true
           end
           else begin
             score_0
@@ -339,14 +338,14 @@ let root_search stack ordering_tables thread depth alpha beta first_move legal_m
       end;
       if score >= !beta0 then begin
         no_cut := false;
-        if isquiet move stack.(1).last_capture then begin
-          ordering_tables.history_moves.(aux_history position.white_to_move move) <- depth * depth;
+        if isquiet move new_state.captured_piece then begin
+          ordering_tables.history_moves.(aux_history (not position.white_to_move) move) <- depth * depth;
           ordering_tables.killer_moves.(1) <- ordering_tables.killer_moves.(0);
           ordering_tables.killer_moves.(0) <- !best_move
         end
       end
     end;
-    unmake position.board move stack.(1).last_capture;
+    unmake position move;
     incr counter
   in if first_move <> Null then begin
     move_loop first_move;
@@ -382,6 +381,6 @@ let root_search stack ordering_tables thread depth alpha beta first_move legal_m
       lower_bound := !best_score;
       upper_bound := !best_score
     end;
-    store thread position.zobrist_position depth !lower_bound !upper_bound !best_move (*hash_static_eval*) !go_counter
+    store thread state.zobrist_position depth !lower_bound !upper_bound !best_move static_eval !go_counter
   end;
   !best_score
