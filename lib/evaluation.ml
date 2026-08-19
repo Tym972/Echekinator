@@ -1,109 +1,7 @@
+open Bitboards
+open Miscellaneous
+
 (*Module implémentant des fonctions d'évaluation*)
-
-open Board
-
-(*let board_of_vector vector =
-  let tab_piece = [|1; 2; 3; 4; 5; 6; -1; -2; -3; -4; -5; -6|] in
-  let board = Array.make 64 0 in
-  for i = 0 to 767 do
-    if vector.(i) = 1. then begin
-      board.(i / 12) <- tab_piece.(i mod 12)
-    end
-  done;
-  board
-
-let print_matrix a m n =
-  for i = 0 to (m - 1) do
-    for j = 0 to (n - 1) do
-      print_string (string_of_float a.(i * n + j) ^ " ")
-    done;
-    print_newline ()
-  done
-
-let matrix_multiplication (a, m, n1) (b, n2, p) =
-  let c = Array.make (m * p) 0. in
-    for i = 0 to (m - 1) do
-      for j = 0 to (p - 1) do
-        c.(i * p + j) <-
-        let h = ref 0. in
-        for k = 0 to (n1 - 1) do
-          h := !h +. a.(i * n2 + k) *. b.(k * p + j)
-        done;
-        !h
-      done
-    done;
-  c
-
-let matrix_addition (a, m1, n1) (b, m2, n2) =
-  let c = Array.make (m1 * n1) 0. in
-  if m1 = m2 && n1 = n2 then begin
-    for i = 0 to (m1 * n1 - 1) do
-      c.(i) <- a.(i) +. b.(i)
-    done
-  end;
-  c
-
-let matrix_multiplication_ones a b m n =
-  let tab = Array.make m 0. in
-    for i = 0 to n - 1 do
-      if b.(i) = 1. then begin
-        for j = 0 to m - 1 do
-          tab.(j) <- tab.(j) +. a.(j * n + i)
-        done
-      end
-    done;
-  tab
-
-let vector_addition a b m =
-  let c = Array.make m 0. in
-  for i = 0 to (m - 1) do
-    c.(i) <- a.(i) +. b.(i)
-  done;
-  c
-
-let make_accumulator_merdique x =
- matrix_addition ((matrix_multiplication (hidden_weights, n, 768) (x, 768, 1)), n , 1) (hidden_bias, n, 1)
-
-let make_accumulator x =
-  vector_addition ((matrix_multiplication_ones hidden_weights x n 768)) (hidden_bias) n
-
-(**)
-let relu x = if x > 0. then x else 0.
-
-let make_hidden_layer x =
-  let tab = make_accumulator x in
-  for i = 0 to n - 1 do
-    tab.(i) <- relu tab.(i)
-  done;
-  tab
-
-let make_output_layer x =
-  (matrix_multiplication (output_weight, 1, n) (make_hidden_layer x, n, 1)).(0) +. output_bias
-
-let evaluate () =
-  let score = ref output_bias in
-  for i = 0 to n - 1 do
-    score := !score +. output_weight.(i) *. (if accumulator.(i) > 0. then accumulator.(i) else 0.)
-  done;
-  !score
-
-let () =
-  vector chessboard;
-  for i = 0 to (n * 768) - 1 do
-    hidden_weights.(i) <- (float_of_int i) *. 8. +. 3. *. (float_of_int (i * i))
-  done;
-  for i = 0 to n - 1 do
-    hidden_bias.(i) <- 3. *. (float_of_int i) -. 7. ;
-    output_weight.(i) <- (float_of_int i) *. -7. +. 2. *. (float_of_int (i * i))
-  done;
-  let acc = make_accumulator board_vector in
-  let hid = make_hidden_layer board_vector in
-  for i = 0 to n - 1 do
-    accumulator.(i) <- acc.(i);
-  done;
-  for i = 0 to n - 1 do
-    hidden_layer.(i) <- hid.(i)
-  done*)
 
 let mg_value = [| 82; 337; 365; 477; 1025;  0|]
 let eg_value = [| 94; 281; 297; 512;  936;  0|]
@@ -248,22 +146,17 @@ let eg_table = Array.make 768 0
 
 let gamephase_table = [|0; 1; 1; 2; 4; 0|]
 
-let flip square =
-  let rank = square / 8 in
-  let file = square mod 8 in
-  (7 - rank) * 8 + file
-
 let () =
   for piece = 1 to 6 do
     for square = 0 to 63 do
-      mg_table.(12 * square + (piece - 1)) <- mg_value.(piece - 1) + mg_tables.(piece - 1).(square);
-      eg_table.(12 * square + (piece - 1)) <- eg_value.(piece - 1) + eg_tables.(piece - 1).(square);
+      mg_table.(12 * square + (piece - 1)) <- mg_value.(piece - 1) + mg_tables.(piece - 1).(flip square);
+      eg_table.(12 * square + (piece - 1)) <- eg_value.(piece - 1) + eg_tables.(piece - 1).(flip square);
     done;
   done;
-  for piece = (-1) downto (-6) do
+  for piece = 7 to 12 do
     for square = 0 to 63 do
-      mg_table.(12 * square + (5 - piece)) <- mg_value.(- piece - 1) + mg_tables.(- piece - 1).(flip square);
-      eg_table.(12 * square + (5 - piece)) <- eg_value.(- piece - 1) + eg_tables.(- piece - 1).(flip square);
+      mg_table.(12 * square + (piece - 1)) <- mg_value.(piece - 7) + mg_tables.(piece - 7).(square);
+      eg_table.(12 * square + (piece - 1)) <- eg_value.(piece - 7) + eg_tables.(piece - 7).(square);
     done;
   done
 
@@ -271,25 +164,30 @@ let hce position =
   let mg_score = ref 0 in
   let eg_score = ref 0  in
   let gamephase = ref 0 in
-  for square = 0 to 63 do
-    let piece = position.board.(square) in
-    if piece > 0 then begin
-      mg_score := !mg_score + mg_table.(12 * square + (piece - 1));
-      eg_score := !eg_score + eg_table.(12 * square + (piece - 1));
-      gamephase := !gamephase + gamephase_table.(piece - 1)
-    end
-    else if piece < 0 then begin
-      mg_score := !mg_score - mg_table.(12 * square + (5 - piece));
-      eg_score := !eg_score - eg_table.(12 * square + (5 - piece));
-      gamephase := !gamephase + gamephase_table.(- piece - 1)
-    end;
+  let pieces_bitboard = position.pieces in
+  for piece = 1 to 6 do
+    let bitboard = ref pieces_bitboard.(piece) in
+    while !bitboard <> 0L do
+      let from, other_pieces_bitboard = pop_lsb !bitboard in
+      mg_score := !mg_score + mg_table.(12 * from + (piece - 1));
+      eg_score := !eg_score + eg_table.(12 * from + (piece - 1));
+      gamephase := !gamephase + gamephase_table.(piece - 1);
+      bitboard := other_pieces_bitboard
+    done
+  done;
+  for piece = 7 to 12 do
+    let bitboard = ref pieces_bitboard.(piece) in
+    while !bitboard <> 0L do
+      let from, other_pieces_bitboard = pop_lsb !bitboard in
+      mg_score := !mg_score - mg_table.(12 * from + (piece - 1));
+      eg_score := !eg_score - eg_table.(12 * from + (piece - 1));
+      gamephase := !gamephase + gamephase_table.(piece - 7);
+      bitboard := other_pieces_bitboard
+    done
   done;
   let phase = min !gamephase 24 in
   let score = ((!mg_score * phase + !eg_score * (24 - phase)) / 24) in
-  if position.white_to_move then
-    score
-  else  
-    - score
+  (- 2 * position.white_to_move + 1) * score
 
 (*let value = [| 100; 300; 300; 500; 900; 0|]
 

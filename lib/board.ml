@@ -1,180 +1,21 @@
 (*Module implémentant le type Mouvement, les constantes et les fonctions de bases du programme*)
 
+open Bitboards
+
 (*Program version*)
 let project_name = "Echekinator 1.1"
 
-(*Type for chess moves*)
-type move =
-  |Castling of {sort : int}
-  |Enpassant of  {from : int; to_ : int}
-  |Normal of {piece : int; from : int; to_ : int}
-  |Promotion of {from : int; to_ : int; promotion : int}
-  |Null
-
 (*Table of coordinates of a chessboard*)
 let coord = [|
-  "a8"; "b8"; "c8"; "d8"; "e8"; "f8"; "g8"; "h8";
-  "a7"; "b7"; "c7"; "d7"; "e7"; "f7"; "g7"; "h7";
-  "a6"; "b6"; "c6"; "d6"; "e6"; "f6"; "g6"; "h6";
-  "a5"; "b5"; "c5"; "d5"; "e5"; "f5"; "g5"; "h5";
-  "a4"; "b4"; "c4"; "d4"; "e4"; "f4"; "g4"; "h4";
-  "a3"; "b3"; "c3"; "d3"; "e3"; "f3"; "g3"; "h3";
+  "a1"; "b1"; "c1"; "d1"; "e1"; "f1"; "g1"; "h1";
   "a2"; "b2"; "c2"; "d2"; "e2"; "f2"; "g2"; "h2";
-  "a1"; "b1"; "c1"; "d1"; "e1"; "f1"; "g1"; "h1"
+  "a3"; "b3"; "c3"; "d3"; "e3"; "f3"; "g3"; "h3";
+  "a4"; "b4"; "c4"; "d4"; "e4"; "f4"; "g4"; "h4";
+  "a5"; "b5"; "c5"; "d5"; "e5"; "f5"; "g5"; "h5";
+  "a6"; "b6"; "c6"; "d6"; "e6"; "f6"; "g6"; "h6";
+  "a7"; "b7"; "c7"; "d7"; "e7"; "f7"; "g7"; "h7";
+  "a8"; "b8"; "c8"; "d8"; "e8"; "f8"; "g8"; "h8"
 |]
-
-(* Hash table mapping chessboard coordinates to indices in the coord array *)
-let hash_coord =
-  let ht = Hashtbl.create 64 in
-  List.iter (fun (key, value) -> Hashtbl.add ht key value)
-    [ ("a8", 0);  ("b8", 1);  ("c8", 2);  ("d8", 3);  ("e8", 4);  ("f8", 5);  ("g8", 6);  ("h8", 7);
-      ("a7", 8);  ("b7", 9);  ("c7", 10); ("d7", 11); ("e7", 12); ("f7", 13); ("g7", 14); ("h7", 15);
-      ("a6", 16); ("b6", 17); ("c6", 18); ("d6", 19); ("e6", 20); ("f6", 21); ("g6", 22); ("h6", 23);
-      ("a5", 24); ("b5", 25); ("c5", 26); ("d5", 27); ("e5", 28); ("f5", 29); ("g5", 30); ("h5", 31);
-      ("a4", 32); ("b4", 33); ("c4", 34); ("d4", 35); ("e4", 36); ("f4", 37); ("g4", 38); ("h4", 39);
-      ("a3", 40); ("b3", 41); ("c3", 42); ("d3", 43); ("e3", 44); ("f3", 45); ("g3", 46); ("h3", 47);
-      ("a2", 48); ("b2", 49); ("c2", 50); ("d2", 51); ("e2", 52); ("f2", 53); ("g2", 54); ("h2", 55);
-      ("a1", 56); ("b1", 57); ("c1", 58); ("d1", 59); ("e1", 60); ("f1", 61); ("g1", 62); ("h1", 63)];
-  ht
-
-(* 120-element array where -1 represents an off-board square *)
-let tab120 = [| 
-  -1; -1; -1; -1; -1; -1; -1; -1; -1; -1;
-  -1; -1; -1; -1; -1; -1; -1; -1; -1; -1;
-  -1;  0;  1;  2;  3;  4;  5;  6;  7; -1;
-  -1;  8;  9; 10; 11; 12; 13; 14; 15; -1;
-  -1; 16; 17; 18; 19; 20; 21; 22; 23; -1;
-  -1; 24; 25; 26; 27; 28; 29; 30; 31; -1;
-  -1; 32; 33; 34; 35; 36; 37; 38; 39; -1;
-  -1; 40; 41; 42; 43; 44; 45; 46; 47; -1;
-  -1; 48; 49; 50; 51; 52; 53; 54; 55; -1;
-  -1; 56; 57; 58; 59; 60; 61; 62; 63; -1;
-  -1; -1; -1; -1; -1; -1; -1; -1; -1; -1;
-  -1; -1; -1; -1; -1; -1; -1; -1; -1; -1
-|]
-
-(* 64-element array mapping squares to their indices in tab120 *)
-let tab64 = [| 
-  21; 22; 23; 24; 25; 26; 27; 28;
-  31; 32; 33; 34; 35; 36; 37; 38;
-  41; 42; 43; 44; 45; 46; 47; 48;
-  51; 52; 53; 54; 55; 56; 57; 58;
-  61; 62; 63; 64; 65; 66; 67; 68;
-  71; 72; 73; 74; 75; 76; 77; 78;
-  81; 82; 83; 84; 85; 86; 87; 88;
-  91; 92; 93; 94; 95; 96; 97; 98
-|]
-
-(*Possible directions of movement of a rook in the table tab64*)
-let rook_vect = [|(-10); 10; (-1); 1|]
-
-(*Possible directions of movement of a bishop in the table tab64*)
-let bishop_vect = [|(-11); 11; (-9); 9|]
-
-(*Possible directions of movement of a knight in the table tab64*)
-let knight_vect = [|(-8); 8; (-12); 12; (-19); 19; (-21); 21|]
-
-(*Possible directions of movement of a king in the table tab64*)
-let king_vect = [|(-10); 10; (-1); 1; (-11); 11; (-9); 9|]
-
-(*Initial chessboard setup. The pieces are represented by numbers, positive for white, negative for black. Empty square: 0; pawn: 1; knight: 2; bishop: 3; rook: 4; queen: 5; king: 6*)
-let chessboard = [|
-  (-4); (-2); (-3); (-5); (-6); (-3); (-2); (-4);
-  (-1); (-1); (-1); (-1); (-1); (-1); (-1); (-1);
-  0; 0; 0; 0; 0; 0; 0; 0;
-  0; 0; 0; 0; 0; 0; 0; 0;
-  0; 0; 0; 0; 0; 0; 0; 0;
-  0; 0; 0; 0; 0; 0; 0; 0;
-  1; 1; 1; 1; 1; 1; 1; 1;
-  4; 2; 3; 5; 6; 3; 2; 4
-  |]
-
-(*(**)
-let board_vector = Array.make 768 0.
-
-(**)
-let vector board =
-  for i = 0 to 767 do
-    board_vector.(i) <- 0.
-  done;
-  for i = 0 to 63 do
-    let piece = board.(i) in
-    if piece > 0 then begin
-      board_vector.(12 * i + (piece - 1)) <- 1.
-    end
-    else if piece < 0 then begin
-      board_vector.(12 * i + (5 - piece)) <- 1.
-    end
-  done
-
-(**)
-let n = 1556
-
-(**)
-let hidden_weights = Array.make (n * 768) 0.
-let hidden_bias = Array.make n 0.
-let output_weight = Array.make n 0.
-let output_bias = 0.054845188
-let accumulator = Array.make n 0.
-let hidden_layer = Array.make n 0.*)
-
-(*Array used in print_board*)
-let tab_print = [|"   |"; " P |"; " N |"; " B |"; " R |"; " Q |"; " K |"; " p |"; " n |"; " b |"; " r |"; " q |"; " k |"|]
-
-(*Print the board in ASCII*)
-let print_board board =
-  let display = ref "   +---+---+---+---+---+---+---+---+\n" in
-  for i = 0 to 7 do
-    let k_list = ref [] in
-    let k = string_of_int (8 - i) ^ "  |" in
-    for j = 8 * i to 8 + 8 * i - 1 do
-      let piece = board.(j) in
-      k_list := tab_print.(if piece >= 0 then piece else (6 - piece)) :: !k_list;
-    done;
-    k_list := List.rev !k_list;
-    let k_str = String.concat "" !k_list in
-    display := !display ^ (k ^ k_str ^ "\n" ^"   +---+---+---+---+---+---+---+---+\n");
-  done;
-  print_endline (!display ^ "     a   b   c   d   e   f   g   h\n")
-
-(*Function returning the win value associated with a player loss*)
-let lose player_is_white = if player_is_white then (-1) else 1
-
-(*Function returning the representation of the player's king in the chessboard*)
-let king player_is_white = if player_is_white then 6 else (-6)
-
-(*Function returning the representation of the player's queen in the chessboard*)
-let queen player_is_white = if player_is_white then 5 else (-5)
-
-(*Function returning the representation of the player's rook in the chessboard*)
-let rook player_is_white = if player_is_white then 4 else (-4)
-
-(*Function returning the representation of the player's knight in the chessboard*)
-let knight player_is_white = if player_is_white then 2 else (-2)
-
-(*Function returning the representation of the player's bishop in the chessboard*)
-let bishop player_is_white = if player_is_white then 3 else (-3)
-
-(*Function returning the representation of the player's pawn in the chessboard*)
-let pawn player_is_white = if player_is_white then 1 else (-1)
-
-let isquiet move capture = match move with
-  |Normal {piece = _; from = _; to_ = _} when capture <> 0 -> false
-  |Enpassant _ | Promotion _ -> false
-  |_ -> true
-
-(*Fonction renvoyant l'indice de la première occurence d'un élément dans un tableau*)
-let index_array array element =
-  if element < 0 then begin
-    let rec aux i =
-      if array.(i) = element then i else aux (i + 1)
-    in aux 0
-  end
-  else begin
-    let rec aux i =
-      if array.(i) = element then i else aux (i - 1)
-    in aux 63
-  end
 
 (*Merge sort*)
 let merge_sort l =
@@ -197,7 +38,7 @@ let max_depth = 255
 let max_pv_length = max_depth
 
 (**)
-let pv_table = Array.make ((max_pv_length) * (max_pv_length + 1) / 2) Null
+let pv_table = Array.make ((max_pv_length) * (max_pv_length + 1) / 2) 0
 
 (**)
 let pv_length = Array.make max_pv_length 0
@@ -234,8 +75,6 @@ let transposition_counter = Array.make max_threads_number 0
 (*"Go" counter*)
 let go_counter = ref 0
 
-let zugzwang = ref true
-
 let start_time = ref (Mtime_clock.counter ())
 let soft_bound = ref Mtime.Span.max_span
 let hard_bound = ref Mtime.Span.max_span
@@ -243,162 +82,43 @@ let ponder_time = ref Mtime.Span.max_span
 
 let chess_960 = ref false
 
-(*Variables indiquant la positions initiales des pièces impliquées dans un castlings*)
-let from_white_king = ref 60
-let from_black_king = ref 4
-let from_short_white_rook = ref 63
-let from_long_white_rook = ref 56
-let from_short_black_rook = ref 7
-let from_long_black_rook = ref 0
-
-let to_short_white_king = 62
-let to_short_black_king = 6
-let to_long_white_king = 58
-let to_long_black_king = 2
-let to_short_white_rook = 61
-let to_long_white_rook = 59
-let to_short_black_rook = 5
-let to_long_black_rook = 3
-
-(*Cases de passage du roi pour le castlings*)
-let white_short_path = [|61; 62; 0; 0; 0; 0|]
-let white_long_path = [|59; 58; 0; 0; 0|]
-let black_short_path = [|5; 6; 0; 0; 0; 0|]
-let black_long_path = [|3; 2; 0; 0; 0|]
-
-(*Nombre de square traversée par le roi*)
-let white_short_path_length = ref 2
-let white_long_path_length = ref 2
-let black_short_path_length = ref 2
-let black_long_path_length = ref 2
-
-(*Cases devant êtres empties pour le castlings*)
-let white_short_empties = ref [61; 62]
-let white_long_empties = ref [59; 58; 57]
-let black_short_empties = ref [5; 6]
-let black_long_empties = ref [3; 2; 1]
-
-(*Variable indiquant si le roi doit se déplacer pour atteindre sa square de castlings (échecs 960)*)
-let white_king_pinnable = ref true
-let black_king_pinnable = ref true
-
-(*Variables indicating whether the starting column of the queenside rook is a*)
-let white_long_rook_in_a = ref true
-let black_long_rook_in_a = ref true
-
-(*Variables indicating whether the starting column of the kingside rook is h*)
-let white_short_rook_in_h = ref true
-let black_short_rook_in_h = ref true
-
-(*Critical case for the castling rights*)
-let white_king_pin_1 = ref 52
-let white_king_pin_2 = ref 44
-let black_king_pin_1 = ref 12
-let black_king_pin_2 = ref 20
-
-(*Variable indiquant la direction du grand castlings, valant 1 si le déplacement du roi se fait vers la right, (-1) sinon*)
-let white_long_directions = ref (-1)
-let black_long_directions = ref (-1)
-
-(*Variable indiquant si la square de départ de la tour du grand castlings est b1 (respectivement b8)*)
-let white_long_rook_in_b = ref false
-let black_long_rook_in_b = ref false
-
-(*Vecteurs de déplacement des potentielles menaces au castlings*)
-let white_short_bishop_vect = [|(-9); (-11)|]
-let white_long_bishop_vect = [|(-11); (-9)|]
-let black_short_bishop_vect = [|11; 9|]
-let black_long_bishop_vect = [|9; 11|]
-let white_castling_knights_vect = [|(-8); (-12); (-19); (-21)|]
-let black_castlings_knights_vect = [|8; 12; 19; 21|]
-
-(*Fonction donnant la square de départ d'un move classique et d'une promotion*)
-let from move = match move with
-  |Normal {piece = _; from; to_ = _} | Enpassant {from; to_ = _} | Promotion {from; to_ = _; promotion = _} -> from
-  |Castling {sort} -> if sort < 3 then !from_white_king else !from_black_king
-  |_ -> (-1)
-
-(*Fonction donnant la square d'arrivée d'un move*)
-let to_ move = match move with
-  |Normal {piece = _; from = _; to_} | Promotion {from = _; to_; promotion = _} | Enpassant {from = _; to_} -> to_
-  |Castling {sort} -> begin
-    match sort with
-      |1 -> 62
-      |2 -> 58
-      |3 -> 6
-      |_ -> 2
-  end
-  |_ -> (-1)
-
 let initial_half_moves = ref 0
 
 let board_record = Array.make 100 0L
 
-let[@inline] xor3 a b c =
-  Int64.logxor a (Int64.logxor b c)
-
-let[@inline] xor4 a b c d =
-  Int64.logxor a (Int64.logxor b (Int64.logxor c d))
-
-let[@inline] xor6 a b c d e f =
-  Int64.logxor a (Int64.logxor b (Int64.logxor c (Int64.logxor d (Int64.logxor e f))))
-
-let[@inline] xor7 a b c d e f g =
-  Int64.logxor a (Int64.logxor b (Int64.logxor c (Int64.logxor d (Int64.logxor e (Int64.logxor f g)))))
-
-let[@inline] logand3 a b c =
-  Int64.logand a (Int64.logand b c)
-
-let[@inline] logand4 a b c d =
-  Int64.logand a (Int64.logand b (Int64.logand c d))
-
-type state_info = {
-  mutable ep_square : int; 
-  mutable white_short_castling : bool;
-  mutable white_long_castling : bool;
-  mutable black_short_castling : bool;
-  mutable black_long_castling : bool;
-  mutable half_moves : int;
-  mutable zobrist_position : int64;
-  mutable captured_piece : int;
-  mutable king_to_move_position : int;
-  mutable king_not_to_move_position : int;
-  mutable in_check : bool
-}
-
-let chessboard_state = {
-  ep_square = (-1);
-  white_short_castling = true;
-  white_long_castling = true;
-  black_short_castling = true;
-  black_long_castling = true;
-  half_moves = 0;
-  zobrist_position = 0L;
-  captured_piece = 0;
-  king_to_move_position = 0;
-  king_not_to_move_position = 0;
-  in_check = false
-}
-
-type position = {
-  board : int array;
-  mutable white_to_move : bool;
-  mutable ply : int;
-  state_infos : state_info array
-}
-
 let create_empty_state () = {
-  ep_square = -1;
-  white_short_castling = true;
-  white_long_castling = true;
-  black_short_castling = true;
-  black_long_castling = true;
+  ep_square = (-1);
+  castling_rights = 15;
   half_moves = 0;
-  zobrist_position = 0L;
+  zobrist = 0L;
   captured_piece = 0;
-  king_to_move_position = !from_white_king;
-  king_not_to_move_position = !from_black_king;
   in_check = false
 }
 
-let state_info_array = Array.init (max_depth + 40) (fun _ -> create_empty_state ())
+let state_array = Array.init (max_depth + 40) (fun _ -> create_empty_state ())
+let moves = Array.init (max_depth + 40) (fun _ -> Array.make 218 0)
+let number_of_moves = Array.make (max_depth + 40) 0
+
+let position = {
+  white_to_move = 0;
+  ply = 0;
+  state = Array.copy state_array;
+  pieces = Array.make 13 0L;
+  occupancy = Array.make 2 0L;
+  mailbox = Array.make 64 0;
+  moves = Array.copy moves;
+  number_of_moves = Array.copy number_of_moves
+}
+
+let copy_position position = {
+  white_to_move = position.white_to_move;
+  ply = position.ply;
+  state = Array.copy position.state;
+  pieces = Array.copy position.pieces;
+  occupancy = Array.copy position.occupancy;
+  mailbox = Array.copy position.mailbox;
+  moves = Array.copy position.moves;
+  number_of_moves = Array.copy position.number_of_moves
+  }
+
+let startpos = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"

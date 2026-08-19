@@ -3,17 +3,16 @@
  (modules
   board
   bitboards
-  generator
   translation
   fen
   zobrist
-  move_ordering
+  move_ordering  
   transposition
   quiescence
   search
   evaluation
   uci
-  bitboard_utilities)
+  miscellaneous)
  (libraries
   str
   unix

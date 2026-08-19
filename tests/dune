@@ -1,14 +1,12 @@
 (tests
  (names
  perft
- see
  brouillon
  nnue
  magics
  bitboards)
  (modules
  perft
- see
  brouillon
  config
  positions

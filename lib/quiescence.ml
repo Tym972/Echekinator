@@ -1,7 +1,7 @@
 (*Module implémentant les fonctions permettant la recherche quiescente*)
 
 open Board
-open Generator
+open Bitboards
 open Move_ordering
 open Transposition
 open Evaluation
@@ -9,12 +9,12 @@ open Evaluation
 (*Fonction détectant les répétitions à partir d'une liste de code zobrist*)
 let repetition state ply =
   let index = ref (ply - 2) in
-  let zobrist_position = state.(ply).zobrist_position in
+  let zobrist_position = state.(ply).zobrist in
   let repeat = ref false in
   let limit = max (ply - state.(ply).half_moves) (- !initial_half_moves) in
   while !index >= limit && not !repeat do
     if !index >= 0 then begin
-      if state.(!index).zobrist_position = zobrist_position then begin
+      if state.(!index).zobrist = zobrist_position then begin
         repeat := true
       end
     end
@@ -27,8 +27,24 @@ let repetition state ply =
   done;
   !repeat
 
+let captures position moves number hash_move =
+  let list = ref [] in
+  for i = 0 to number - 1 do
+    if get_move_flag moves.(i) > 3 && moves.(i) <> hash_move then
+      list := moves.(i) :: !list
+  done;
+  let rec aux list = match list with
+    |[] -> []
+    |move :: t ->
+      let note = see position move in
+      if note >= 0 then
+        (note, move) :: aux t
+      else
+        aux t
+    in List.map snd (merge_sort (aux !list))
+
 (*Fonction implémentant la recherche quiescente*)
-let rec quiescence_search position thread depth alpha beta ispv =
+let rec quiescence_search position ordering_tables thread depth alpha beta ispv =
 
   (*Check search limit*)
   if stop_search.(thread) then begin
@@ -37,15 +53,16 @@ let rec quiescence_search position thread depth alpha beta ispv =
 
   else begin
     let ply = position.ply in
-    let state = position.state_infos.(ply) in
+    let state = position.state.(ply) in
+    let in_check = state.in_check in
     
     (*Check repetion or fifty moves rule*)
-    if repetition position.state_infos ply || (state.half_moves = 100 && (not state.in_check || (let _, number_of_moves = legal_moves position in !number_of_moves <> 0))) then begin
+    if repetition position.state ply || (state.half_moves = 100 && (not in_check || (legal_moves position; position.number_of_moves.(ply) <> 0))) then begin
       0
     end
 
     else begin
-      let best_move = ref Null in
+      let best_move = ref 0 in
       let hash_depth, hash_lower_bound, hash_upper_bound, hash_move, hash_static_eval = probe position in
       let static_eval = ref hash_static_eval in
       let no_cut = ref true in
@@ -60,14 +77,14 @@ let rec quiescence_search position thread depth alpha beta ispv =
       if !no_cut then begin
 
         (*Static eval*)
-        if not (state.in_check || hash_static_eval <> (- max_int)) then begin
+        if not (in_check || hash_static_eval <> (- max_int)) then begin
           static_eval := hce position
         end;
         best_score := !static_eval;
 
         (*Stand pat verification then move loop*)
         if !best_score < beta then begin
-          
+          let moves = position.moves.(ply) in
           if !best_score > !alpha0 then begin
             alpha0 := !best_score
           end;
@@ -75,7 +92,7 @@ let rec quiescence_search position thread depth alpha beta ispv =
           let counter = ref 0 in
           let move_loop move =
             make position move;
-            let score = - quiescence_search position thread (depth - 1) (- !beta0) (- !alpha0) ispv
+            let score = - quiescence_search position ordering_tables thread (depth - 1) (- !beta0) (- !alpha0) ispv
             in if score > !best_score then begin
               best_score := score;
               if score > !alpha0 then begin
@@ -92,15 +109,21 @@ let rec quiescence_search position thread depth alpha beta ispv =
             incr counter
 
           (*If in check search for all moves*)
-          in if state.in_check then begin
+          in if in_check then begin
             let move_loop_in_check () =
-              let legal_moves, number_of_legal_moves = legal_moves position in
-              let i = ref 0 in
-              while !no_cut && !i < !number_of_legal_moves do
-                move_loop legal_moves.(!i);
-                incr i
+              legal_moves position;
+              let ordering_array = Array.make position.number_of_moves.(ply) 0 in
+              move_ordering ordering_tables position moves position.number_of_moves.(ply) ply hash_move ordering_array;
+              while !no_cut do
+                let move = move_picker moves ordering_array position.number_of_moves.(ply) in
+                  if move <> 0 then begin
+                    move_loop move 
+                  end 
+                  else begin
+                    no_cut := false
+                  end
               done
-            in if hash_move <> Null then begin
+            in if hash_move <> 0 then begin
               move_loop hash_move;
               if !no_cut then begin
                 move_loop_in_check ()
@@ -120,12 +143,13 @@ let rec quiescence_search position thread depth alpha beta ispv =
           (*Else only search for captures and promotions*)
           else begin
             let move_loop_normal () =
-              let captures = ref (tri_see (captures position) position.board hash_move) in
+              legal_moves position;
+              let captures = ref (captures position moves position.number_of_moves.(ply) hash_move) in
               while !no_cut && !captures <> [] do
                 move_loop (List.hd !captures);
                 captures := List.tl !captures
               done
-            in if hash_move <> Null && not (isquiet hash_move position.board.(to_ hash_move)) then begin
+            in if hash_move <> 0 && not (isquiet hash_move) then begin
               move_loop hash_move;
               if !no_cut then begin
                 move_loop_normal ()
@@ -163,7 +187,7 @@ let rec quiescence_search position thread depth alpha beta ispv =
           lower_bound := stored_value;
           upper_bound := stored_value
         end;
-        store thread state.zobrist_position depth !lower_bound !upper_bound !best_move !static_eval !go_counter
+      store thread state.zobrist depth !lower_bound !upper_bound !best_move !static_eval !go_counter
       end;
     !best_score
     end

@@ -2,5 +2,4 @@
  (public_name echekinator)
  (name echekinator)
  (modules echekinator)
- (libraries 
- libs))
+ (libraries libs))

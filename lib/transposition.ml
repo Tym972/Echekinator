@@ -1,45 +1,6 @@
 open Board
+open Bitboards
 open Bigarray
-
-let encode move = match move with
-  |Castling {sort} -> sort
-  |Enpassant  {from; to_} -> 49152 + 64 * from + to_
-  |Normal {piece; from; to_} ->
-    let adjusted_piece = if piece > 0 then piece - 1 else 5 - piece in
-    49152 * 2 + 4096 * adjusted_piece + 64 * from + to_
-  |Promotion {from; to_; promotion} ->
-    let adjusted_promotion = if promotion > 0 then promotion - 1 else 5 - promotion in
-    49152 * 3 + 4096 * adjusted_promotion + 64 * from + to_
-  |Null -> 0
-
-let decode intmove =
-  if intmove = 0 then begin
-    Null
-  end
-  else begin
-    let move_type = intmove / 49152 in
-    if move_type = 0 then begin
-      Castling {sort = intmove mod 49152}
-    end
-    else if move_type = 1 then begin
-      let k = intmove - 49152 in
-      Enpassant  {from = k / 64; to_ = k mod 64}
-    end
-    else if move_type = 2 then begin
-      let k = intmove - 2 * 49152 in
-      let j = k / 4096 in
-      let l = k mod 4096 in
-      let adjusted_piece = if j < 6 then j + 1 else 5 - j in
-      Normal {piece = adjusted_piece; from = l/64; to_ = l mod 64 }
-    end
-    else begin
-      let k = intmove - 3 * 49152 in
-      let j = k / 4096 in
-      let l = k mod 4096 in
-      let adjusted_promotion = if j < 6 then j + 1 else 5 - j in
-      Promotion {from = l / 64; to_ = l mod 64; promotion = adjusted_promotion}
-    end
-  end
 
 type tt = {
   key   : (int64, int64_elt, c_layout) Array1.t;
@@ -126,7 +87,6 @@ let score_node lower_bound upper_bound =
 
 let store thread key depth lower_bound upper_bound move static_eval generation =
   let index = Int64.to_int (Int64.rem key !slots) in
-  let encoded_move = encode move in
   let old_key   = Array1.get !tt.key index in
   let old_depth = Array1.get !tt.depth index in
   let old_lower_bound  = Array1.get !tt.lower_bound index in
@@ -137,7 +97,7 @@ let store thread key depth lower_bound upper_bound move static_eval generation =
     Array1.set !tt.depth index depth;
     Array1.set !tt.lower_bound index lower_bound;
     Array1.set !tt.upper_bound index upper_bound;
-    Array1.set !tt.encoded_move index encoded_move;
+    Array1.set !tt.encoded_move index move;
     Array1.set !tt.static_eval index static_eval;
     Array1.set !tt.generation index generation;
     Array1.set !tt.key index key;
@@ -146,9 +106,9 @@ let store thread key depth lower_bound upper_bound move static_eval generation =
   else if (!go_counter - old_generation > 5) || (depth > old_depth) || (depth = old_depth && (key = old_key || score_node lower_bound upper_bound > score_node old_lower_bound old_upper_bound)) then begin
     let stored_lower_bound = ref lower_bound in
     let stored_upper_bound = ref upper_bound in
-    let stored_move = ref encoded_move in
+    let stored_move = ref move in
     if key = old_key then begin
-      if encoded_move = 0 then begin
+      if move = 0 then begin
         stored_move := old_best_move
       end;
       if depth = old_depth then begin
@@ -164,35 +124,23 @@ let store thread key depth lower_bound upper_bound move static_eval generation =
     Array1.set !tt.generation index generation;
     Array1.set !tt.key index key
   end
-  else if old_best_move = 0 && encoded_move <> 0 && key = old_key then begin
+  else if old_best_move = 0 && move <> 0 && key = old_key then begin
     Array1.set !tt.depth index old_depth;
     Array1.set !tt.lower_bound index old_lower_bound;
     Array1.set !tt.upper_bound index old_upper_bound;
-    Array1.set !tt.encoded_move index encoded_move;
+    Array1.set !tt.encoded_move index move;
     Array1.set !tt.static_eval index static_eval;
     Array1.set !tt.generation index generation;
     Array1.set !tt.key index key
   end
 
-let verif board move = match move with
-  |Normal {piece; from; to_} -> board.(from) = piece && board.(to_) * piece <= 0
-  |Enpassant {from; to_} -> board.(from) = (if from < 32 then 1 else -1) && board.(to_) = 0
-  |Castling {sort} ->
-    if sort < 3 then
-      board.(!from_white_king) = 6
-    else
-      board.(!from_black_king) = (-6)
-  |Promotion {from; to_; promotion} -> board.(from) = (if promotion > 0 then 1 else -1) && board.(to_) * promotion <= 0
-  |Null -> true
-
 let probe position =
-  let index = Int64.to_int (Int64.rem position.state_infos.(position.ply).zobrist_position !slots) in
+  let index = Int64.to_int (Int64.rem position.state.(position.ply).zobrist !slots) in
   let old_key = Array1.get !tt.key index in
   let old_best_move = Array1.get !tt.encoded_move index in
-  let decoded_move = decode old_best_move in
-  if position.state_infos.(position.ply).zobrist_position = old_key && verif position.board decoded_move then begin
-    Array1.get !tt.depth index, Array1.get !tt.lower_bound index, Array1.get !tt.upper_bound index, decoded_move, Array1.get !tt.static_eval index
+  if position.state.(position.ply).zobrist = old_key then begin
+    Array1.get !tt.depth index, Array1.get !tt.lower_bound index, Array1.get !tt.upper_bound index, old_best_move, Array1.get !tt.static_eval index
   end
   else begin
-    empty_depth, - max_int, max_int, Null, (- max_int)
+    empty_depth, - max_int, max_int, 0, (- max_int)
   end

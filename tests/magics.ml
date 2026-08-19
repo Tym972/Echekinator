@@ -1,4 +1,3 @@
-open Libs.Bitboard_utilities
 open Libs.Bitboards
 
 let random_magic () = Int64.logand (Random.int64 Int64.max_int) (Int64.logand (Random.int64 Int64.max_int) (Random.int64 Int64.max_int))

@@ -1,261 +1,94 @@
 (*Module implémentant les fonctions qui permettent de traduire les coups de la notation algébrique vers la notation avec le type Mouvement*)
 
 open Board
-open Generator
+open Bitboards
 
-(*Fonction supprimant les caractères dispensables de la notation algébrique*)
-let remove chain =
-  let nc = ref "" in
-  for i = 0 to ((String.length chain) - 1) do
-    let k = chain.[i] in
-    if not (List.mem k ['x'; '('; ')'; '+'; '.'; '?'; '!'; '"'; '\n']) then begin
-      nc := !nc ^ (String.make 1 k)
-    end
-  done;
-  !nc
-
-(*Dictionnaire associant une pièce en notation algébrique anglaise à la valeur des pièces pour le moteur*)
-let hash_pieces =
-  let ht = Hashtbl.create 12 in
-  List.iter (fun (key, value) -> Hashtbl.add ht key value)
-    [ ('R', 4); ('N', 2); ('B', 3); ('Q', 5); ('K', 6)];
-  ht
-
-(*Fonction traduisant une capture en passant de la notation algébrique vers la notation avec le type Mouvement*)
-let ep_origin move white_to_move =
-  let to_ = Hashtbl.find hash_coord ((String.sub move 1 1) ^ (String.sub move 2 1)) in
-  let player_sign = if white_to_move then 1 else (-1) in
-  let from = Hashtbl.find hash_coord ((String.sub move 0 1) ^ string_of_int (int_of_string (String.sub move 2 1) - player_sign))
-  in Enpassant {from = from ; to_ = to_}
-
-(*Fonction traduisant une notation algébrique exhaustive vers la notation avec le type Mouvement*)
-let normal_origin move white_to_move =
-  let player_sign = if white_to_move then 1 else (-1) in
-  let piece = player_sign * Hashtbl.find hash_pieces move.[0] in
-  let from = Hashtbl.find hash_coord ((String.sub move 1 1) ^ (String.sub move 2 1)) in
-  let to_ = Hashtbl.find hash_coord ((String.sub move 3 1) ^ (String.sub move 4 1)) in
-  Normal {piece = piece; from = from; to_ = to_}
-
-(*Fonction traduisant le move d'un pawn de la notation algébrique vers la notation avec le type Mouvement*)
-let pawn_origin position move =
-  let from = ref (-1) in
-  let l = String.length move in
-  let square = Hashtbl.find hash_coord ((String.sub move (l - 2) 1) ^ (String.sub move (l - 1) 1)) in
-  let player_sign = if position.white_to_move then 1 else (-1) in
-  if String.length move = 2 then begin
-    if position.board.(square + 8 * player_sign) = player_sign then begin
-      from := square + 8 * player_sign
-    end
-    else begin
-      from := square + 16 * player_sign
-    end
-  end
-  else begin
-    from := Hashtbl.find hash_coord ((String.sub move 0 1) ^ string_of_int ((int_of_string (String.sub move 2 1)) - player_sign))
-  end;
-  Normal {piece = (pawn position.white_to_move); from = !from; to_ = square}
-
-(*Fonction traduisant le move d'une tour de la notation algébrique vers la notation avec le type Mouvement*)
-let distance_origin board move player_legal_moves number_of_legal_moves piece vect_piece =
-  let from = ref (-1) in
-  let l = String.length move in
-  let square = Hashtbl.find hash_coord ((String.sub move (l - 2) 1) ^ (String.sub move (l - 1) 1)) in
-  if String.length move = 3 then begin
-    let t = tab64.(square) in
-    let i = ref 0 in
-    while (!from = (-1) && !i < Array.length vect_piece) do
-      let dir = vect_piece.(!i) in
-      let k = ref 1 in
-      let s = ref true in
-      while (tab120.(t + (!k * dir)) <> (-1) && !s) do
-        let candidate = tab120.(t + (!k * dir)) in
-        let dest = board.(candidate) in
-        if dest = piece && move_array_mem (Normal {piece = piece; from = candidate; to_ = square}) player_legal_moves number_of_legal_moves then begin
-          from := candidate;
-          s := false
-        end
-        else if dest = 0 then begin
-          k := !k + 1
-        end
-        else begin
-          s := false
-        end
-      done;
-      i := !i + 1
-    done
-  end
-  else begin
-    let x = (int_of_char move.[1]) in
-    if (x > 48 && x < 57) then begin
-      let square_0 = Hashtbl.find hash_coord ("a" ^ (String.sub move 1 1)) in
-      let i = ref 0 in
-      while (!from = (-1) && !i < 8) do
-        let candidate = square_0 + !i in
-        if board.(candidate) = piece && move_array_mem (Normal {piece = piece; from = candidate; to_ = square}) player_legal_moves number_of_legal_moves then begin
-          from := candidate
-        end;
-        i := !i + 1
-      done
-    end
-    else begin
-      let square_0 = Hashtbl.find hash_coord ((String.sub move 1 1) ^ "8") in
-      let i = ref 0 in
-      while (!from = (-1) && !i < 8) do
-        let candidate = square_0 + (8 * !i) in
-        if board.(candidate) = piece && move_array_mem (Normal {piece = piece; from = candidate; to_ = square}) player_legal_moves number_of_legal_moves then begin
-          from := candidate
-        end;
-        i := !i + 1
-      done
-    end
-  end;
-  Normal {piece = piece; from = !from; to_ = square}
-
-(*Fonction traduisant une promotion en notation algébrique vers la notation avec le type Mouvement*)
-let origine_promotion move white_to_move =
-  let from = ref (-1) in
-  let l = String.length move in
-  let square = Hashtbl.find hash_coord ((String.sub move (l - 4) 1) ^ (String.sub move (l - 3) 1)) in
-  let promo = ref 0 in
-  let player_sign = if white_to_move then 1 else (-1) in
-  promo := player_sign * Hashtbl.find hash_pieces (Char.uppercase_ascii move.[l - 1]);
-  if String.length move = 4 then begin
-    from := square + player_sign * 8
-  end
-  else begin
-    from := Hashtbl.find hash_coord ((String.sub move 0 1) ^ string_of_int ((int_of_string (String.sub move 2 1)) - player_sign))
-  end;
-  Promotion {from = !from; to_ = square; promotion = !promo}
-
-(*Fonction décomposant une chain de caractère en list de substring correspondants aux mots*)
-let word_detection chain =
-  Str.split (Str.regexp " +") chain
-
-(*Fonction vérifiant si une chain de caractère représente un entier*)
-let is_integer_string chain =
-  let i = try int_of_string chain with _ -> (-1) in
-  i > 0
-
-(*Fonction convertissant la notation d'un string de coups notés algébriquement, en une list de coups en notation algébrique*)
-let algebric_list_of_san algebric =
-  let rec remove_move_counter list  = match list with
-    |[] -> []
-    |h :: t ->
-      if is_integer_string h then begin
-        (remove_move_counter t)
-      end
-      else begin
-        h :: (remove_move_counter t)
-      end
-  in remove_move_counter (word_detection (remove algebric))
-
-(*Dictionnaire associant une pièce en notation algébrique anglaise à la fonction à appliquer pour trouver sa square de départ*)
-let hash_origin =
-  let ht = Hashtbl.create 12 in
-  List.iter (fun (key, value) -> Hashtbl.add ht key value)
-    [ ('R', (4, rook_vect)); ('N', (2, knight_vect)); ('B', (3, bishop_vect));
-      ('Q', (5, king_vect)); ('K', (6, king_vect))];
-  ht
-
-(*Traduit un move noté en notation algébrique en sa notation avec le type mouvement*)
-let move_of_algebric position move player_legal_moves number_of_legal_moves =
-  let translated_move = ref Null in
-  if List.mem move ["0-0"; "O-O"] then begin
-    translated_move := if position.white_to_move then Castling {sort = 1} else Castling {sort = 3}
-  end
-  else if List.mem move ["0-0-0"; "O-O-O"] then begin
-    translated_move := if position.white_to_move then Castling {sort = 2} else Castling {sort = 4}
-  end
-  else if String.contains move 'p' then begin
-    translated_move := ep_origin move position.white_to_move
-  end
-  else if String.contains move '=' then begin
-    translated_move := origine_promotion move position.white_to_move
-  end
-  else begin match String.length move with
-    |2 |3 when move.[0] = Char.lowercase_ascii move.[0] && move.[0] <> move.[1] -> translated_move := pawn_origin position move
-    |5 -> translated_move := normal_origin move position.white_to_move
-    |_->
-      let piece, vect_piece = (Hashtbl.find hash_origin move.[0]) in
-      translated_move := distance_origin position.board move player_legal_moves number_of_legal_moves (if position.white_to_move then piece else (- piece)) vect_piece
-  end;
-  if not (move_array_mem !translated_move player_legal_moves number_of_legal_moves) then begin
-    failwith "Invalid Move"
-  end
-  else begin
-    !translated_move
-  end
-
-(*Dictionnaire associant la notation algébrique française des pièces à leur notation algébrique anglaise*)
-let dicofrench =
-  let ht = Hashtbl.create 12 in
-  List.iter (fun (key, value) -> Hashtbl.add ht key value)
-    [ ('T', "R"); ('C', "N"); ('F', "B");
-      ('D', "Q"); ('R', "K")];
-  ht
-
-(*Fonction interprétant la notation UCI*)
-let mouvement_of_uci uci board player_legal_moves number_of_legal_moves =
-  let move = ref Null in
-    let from = Hashtbl.find hash_coord (String.sub uci 0 2) in
-    let to_ = Hashtbl.find hash_coord (String.sub uci 2 2) in
-    let promotion = try Hashtbl.find hash_pieces (Char.uppercase_ascii uci.[4]) with _ -> 10 in
-    let white_to_move = board.(from) > 0 in
-    let player_sign = if white_to_move then 1 else (-1) in
-    if promotion <> 10 then begin
-      move := Promotion {from; to_; promotion = player_sign * promotion}
-    end
-    else if board.(from) = 6 * player_sign && (to_ / 8 = from / 8) && (abs (to_ - from) <> 1 || board.(to_) * player_sign > 0) then begin
-      let player_castling = if white_to_move then 1 else 3 in
-      let arrivee_pr, depart_tour_pr, to_long, from_long_rook = if white_to_move then 62, !from_short_white_rook, 58, !from_long_white_rook else 6, !from_short_black_rook, 2, !from_long_black_rook in
-      if (not !chess_960 && to_ = arrivee_pr) || (!chess_960 && to_ = depart_tour_pr) then begin
-        move := Castling {sort = player_castling}
-      end
-      else if (not !chess_960 && to_ = to_long) || (!chess_960 && to_ = from_long_rook) then begin
-        move := Castling {sort = player_castling + 1}
-      end
-    end
-    else if board.(from) = player_sign && (from - to_) mod 8 <> 0 && board.(to_) = 0 then begin
-      move := Enpassant {from; to_}
-    end
-    else begin
-      move := Normal {piece = board.(from); from; to_}
-    end;
-    if not (move_array_mem !move player_legal_moves number_of_legal_moves) then begin
-      failwith "Invalid Move"
-    end
-    else begin
-      !move
-    end
-  
-(*Fonction permettant une tolérance à l'approximation de l'utilisateur dans sa saisie*)
-let tolerance position move player_legal_moves number_of_legal_moves =
-  try mouvement_of_uci move position.board player_legal_moves number_of_legal_moves with _ ->
-  try move_of_algebric position move player_legal_moves number_of_legal_moves with _ ->
-  try move_of_algebric position (move ^ "ep") player_legal_moves number_of_legal_moves with _ ->
-  try move_of_algebric position (String.capitalize_ascii move) player_legal_moves number_of_legal_moves with _ ->
-  try move_of_algebric position (Hashtbl.find dicofrench move.[0] ^ String.sub move 1 (String.length move - 1)) player_legal_moves number_of_legal_moves with _ ->
-  try move_of_algebric position (Hashtbl.find dicofrench (Char.uppercase_ascii move.[0]) ^ String.sub move 1 (String.length move - 1)) player_legal_moves number_of_legal_moves with _ -> Null
+let get_move_promotion move =
+  match get_move_flag move with
+  |8 |12 -> 2
+  |9 | 13 -> 3
+  |10 | 14 -> 4
+  |11 | 15 -> 5
+  |_ -> 0
 
 (*Tableau assoicant la valeur des pièces pour le moteur (indice) à leur notation algébrique anglaise*)
 let english_pieces_lowercase = [|""; "p"; "n"; "b"; "r"; "q"; "k"|]
 
-(*Fonction traduisant un move en sa notation UCI*)
-let uci_of_mouvement move = match move with
-  |Castling {sort} ->
-    let from_king, to_short, to_long, from_short_rook, from_long_rook =
-      if sort < 3 then
-        !from_white_king, 62, 58, !from_short_white_rook, !from_long_white_rook
-      else
-        !from_black_king, 6, 2, !from_short_black_rook, !from_long_black_rook
-    in let arrivee_roque, depart_tour = if sort mod 2 = 1 then
-      to_short, from_short_rook
+let uci_of_mouvement move =
+  let from = get_move_from move in
+  let to_ = get_move_to move in
+  if !chess_960 && (get_move_flag move = 2 || get_move_flag move = 3) then begin
+    coord.(from) ^ coord.(get_move_to move)
+  end
+  else if get_move_flag move land 8 <> 0 then begin
+    coord.(from) ^ coord.(to_) ^ english_pieces_lowercase.(get_move_promotion move mod 6)
+  end
+  else if from + to_ <> 0 then begin
+    coord.(from) ^ coord.(to_)
+  end
+  else begin
+    "(none)"
+  end
+
+(*Dictionnaire associant une pièce en notation algébrique anglaise à la valeur des pièces pour le moteur*)
+let hash_pieces =
+  let ht = Hashtbl.create 5 in
+  List.iter (fun (key, value) -> Hashtbl.add ht key value)
+    [ ('R', 4); ('N', 2); ('B', 3); ('Q', 5); ('K', 6)];
+  ht
+
+(* Hash table mapping chessboard coordinates to indices in the coord array *)
+let hash_coord =
+  let ht = Hashtbl.create 64 in
+  List.iter (fun (key, value) -> Hashtbl.add ht key value)
+    [ ("a1", 0);  ("b1", 1);  ("c1", 2);  ("d1", 3);  ("e1", 4);  ("f1", 5);  ("g1", 6);  ("h1", 7);
+      ("a2", 8);  ("b2", 9);  ("c2", 10); ("d2", 11); ("e2", 12); ("f2", 13); ("g2", 14); ("h2", 15);
+      ("a3", 16); ("b3", 17); ("c3", 18); ("d3", 19); ("e3", 20); ("f3", 21); ("g3", 22); ("h3", 23);
+      ("a4", 24); ("b4", 25); ("c4", 26); ("d4", 27); ("e4", 28); ("f4", 29); ("g4", 30); ("h4", 31);
+      ("a5", 32); ("b5", 33); ("c5", 34); ("d5", 35); ("e5", 36); ("f5", 37); ("g5", 38); ("h5", 39);
+      ("a6", 40); ("b6", 41); ("c6", 42); ("d6", 43); ("e6", 44); ("f6", 45); ("g6", 46); ("h6", 47);
+      ("a7", 48); ("b7", 49); ("c7", 50); ("d7", 51); ("e7", 52); ("f7", 53); ("g7", 54); ("h7", 55);
+      ("a8", 56); ("b8", 57); ("c8", 58); ("d8", 59); ("e8", 60); ("f8", 61); ("g8", 62); ("h8", 63)];
+  ht
+
+let move_array_mem move legal_moves number_of_legal_moves =
+  let mem = ref false in
+  let i = ref 0 in
+  while !i < number_of_legal_moves && not !mem do
+    if legal_moves.(!i) = move then begin
+      mem := true
+    end;
+    incr i
+  done;
+  !mem
+
+(*Fonction interprétant la notation UCI*)
+let mouvement_of_uci uci position =
+  let white_to_move = position.white_to_move in
+  let player_pieces = pieces_rep.(white_to_move) in
+  let from = Hashtbl.find hash_coord (String.sub uci 0 2) in
+  let to_ = ref (Hashtbl.find hash_coord (String.sub uci 2 2)) in
+
+
+  let piece = (position.mailbox.(from)) in
+  let promotion_piece = try Hashtbl.find hash_pieces (Char.uppercase_ascii uci.[4]) with _ -> 0 in
+  let capture = if position.mailbox.(!to_) = 0 then 0 else 4 in
+  let player_castling_infos = castling_infos.(white_to_move) in
+  let flag = 
+    if piece = player_pieces.(pawn) && (from - !to_) mod 8 <> 0 && capture = 0 then 
+      5
+    else if piece = player_pieces.(pawn) && abs (from - !to_) = 16 then
+      1
+    else if piece = player_pieces.(king) && from = player_castling_infos.from_king && !to_ = player_castling_infos.to_short_king || (!chess_960 && !to_ = player_castling_infos.from_short_rook) then
+      2
+    else if piece = player_pieces.(king) && from = player_castling_infos.from_king && !to_ = player_castling_infos.to_long_king || (!chess_960 && !to_ = player_castling_infos.from_long_rook) then
+      3
+    else if promotion_piece <> 0 then
+      (promotion_piece + 6) lor capture
     else
-      to_long, from_long_rook
-    in coord.(from_king) ^ coord.(if not !chess_960 then arrivee_roque else depart_tour)
-  |Promotion {from = _; to_ = _; promotion} -> coord.(from move) ^ coord.(to_ move) ^ english_pieces_lowercase.(abs promotion)
-  |Null -> "(none)"
-  |_ -> coord.(from move) ^ coord.(to_ move)
+      capture
+  in
+  encode_move from !to_ flag
 
 let pv_finder depth =
   let pv = ref [] in

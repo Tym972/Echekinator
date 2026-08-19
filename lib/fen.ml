@@ -1,9 +1,10 @@
 (*Modules implémentant les traductions FEN*)
 
+open Miscellaneous
 open Board
-open Generator
-open Translation
 open Zobrist
+open Translation
+open Bitboards
 
 (*Tableau contenant la représentation algébrique des pièces*)
 let tabfen_blanc = [|"P"; "N"; "B"; "R"; "Q"; "K"|]
@@ -11,52 +12,32 @@ let tabfen_blanc = [|"P"; "N"; "B"; "R"; "Q"; "K"|]
 let tabfen_noir = [|"p"; "n"; "b"; "r"; "q"; "k"|]
 
 (*Tableau utilisé pour expliciter la notation des castlings dans la notation FEN en cas d'ambiguïté*)
-let tab_roques = [|"q"; "b"; "c"; "d"; "e"; "f"; "g"; "k"|]
+let castling_fen_tab = [|"q"; "b"; "c"; "d"; "e"; "f"; "g"; "k"|]
 
-(*Fonction utilisée pour expliciter la notation des castlings dans la notation FEN en cas d'ambiguïté*)
-let xfen_castlings board =
-  let castlings_representations = [|"K"; "Q"; "k"; "q"|] in
-  let aux board from_short_rook from_long_rook white_to_move i =
-    let decrement = if white_to_move then 56 else 0 in
-    let square = ref decrement in
-    let right_square = decrement + 8 in
-    let rook = rook white_to_move in
-    let short_index = from_short_rook - decrement in
-    let long_index = from_long_rook - decrement in
-    let maj = if white_to_move then String.uppercase_ascii else fun s -> s in
-    while !square < right_square do
-      let piece = board.(!square) in
-      if piece = rook then begin
-        if !square < from_long_rook then begin
-          castlings_representations.(i + 1) <- maj (tab_roques.(long_index))
-        end
-        else if !square > from_short_rook then begin
-          castlings_representations.(i) <- maj (tab_roques.(short_index))
-        end
-      end;
-      incr square
-    done
-  in List.iter (fun (from_short_rook, from_long_rook, white_to_move, i) -> aux board from_short_rook from_long_rook white_to_move i)
-  [(!from_short_white_rook, !from_long_white_rook, true, 0); (!from_short_black_rook, !from_long_black_rook, false, 2)];
-  castlings_representations
+let castlings_representations = [|"K"; "Q"; "k"; "q"|]
+
+let is_possible_castling castling_rights castling =
+  castling_rights land castling = castling
 
 (*Fonction représentant un board en sa notation FEN*)
 let fen position move_counter =
-  let state = position.state_infos.(position.ply) in
+  let state = position.state.(position.ply) in
+  let mailbox = position.mailbox in
+  let castling_rights = state.castling_rights in
   let fen = ref "" in
   let empties = ref 0 in
   for i = 0 to 63 do
-    let square = position.board.(i) in
+    let square = mailbox.(flip i) in
     if square = 0 then begin
       empties := !empties + 1
     end
     else begin
       if !empties > 0 then begin
-        fen := !fen ^ (string_of_int !empties) ^ (if square > 0 then tabfen_blanc.(square - 1) else tabfen_noir.(- square - 1));
+        fen := !fen ^ (string_of_int !empties) ^ (if square < 7 then tabfen_blanc.(square - 1) else tabfen_noir.(square - 7));
         empties := 0
       end
       else begin
-        fen := !fen ^ (if square > 0 then tabfen_blanc.(square - 1) else tabfen_noir.(- square - 1))
+        fen := !fen ^ (if square < 7 then tabfen_blanc.(square - 1) else tabfen_noir.(square - 7))
       end
     end;
     if (i + 1) mod 8 = 0 then begin
@@ -72,56 +53,52 @@ let fen position move_counter =
   if !empties > 0 then begin
     fen := !fen ^ (string_of_int !empties)
   end;
-  if position.white_to_move then
+  if position.white_to_move = 0 then
     fen := !fen ^ " w "
   else begin
     fen := !fen ^ " b "
   end;
-  if not (state.white_short_castling || state.white_long_castling || state.black_short_castling || state.black_long_castling) then begin
+  if castling_rights = 0 then begin
     fen := !fen ^ "-"
   end
   else begin
-    let castlings_representations = xfen_castlings position.board in
-    if state.white_short_castling then fen := !fen ^ castlings_representations.(0);
-    if state.white_long_castling then fen := !fen ^ castlings_representations.(1);
-    if state.black_short_castling then fen := !fen ^ castlings_representations.(2);
-    if state.black_long_castling then fen := !fen ^ castlings_representations.(3)
+    if !chess_960 then begin
+      castlings_representations.(0) <- "K";
+      castlings_representations.(1) <- "Q";
+      castlings_representations.(2) <- "k";
+      castlings_representations.(3) <- "q";
+      let white_rooks = position.pieces.(white_pieces.(rook)) in
+      let black_rooks = position.pieces.(black_pieces.(rook)) in
+      if Int64.logand white_rooks ambiguity_masks.(0) <> 0L then begin
+        castlings_representations.(0) <- String.uppercase_ascii (castling_fen_tab.(white_castling_info.from_short_rook));
+      end;
+      if Int64.logand white_rooks ambiguity_masks.(1) <> 0L then begin
+        castlings_representations.(1) <- String.uppercase_ascii (castling_fen_tab.(white_castling_info.from_long_rook));
+      end;
+      if Int64.logand black_rooks ambiguity_masks.(2) <> 0L then begin
+        castlings_representations.(2) <- castling_fen_tab.(black_castling_info.from_short_rook);
+      end;
+      if Int64.logand black_rooks ambiguity_masks.(3) <> 0L then begin
+        castlings_representations.(3) <- castling_fen_tab.(black_castling_info.from_long_rook);
+      end
+    end;
+    if is_possible_castling castling_rights castling_infos.(0).short_castling then
+      fen := !fen ^ castlings_representations.(0);
+    if is_possible_castling castling_rights castling_infos.(0).long_castling then
+      fen := !fen ^ castlings_representations.(1);
+    if is_possible_castling castling_rights castling_infos.(1).short_castling then
+      fen := !fen ^ castlings_representations.(2);
+    if is_possible_castling castling_rights castling_infos.(1).long_castling then
+      fen := !fen ^ castlings_representations.(3)
   end;
-  fen := !fen ^ " " ^ (if state.ep_square <> (-1) then coord.(state.ep_square) ^ " " else "- ");
-  fen := !fen ^ (string_of_int state.half_moves ^ " ");
-  fen := !fen ^ string_of_int (1 + move_counter / 2);
-  !fen
+  !fen ^ " " ^ (if state.ep_square <> (-1) then coord.(state.ep_square) ^ " " else "- ") ^ string_of_int state.half_moves ^ " " ^ string_of_int (1 + move_counter / 2)
 
 (*Dictionnaire associant la repsésentation des pièces dans les tableau-échiquier à une chaîne de caractères*)
 let hash_fen =
   let ht = Hashtbl.create 13 in
   List.iter (fun (key, value) -> Hashtbl.add ht key value)
-  [ ('p', (-1)); ('n', (-2)); ('b', (-3)); ('r', (-4)); ('q', (-5)); ('k', (-6));
-    ('P', 1); ('N', 2); ('B', 3); ('R', 4); ('Q', 5); ('K', 6)];
+  [ ('P', 1); ('N', 2); ('B', 3); ('R', 4); ('Q', 5); ('K', 6);  ('p', 7); ('n', 8); ('b', 9); ('r', 10); ('q', 11); ('k', 12);];
   ht
-
-(*Fonction actualisant le board en fonction de la partie "pièces" du FEN*)
-let board_of_fen board lines_list =
-  for i = 0 to 63 do
-    board.(i) <- 0
-  done;
-  for i = 0 to 7 do
-    let ligne = List.nth lines_list i in
-    let j = ref 0 in
-    let k = ref 0 in
-    while !j < 8 do
-      let elt = ligne.[!k] in
-      let piece = try Hashtbl.find hash_fen elt with _ ->
-        let empties = (int_of_char elt) - 48 in
-        j := !j + empties;
-        0
-      in if piece <> 0 then begin
-        board.(8 * i + !j) <- piece;
-        incr j
-      end;
-      incr k
-    done
-  done
 
 (*Tableau utilisé pour expliciter la notation des castlings dans la notation FEN en cas d'ambiguïté*)
 let hash_castling_xfen =
@@ -130,129 +107,54 @@ let hash_castling_xfen =
   [('q', 0); ('a', 0); ('b', 1); ('c', 2); ('d', 3); ('e', 4); ('f', 5); ('g', 6); ('k', 7); ('h', 7)];
   ht
 
-(*Fonction vérifiant la validité des castlings d'une position XFEN*)
-let valid_castlings position castlings =
-  let white_short = ref false in
-  let white_long = ref false in
-  let black_short = ref false in
-  let black_long = ref false in
-  let white_castlings_number = ref 0 in
-  let black_castlings_number = ref 0 in
-  let n = if castlings = "-" then 0 else String.length castlings in
-  for i = 0 to (n - 1) do 
-    let roque = castlings.[i] in
-    if roque = Char.uppercase_ascii roque then begin
-      incr white_castlings_number
-    end
-    else begin
-      incr black_castlings_number
-    end
-  done;
-  let from_white_rooks = ref [] in
-  let from_black_rooks = ref [] in
-  let from_white_king = ref (-1) in
-  let from_black_king = ref (-1) in
-  let board_aux board white_to_move rook_positions king_position =
-    let increment = if white_to_move then 56 else 0 in
-    let square = ref increment in
-    let right_square = increment + 8 in
-    let rook = rook white_to_move in
-    let king = king white_to_move in
-    while !square < right_square do
-      let piece = board.(!square) in
-      if piece = rook then begin
-        rook_positions := !square :: !rook_positions
-      end
-      else if piece = king then begin
-        king_position := !square
-      end;
-      incr square
-    done
-  in List.iter
-  (fun (white_to_move, rook_positions, king_position) -> board_aux position.board white_to_move rook_positions king_position)
-  [(true, from_white_rooks, from_white_king); (false, from_black_rooks, from_black_king)];
-  let index = ref 0 in
-  let aux_string king_position castlings_number white_to_move index =
-    let increment = if white_to_move then 56 else 0 in
-    if castlings_number = 2 then begin
-      let result = (try Hashtbl.find hash_castling_xfen (Char.lowercase_ascii castlings.[!index]) + increment with _ -> (-2)), (try Hashtbl.find hash_castling_xfen (Char.lowercase_ascii castlings.[!index + 1]) + increment with _ -> (-2))
-      in index := !index + 2;
-      result
-    end
-    else if castlings_number = 1 then begin
-      let from_short_black_rook = (try Hashtbl.find hash_castling_xfen (Char.lowercase_ascii castlings.[!index]) + increment with _ -> (-2)) in
-      incr index;
-      if from_short_black_rook > king_position then begin
-        from_short_black_rook, (-2)
-      end
-      else begin
-        (-2), from_short_black_rook
-      end
-    end
-    else begin
-      (-2), (-2)
-    end
-  in let short_white, long_white = aux_string !from_white_king !white_castlings_number true index
-  in let short_black, long_black = aux_string !from_black_king !black_castlings_number false index in
-  if !white_castlings_number <> 0 && !from_white_king <> (-1) then begin
-    if (long_white <> (-2) && List.exists (fun rook_position -> !from_white_king > rook_position) !from_white_rooks) then begin
-      white_long := true
-    end;
-    if (short_white <> (-2) && List.exists (fun rook_position -> !from_white_king < rook_position) !from_white_rooks) then begin
-      white_short := true
-    end
-  end;
-  if !black_castlings_number <> 0 && !from_black_king <> (-1) then begin
-    if (long_black <> (-2) && List.exists (fun rook_position -> !from_black_king > rook_position) !from_black_rooks) then begin
-      black_long := true
-    end;
-    if (short_black <> (-2) && List.exists (fun rook_position -> !from_black_king < rook_position) !from_black_rooks) then begin
-      black_short := true
-    end
-  end;
-  position.state_infos.(position.ply).white_short_castling <- !white_short;
-  position.state_infos.(position.ply).white_long_castling <- !white_long;
-  position.state_infos.(position.ply).black_short_castling <- !black_short;
-  position.state_infos.(position.ply).black_long_castling <- !black_long;
-  if !white_short || !black_short || !white_long || !black_long then begin
-    let provisional_board = Array.make 64 0
-    in let from_long_white = ref (if long_white = (-2) || not !white_long then (-2) else if long_white = 56 then (List.hd (List.rev !from_white_rooks)) else long_white) in
-    let from_short_white = ref (if short_white = (-2) || not !white_short then (-1) else if short_white = 63 then (List.hd !from_white_rooks) else short_white) in
-    let from_long_black = ref (if long_black = (-2) || not !black_long then (-2) else if long_black = 0 then (List.hd (List.rev !from_black_rooks)) else long_black) in
-    let from_short_black = ref (if short_black = (-2) || not !black_short then (-1) else if short_black = 7 then (List.hd !from_black_rooks) else short_black) in
-    let occupied_white_list = List.filter (fun square -> square > (-1)) [!from_long_white; !from_short_white; !from_white_king] in
-    let occupied_black_list = List.filter (fun square -> square > (-1)) [!from_long_black; !from_short_black; !from_black_king] in
-    let aux_depart from white_to_move occupied_list possible =
-      if !from < 0 && possible then begin
-        let candidate, direction = if !from = (-1) then 7, incr else 0, decr in
-        let increment = if white_to_move then 56 else 0 in
-        let b = ref true in
-        let square = ref (increment + candidate) in
-        while !b do
-          if List.mem !square occupied_list then
-            direction square
-          else begin
-            from := !square;
-            b := false
-          end
-        done
-      end
-    in List.iter (fun (from, white_to_move, occupied_list, possible) -> aux_depart from white_to_move occupied_list possible)
-    [(from_long_white, true, occupied_white_list, !white_long); (from_short_white, true, occupied_white_list, !white_short); (from_white_king, true, occupied_white_list, (!white_long || !white_short));
-    (from_long_black, false, occupied_black_list, !black_long); (from_short_black, false, occupied_black_list, !black_short); (from_black_king, false, occupied_black_list, (!black_long || !black_short))];
-    List.iter (fun (position, piece, possible) -> if possible then provisional_board.(position) <- piece)
-    [(!from_white_king, 6, (!white_long || !white_short)); (!from_black_king, (-6), (!black_long || !black_short)); (!from_long_white, 4, !white_long); (!from_short_white, 4, !white_short); (!from_long_black, (-4), !black_long); (!from_short_black, (-4), !black_short)];
-    castling_init provisional_board
-  end
-
 (*Fonction traduisant une position FEN en l'int array correspondant. Par défaut si non rensigné, le trait est au blancs, il n'y a plus de castlings, pas de capture en passant, aucun coup joué*)
 let position_of_fen chain position move_counter =
-  let state = position.state_infos.(position.ply) in
+  position.ply <- 0;
+  let state = position.state.(0) in
+  let mailbox = position.mailbox in
+  let pieces_bitboards = position.pieces in
+  state.castling_rights <- 0;
+  state.captured_piece <- 0;
+  move_counter := 0;
+  initial_half_moves := 0;
+  position.occupancy.(0) <- 0L;
+  position.occupancy.(1) <- 0L;
+  for piece = 1 to 12 do
+    pieces_bitboards.(piece) <- 0L
+  done;
+  for square = 0 to 63 do
+    mailbox.(square) <- 0
+  done;
   let split_fen = ref (word_detection chain) in
   let fen_length = List.length !split_fen in
   let pieces_position = (List.nth !split_fen 0) in
-  let split_ligne = Str.split (Str.regexp "/") pieces_position in
-  board_of_fen position.board split_ligne;
+  let split_rows = Str.split (Str.regexp "/") pieces_position in
+  for row = 0 to 7 do
+    let row_string = List.nth split_rows row in
+    let column = ref 0 in
+    let row_index = ref 0 in
+    while !column < 8 do
+      let square = 8 * (7 - row) + !column in
+      let elt = row_string.[!row_index] in
+      let piece = try Hashtbl.find hash_fen elt with _ ->
+        column := !column + (int_of_char elt - 48);
+        0
+      in mailbox.(square) <- piece;
+      if piece <> 0 then begin
+        pieces_bitboards.(piece) <- pieces_bitboards.(piece) ||| single_bitboards_tab.(square);
+        incr column
+      end;
+      incr row_index
+    done
+  done;
+  for piece = 1 to 6 do
+    position.occupancy.(0) <- position.occupancy.(0) ||| pieces_bitboards.(piece)
+  done;
+  for piece = 7 to 12 do
+    position.occupancy.(1) <- position.occupancy.(1) ||| pieces_bitboards.(piece)
+  done;
+  let from_white_king = lsb_index pieces_bitboards.(white_pieces.(king)) in
+  let from_black_king = lsb_index pieces_bitboards.(black_pieces.(king)) in
   let complete longueur = 
     let rec aux acc longueur = match longueur with
       |5 -> aux ("1" :: acc) 6
@@ -263,27 +165,77 @@ let position_of_fen chain position move_counter =
     in List.rev (aux [] longueur)
   in split_fen := !split_fen @ (complete fen_length);
   if List.nth !split_fen 1 = "w" then begin
-    state.king_to_move_position <- index_array position.board (king true);
-    state.king_not_to_move_position <- index_array position.board (king false);
-    state.in_check <- threatened position.board state.king_to_move_position
+    position.white_to_move <- 0
   end
   else begin
-    position.white_to_move <- false;
-    state.king_to_move_position <- index_array position.board (king false);
-    state.king_not_to_move_position <- index_array position.board (king true);
-    state.in_check <- threatened position.board state.king_to_move_position
+    position.white_to_move <- 1
   end;
   let ep_square_string = (List.nth !split_fen 3) in
   if ep_square_string <> "-" then begin
     state.ep_square <- Hashtbl.find hash_coord ep_square_string
   end;
-  valid_castlings position (List.nth !split_fen 2);
+  let castlings = (List.nth !split_fen 2) in
+  if castlings <> "-" then begin
+    let number_of_white_castlings, number_of_black_castlings =
+      String.fold_left
+      (fun (white_castlings, black_castlings) c -> 
+        if Char.uppercase_ascii c = c then white_castlings + 1, black_castlings else white_castlings, black_castlings + 1
+      ) (0, 0) castlings
+    in let white_rooks_squares = index_list (Int64.logand rows.(0) position.pieces.(pieces_rep.(0).(rook))) in
+    let black_rooks_squares = index_list (Int64.logand rows.(7) position.pieces.(pieces_rep.(1).(rook))) in
+    let castling_aux white_to_move number_of_castling player_castling_info from_king rooks_squares index =
+      if number_of_castling <> 0 then begin
+        if !chess_960 then begin
+          player_castling_info.from_king <- from_king
+        end;
+        let aux castling_column edge_column edge_rook =
+          if castling_column = edge_column then begin
+            edge_rook
+          end
+          else begin
+            castling_column + white_to_move * 56
+          end
+        in if number_of_castling = 2 then begin
+          state.castling_rights <- state.castling_rights lxor player_castling_info.long_castling lxor player_castling_info.short_castling;
+          if !chess_960 then begin
+            let long_castling_column = Hashtbl.find hash_castling_xfen (Char.lowercase_ascii castlings.[index + 1]) in
+            let short_castling_column = Hashtbl.find hash_castling_xfen (Char.lowercase_ascii castlings.[index]) in
+            if !chess_960 then begin
+              player_castling_info.from_long_rook <- aux long_castling_column 0 (List.hd rooks_squares);
+              player_castling_info.from_short_rook <- aux short_castling_column 7 (List.hd (List.rev rooks_squares))
+            end
+          end
+        end
+        else if number_of_castling = 1 then begin
+          let castling_column = Hashtbl.find hash_castling_xfen (Char.lowercase_ascii castlings.[index]) in
+          if castling_column < from_king mod 8 then begin
+            state.castling_rights <- state.castling_rights lxor player_castling_info.long_castling;
+            if !chess_960 then begin
+              player_castling_info.from_long_rook <- aux castling_column 0 (List.hd rooks_squares)
+            end
+          end
+          else begin
+            state.castling_rights <- state.castling_rights lxor player_castling_info.short_castling;
+            if !chess_960 then begin
+              player_castling_info.from_short_rook <- aux castling_column 7 (List.hd (List.rev rooks_squares))
+            end
+          end
+        end
+      end
+    in
+    castling_aux 0 number_of_white_castlings white_castling_info from_white_king white_rooks_squares 0;
+    castling_aux 1 number_of_black_castlings black_castling_info from_black_king black_rooks_squares number_of_white_castlings;
+    if !chess_960 then begin
+      init_castling_info ()
+    end
+  end;
   state.half_moves <- (try int_of_string (List.nth !split_fen 4) with _ -> 0);
-  state.zobrist_position <- zobrist position;
-  if position.white_to_move then begin
+  state.zobrist <- zobrist position;
+  if position.white_to_move = 0 then begin
     move_counter := (try (2 * (int_of_string (List.nth !split_fen 5) - 1)) with _ -> 0)
   end
   else begin
     move_counter := (try (2 * (int_of_string (List.nth !split_fen 5) - 1) + 1) with _ -> 0)
   end;
-  board_record.(0) <- state.zobrist_position
+  state.in_check <- is_attacked (lsb_index pieces_bitboards.(pieces_rep.(position.white_to_move).(king))) (position.white_to_move) (position.occupancy.(0) ||| position.occupancy.(1)) pieces_bitboards pieces_rep.(position.white_to_move lxor 1);
+  board_record.(0) <- state.zobrist
