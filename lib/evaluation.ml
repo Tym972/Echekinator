@@ -1,5 +1,4 @@
 open Bitboards
-open Miscellaneous
 
 (*Module implémentant des fonctions d'évaluation*)
 
@@ -149,8 +148,8 @@ let gamephase_table = [|0; 1; 1; 2; 4; 0|]
 let () =
   for piece = 1 to 6 do
     for square = 0 to 63 do
-      mg_table.(12 * square + (piece - 1)) <- mg_value.(piece - 1) + mg_tables.(piece - 1).(flip square);
-      eg_table.(12 * square + (piece - 1)) <- eg_value.(piece - 1) + eg_tables.(piece - 1).(flip square);
+      mg_table.(12 * square + (piece - 1)) <- mg_value.(piece - 1) + mg_tables.(piece - 1).(square lxor 56);
+      eg_table.(12 * square + (piece - 1)) <- eg_value.(piece - 1) + eg_tables.(piece - 1).(square lxor 56);
     done;
   done;
   for piece = 7 to 12 do
@@ -185,6 +184,12 @@ let hce position =
       bitboard := other_pieces_bitboard
     done
   done;
+  (*for side = 0 to 1 do
+    if population_count pieces_bitboard.(3 + 6 * side) > 1 then begin
+      mg_score := !mg_score + (if side = 0 then 30 else - 30);
+      eg_score := !eg_score + (if side = 0 then 60 else - 60)
+    end
+  done;*)
   let phase = min !gamephase 24 in
   let score = ((!mg_score * phase + !eg_score * (24 - phase)) / 24) in
   (- 2 * position.white_to_move + 1) * score

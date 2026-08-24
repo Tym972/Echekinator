@@ -1,5 +1,4 @@
 open Board
-open Bitboards
 open Bigarray
 
 type tt = {
@@ -57,16 +56,16 @@ let is_win score = score > 90000
 let is_decisive score = abs score > 90000
 
 (*PV node : Exact value, Cut Node : Lower Bound, All Node : Upper Bound*)
-let hash_treatment hash_lower_bound hash_upper_bound alpha beta best_score no_cut ply =
+let hash_treatment hash_lower_bound hash_upper_bound alpha beta best_score no_cut search_ply =
   let adjust_value bound =
     if abs bound = max_int || not (is_decisive bound) then begin
       bound
     end
     else if is_win bound then begin
-      bound - ply
+      bound - search_ply
     end
     else begin
-      bound + ply
+      bound + search_ply
     end
   in let adjusted_low = adjust_value hash_lower_bound in
   let adjusted_up = adjust_value hash_upper_bound in
@@ -134,11 +133,11 @@ let store thread key depth lower_bound upper_bound move static_eval generation =
     Array1.set !tt.key index key
   end
 
-let probe position =
-  let index = Int64.to_int (Int64.rem position.state.(position.ply).zobrist !slots) in
+let probe zobrist =
+  let index = Int64.to_int (Int64.rem zobrist !slots) in
   let old_key = Array1.get !tt.key index in
   let old_best_move = Array1.get !tt.encoded_move index in
-  if position.state.(position.ply).zobrist = old_key then begin
+  if zobrist = old_key then begin
     Array1.get !tt.depth index, Array1.get !tt.lower_bound index, Array1.get !tt.upper_bound index, old_best_move, Array1.get !tt.static_eval index
   end
   else begin

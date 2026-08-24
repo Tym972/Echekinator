@@ -96,3 +96,20 @@ let pv_finder depth =
     pv := !pv @ [pv_table.(i)]
   done;
   !pv
+
+open Transposition
+let pv_finder2 position depth =
+  let pv = ref [] in
+  let rec aux position d =
+    if d < depth then begin
+      let state = position.state_array.(position.game_ply) in
+      let _, _, _, hash_move, _ = probe state.zobrist in
+      if hash_move <> 0 then begin
+        pv := hash_move :: !pv;
+        make position hash_move;
+        aux position (d+1);
+        unmake position hash_move
+      end
+    end
+  in aux position 0;
+  List.rev !pv 

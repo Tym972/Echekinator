@@ -10,7 +10,7 @@ let () =
 
 (*Fonction de hachage*)
 let zobrist position =
-  let state = position.state.(position.ply) in
+  let state = position.state_array.(position.game_ply) in
   let h = ref 0L in
   let aux pieces_bitboard piece =
     let bitboard = ref pieces_bitboard.(piece) in

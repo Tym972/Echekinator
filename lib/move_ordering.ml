@@ -82,16 +82,16 @@ type ordering_tables = {
 let history_index white_to_move move =
   4096 * white_to_move + 64 * (get_move_from move) + get_move_to move
 
-let move_ordering ordering_tables position moves number_of_moves ply hash_move ordering_array =
+let move_ordering ordering_tables position moves number_of_moves search_ply hash_move ordering_array =
   let score move move_index =
     if move = hash_move then begin
       ordering_array.(move_index) <- - 1000000
     end
     else if isquiet move then begin
-      if ordering_tables.killer_moves.(2 * ply) = move land 0xfff then begin
+      if ordering_tables.killer_moves.(2 * search_ply) = move land 0xfff then begin
         ordering_array.(move_index) <- 2000000
       end
-      else if ordering_tables.killer_moves.(2 * ply + 1) = move land 0xfff then begin
+      else if ordering_tables.killer_moves.(2 * search_ply + 1) = move land 0xfff then begin
         ordering_array.(move_index) <- 1000000
       end
       else begin

@@ -20,8 +20,8 @@ let is_possible_castling castling_rights castling =
   castling_rights land castling = castling
 
 (*Fonction représentant un board en sa notation FEN*)
-let fen position move_counter =
-  let state = position.state.(position.ply) in
+let fen position =
+  let state = position.state_array.(position.game_ply) in
   let mailbox = position.mailbox in
   let castling_rights = state.castling_rights in
   let fen = ref "" in
@@ -91,7 +91,7 @@ let fen position move_counter =
     if is_possible_castling castling_rights castling_infos.(1).long_castling then
       fen := !fen ^ castlings_representations.(3)
   end;
-  !fen ^ " " ^ (if state.ep_square <> (-1) then coord.(state.ep_square) ^ " " else "- ") ^ string_of_int state.half_moves ^ " " ^ string_of_int (1 + move_counter / 2)
+  !fen ^ " " ^ (if state.ep_square <> (-1) then coord.(state.ep_square) ^ " " else "- ") ^ string_of_int state.half_moves ^ " " ^ string_of_int (1 + position.game_ply / 2)
 
 (*Dictionnaire associant la repsésentation des pièces dans les tableau-échiquier à une chaîne de caractères*)
 let hash_fen =
@@ -108,15 +108,25 @@ let hash_castling_xfen =
   ht
 
 (*Fonction traduisant une position FEN en l'int array correspondant. Par défaut si non rensigné, le trait est au blancs, il n'y a plus de castlings, pas de capture en passant, aucun coup joué*)
-let position_of_fen chain position move_counter =
-  position.ply <- 0;
-  let state = position.state.(0) in
+let position_of_fen chain position =
+  let split_fen = ref (word_detection chain) in
+  if List.nth !split_fen 1 = "w" then begin
+    position.white_to_move <- 0
+  end
+  else begin
+    position.white_to_move <- 1
+  end;
+  if position.white_to_move = 0 then begin
+    position.game_ply <- (try (2 * (int_of_string (List.nth !split_fen 5) - 1)) with _ -> 0)
+  end
+  else begin
+    position.game_ply <- (try (2 * (int_of_string (List.nth !split_fen 5)) - 1) with _ -> 0)
+  end;
+  let state = position.state_array.(position.game_ply) in
   let mailbox = position.mailbox in
   let pieces_bitboards = position.pieces in
   state.castling_rights <- 0;
   state.captured_piece <- 0;
-  move_counter := 0;
-  initial_half_moves := 0;
   position.occupancy.(0) <- 0L;
   position.occupancy.(1) <- 0L;
   for piece = 1 to 12 do
@@ -125,7 +135,6 @@ let position_of_fen chain position move_counter =
   for square = 0 to 63 do
     mailbox.(square) <- 0
   done;
-  let split_fen = ref (word_detection chain) in
   let fen_length = List.length !split_fen in
   let pieces_position = (List.nth !split_fen 0) in
   let split_rows = Str.split (Str.regexp "/") pieces_position in
@@ -164,12 +173,6 @@ let position_of_fen chain position move_counter =
       |_ -> acc
     in List.rev (aux [] longueur)
   in split_fen := !split_fen @ (complete fen_length);
-  if List.nth !split_fen 1 = "w" then begin
-    position.white_to_move <- 0
-  end
-  else begin
-    position.white_to_move <- 1
-  end;
   let ep_square_string = (List.nth !split_fen 3) in
   if ep_square_string <> "-" then begin
     state.ep_square <- Hashtbl.find hash_coord ep_square_string
@@ -231,11 +234,4 @@ let position_of_fen chain position move_counter =
   end;
   state.half_moves <- (try int_of_string (List.nth !split_fen 4) with _ -> 0);
   state.zobrist <- zobrist position;
-  if position.white_to_move = 0 then begin
-    move_counter := (try (2 * (int_of_string (List.nth !split_fen 5) - 1)) with _ -> 0)
-  end
-  else begin
-    move_counter := (try (2 * (int_of_string (List.nth !split_fen 5) - 1) + 1) with _ -> 0)
-  end;
-  state.in_check <- is_attacked (lsb_index pieces_bitboards.(pieces_rep.(position.white_to_move).(king))) (position.white_to_move) (position.occupancy.(0) ||| position.occupancy.(1)) pieces_bitboards pieces_rep.(position.white_to_move lxor 1);
-  board_record.(0) <- state.zobrist
+  state.in_check <- is_attacked (lsb_index pieces_bitboards.(pieces_rep.(position.white_to_move).(king))) (position.white_to_move) (position.occupancy.(0) ||| position.occupancy.(1)) pieces_bitboards pieces_rep.(position.white_to_move lxor 1)

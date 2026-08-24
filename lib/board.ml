@@ -34,6 +34,8 @@ let merge_sort l =
 (*Max depth reached by the search*)
 let max_depth = 255
 
+let max_moves = 2048
+
 (**)
 let max_pv_length = max_depth
 
@@ -82,10 +84,6 @@ let ponder_time = ref Mtime.Span.max_span
 
 let chess_960 = ref false
 
-let initial_half_moves = ref 0
-
-let board_record = Array.make 100 0L
-
 let create_empty_state () = {
   ep_square = (-1);
   castling_rights = 15;
@@ -95,29 +93,34 @@ let create_empty_state () = {
   in_check = false
 }
 
-let state_array = Array.init (max_depth + 40) (fun _ -> create_empty_state ())
-let moves = Array.init (max_depth + 40) (fun _ -> Array.make 218 0)
-let number_of_moves = Array.make (max_depth + 40) 0
+let copy_state state = {
+  ep_square = state.ep_square;
+  castling_rights = state.castling_rights;
+  half_moves = state.half_moves;
+  zobrist = state.zobrist;
+  captured_piece = state.captured_piece;
+  in_check = state.in_check
+}
 
-let position = {
+let create_position () = {
   white_to_move = 0;
-  ply = 0;
-  state = Array.copy state_array;
+  game_ply = 0;
+  state_array = Array.init max_moves (fun _ -> create_empty_state ());
   pieces = Array.make 13 0L;
   occupancy = Array.make 2 0L;
   mailbox = Array.make 64 0;
-  moves = Array.copy moves;
-  number_of_moves = Array.copy number_of_moves
+  moves = Array.init (max_depth + 40) (fun _ -> Array.make 218 0);
+  number_of_moves = Array.make (max_depth + 40) 0
 }
 
 let copy_position position = {
   white_to_move = position.white_to_move;
-  ply = position.ply;
-  state = Array.copy position.state;
+  game_ply = position.game_ply;
+  state_array = Array.map copy_state position.state_array;
   pieces = Array.copy position.pieces;
   occupancy = Array.copy position.occupancy;
   mailbox = Array.copy position.mailbox;
-  moves = Array.copy position.moves;
+  moves = Array.map Array.copy position.moves;
   number_of_moves = Array.copy position.number_of_moves
   }
 

@@ -7,11 +7,11 @@ open Transposition
 open Evaluation
 
 (*Fonction détectant les répétitions à partir d'une liste de code zobrist*)
-let repetition state ply =
-  let index = ref (ply - 2) in
-  let zobrist_position = state.(ply).zobrist in
+let repetition state game_ply =
+  let index = ref (game_ply - 2) in
+  let zobrist_position = state.(game_ply).zobrist in
   let repeat = ref false in
-  let limit = max (ply - state.(ply).half_moves) (- !initial_half_moves) in
+  let limit = (game_ply - state.(game_ply).half_moves) in
   while !index >= limit && not !repeat do
     if !index >= 0 then begin
       if state.(!index).zobrist = zobrist_position then begin
@@ -19,7 +19,7 @@ let repetition state ply =
       end
     end
     else begin
-      if board_record.(!initial_half_moves + !index) = zobrist_position then begin
+      if state.(!index).zobrist = zobrist_position then begin
         repeat := true
       end
     end;
@@ -44,7 +44,7 @@ let captures position moves number hash_move =
     in List.map snd (merge_sort (aux !list))
 
 (*Fonction implémentant la recherche quiescente*)
-let rec quiescence_search position ordering_tables thread depth alpha beta ispv =
+let rec quiescence_search position ordering_tables thread depth search_ply alpha beta ispv =
 
   (*Check search limit*)
   if stop_search.(thread) then begin
@@ -52,18 +52,18 @@ let rec quiescence_search position ordering_tables thread depth alpha beta ispv 
   end
 
   else begin
-    let ply = position.ply in
-    let state = position.state.(ply) in
+    let game_ply = position.game_ply in
+    let state = position.state_array.(game_ply) in
     let in_check = state.in_check in
     
     (*Check repetion or fifty moves rule*)
-    if repetition position.state ply || (state.half_moves = 100 && (not in_check || (legal_moves position; position.number_of_moves.(ply) <> 0))) then begin
+    if repetition position.state_array game_ply || (state.half_moves = 100 && (not in_check || (legal_moves position search_ply; position.number_of_moves.(search_ply) <> 0))) then begin
       0
     end
 
     else begin
       let best_move = ref 0 in
-      let hash_depth, hash_lower_bound, hash_upper_bound, hash_move, hash_static_eval = probe position in
+      let hash_depth, hash_lower_bound, hash_upper_bound, hash_move, hash_static_eval = probe state.zobrist in
       let static_eval = ref hash_static_eval in
       let no_cut = ref true in
       let best_score = ref (- max_int) in
@@ -72,7 +72,7 @@ let rec quiescence_search position ordering_tables thread depth alpha beta ispv 
 
       (*Use TT informations*)
       if not (ispv || depth > hash_depth) then begin
-        hash_treatment hash_lower_bound hash_upper_bound alpha0 beta0 best_score no_cut ply
+        hash_treatment hash_lower_bound hash_upper_bound alpha0 beta0 best_score no_cut search_ply
       end;
       if !no_cut then begin
 
@@ -84,7 +84,7 @@ let rec quiescence_search position ordering_tables thread depth alpha beta ispv 
 
         (*Stand pat verification then move loop*)
         if !best_score < beta then begin
-          let moves = position.moves.(ply) in
+          let moves = position.moves.(search_ply) in
           if !best_score > !alpha0 then begin
             alpha0 := !best_score
           end;
@@ -92,7 +92,7 @@ let rec quiescence_search position ordering_tables thread depth alpha beta ispv 
           let counter = ref 0 in
           let move_loop move =
             make position move;
-            let score = - quiescence_search position ordering_tables thread (depth - 1) (- !beta0) (- !alpha0) ispv
+            let score = - quiescence_search position ordering_tables thread (depth - 1) (search_ply + 1) (- !beta0) (- !alpha0) ispv
             in if score > !best_score then begin
               best_score := score;
               if score > !alpha0 then begin
@@ -111,11 +111,11 @@ let rec quiescence_search position ordering_tables thread depth alpha beta ispv 
           (*If in check search for all moves*)
           in if in_check then begin
             let move_loop_in_check () =
-              legal_moves position;
-              let ordering_array = Array.make position.number_of_moves.(ply) 0 in
-              move_ordering ordering_tables position moves position.number_of_moves.(ply) ply hash_move ordering_array;
+              legal_moves position search_ply;
+              let ordering_array = Array.make position.number_of_moves.(search_ply) 0 in
+              move_ordering ordering_tables position moves position.number_of_moves.(search_ply) search_ply hash_move ordering_array;
               while !no_cut do
-                let move = move_picker moves ordering_array position.number_of_moves.(ply) in
+                let move = move_picker moves ordering_array position.number_of_moves.(search_ply) in
                   if move <> 0 then begin
                     move_loop move 
                   end 
@@ -135,7 +135,7 @@ let rec quiescence_search position ordering_tables thread depth alpha beta ispv 
 
             (*Check for mate*)
             if !best_score = (- max_int) then begin
-              best_score := ply - 99999
+              best_score := search_ply - 99999
             end
 
           end
@@ -143,8 +143,8 @@ let rec quiescence_search position ordering_tables thread depth alpha beta ispv 
           (*Else only search for captures and promotions*)
           else begin
             let move_loop_normal () =
-              legal_moves position;
-              let captures = ref (captures position moves position.number_of_moves.(ply) hash_move) in
+              legal_moves position search_ply;
+              let captures = ref (captures position moves position.number_of_moves.(search_ply) hash_move) in
               while !no_cut && !captures <> [] do
                 move_loop (List.hd !captures);
                 captures := List.tl !captures
@@ -169,10 +169,10 @@ let rec quiescence_search position ordering_tables thread depth alpha beta ispv 
         let upper_bound = ref max_int in
         let stored_value =
           if is_win !best_score then begin
-            !best_score + ply
+            !best_score + search_ply
           end
           else if is_loss !best_score then begin
-            !best_score - ply
+            !best_score - search_ply
           end
           else begin
             !best_score

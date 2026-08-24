@@ -89,7 +89,7 @@ let [@inline] is_king piece = piece mod 6 = 0
 
 *)
 
-(*        flags                         hexidecimal constants
+(*        flags                         hexadecimal constants
     
     0000      quiet move                      0x0
     0001      double pawn push                0x1
@@ -223,10 +223,10 @@ type state = {
 
 type position = {
   mutable white_to_move : int;
-  mutable ply : int;
-  mutable pieces : int64 array;
-  mutable occupancy : int64 array;
-  mutable state : state array;
+  mutable game_ply : int;
+  pieces : int64 array;
+  occupancy : int64 array;
+  state_array : state array;
   mailbox : int array;
   moves : int array array;
   number_of_moves : int array
@@ -290,8 +290,140 @@ let rook_blockers = Array.make 64 [||]
 let bishop_moves = Array.make 64 [||]
 let rook_moves = Array.make 64 [||]
 
-let bishop_magics = Array.make 64 0L
-let rook_magics = Array.make 64 0L
+let bishop_magics =
+  [|
+    0x4020010905040C82L;
+    0x1942284A20820090L;
+    0x10012041000045L;
+    0x24404088060408L;
+    0xD04242000010C01L;
+    0x82020320000140L;
+    0x1010820040018L;
+    0x20120202024000L;
+    0x1A0442122040AL;
+    0x200200400820044L;
+    0x2040A12800828010L;
+    0x4000040408803000L;
+    0x4042044C204L;
+    0x204A05019840418CL;
+    0x240104022018L;
+    0x28A01600A0880818L;
+    0x101080A120010100L;
+    0x1011C292081100L;
+    0x4504101800202600L;
+    0x208200104010401L;
+    0x4824010202A20000L;
+    0x2000040522040L;
+    0x4200840768080800L;
+    0x20300208080B002L;
+    0x8401220050104L;
+    0x225088A0040882L;
+    0x4000240902040C00L;
+    0x2002088008020L;
+    0x82040002008201L;
+    0x40490000900800L;
+    0x4040C40010842400L;
+    0x4201002010520820L;
+    0x1D101900502004L;
+    0x100821014A00400L;
+    0x1100211000110400L;
+    0x12C2020080080080L;
+    0x2040008200110104L;
+    0x10008A00A42210L;
+    0x818408C80810802L;
+    0xA009100002400L;
+    0xA11082010B60580L;
+    0x2202422A20001000L;
+    0x16200A0082001000L;
+    0x690204010402201L;
+    0x1010200411003010L;
+    0x101204902080A500L;
+    0x28184114000040L;
+    0x2419881482840902L;
+    0x1021008820090000L;
+    0x1101040082080000L;
+    0x10404404040670L;
+    0x8AA20A020000L;
+    0x8D0240800L;
+    0x6040900210011080L;
+    0x4102041C428000L;
+    0x20088101002020L;
+    0x4044140C01081801L;
+    0x88481C402980801L;
+    0x2040001022311005L;
+    0x28040040840403L;
+    0x402040010020880L;
+    0x400000420040108L;
+    0x101112008008082L;
+    0x20120A1002220045L
+  |]
+
+let rook_magics = [|
+  0x1280008240021020L;
+  0xC0004010002000L;
+  0x200082200104480L;
+  0x2880048208001000L;
+  0x1080080004008082L;
+  0x2080020080010400L;
+  0x400080110008402L;
+  0xA00009408204102L;
+  0x800080204000L;
+  0xC00040201000L;
+  0x2400808020001000L;
+  0x36000840201204L;
+  0x800400080081L;
+  0x4202000200090410L;
+  0x1202000200040801L;
+  0x402000040820924L;
+  0x1620218000400284L;
+  0x80404000201001L;
+  0x2008110020090040L;
+  0x828008029000L;
+  0x510110008010144L;
+  0x20808004000201L;
+  0x4810C0008220110L;
+  0x420020000842041L;
+  0x4010902080004002L;
+  0x1001020200208040L;
+  0x800200080801000L;
+  0x2100480080081L;
+  0x1800080080040080L;
+  0x20080800400L;
+  0x1041A400082210L;
+  0x4302204200009409L;
+  0x1003400082800122L;
+  0x4210004000402001L;
+  0x1100081802003L;
+  0x1400100080800804L;
+  0x408800400800802L;
+  0x402401008012004L;
+  0x811004004802L;
+  0x122A010082000044L;
+  0x4000400080208000L;
+  0x201000404000L;
+  0x500200100410012L;
+  0x200100008008080L;
+  0x109000800450010L;
+  0x402001008020004L;
+  0x480201040010L;
+  0x3040884244A0009L;
+  0xB0400180012180L;
+  0x204401000200440L;
+  0x4410020001100L;
+  0x10001080080180L;
+  0x880080080040080L;
+  0x62000410080200L;
+  0x20C01B018020400L;
+  0x1000108400510200L;
+  0xA88800021401501L;
+  0x888210200144282L;
+  0x400900200011L;
+  0x200100020F80501L;
+  0x82A000820100402L;
+  0x2213006804001209L;
+  0x4000100108008204L;
+  0x844840300A2L
+  |]
 
 let bishop_shifts = Array.make 64 0
 let rook_shifts = Array.make 64 0
@@ -432,15 +564,12 @@ let init_sliding_moves () =
   done
 
 let init_magic () =
-  let bishop_file = open_in "magic_bishop.txt" in
-  let rook_file = open_in "magic_rook.txt" in
-  let aux masks shifts magics file  =
+  let aux masks shifts  =
     for square = 0 to 63 do
       shifts.(square) <- 64 - population_count masks.(square);
-      magics.(square) <- Int64.of_string (input_line file)
     done
-  in aux bishop_masks bishop_shifts bishop_magics bishop_file;
-  aux rook_masks rook_shifts rook_magics rook_file
+  in aux bishop_masks bishop_shifts;
+  aux rook_masks rook_shifts
 
 let [@inline] index magic blocker shift =
   Int64.to_int (Int64.shift_right_logical (Int64.mul magic blocker) shift)
@@ -465,9 +594,7 @@ let () =
   init_sliding_masks ();
   init_blockers ();
   init_sliding_moves ();
-  begin try
-    init_magic () with _ -> print_endline "No magic bitboards file"
-  end;
+  init_magic ();
   init_tables ()
 
 let [@inline] add_pawn_moves moves number_of_moves moves_bitboard from flag =
@@ -631,9 +758,8 @@ let tab_zobrist = Array.make 781 0L
 
 let tab_zobrist_castling = Array.make 16 0L
 
-let legal_moves position =
-  let ply = position.ply in
-  let state = position.state.(position.ply) in
+let legal_moves position search_ply =
+  let state = position.state_array.(position.game_ply) in
   let white_to_move = position.white_to_move in
   let pieces_bitboards = position.pieces in
   let player_pieces = pieces_rep.(white_to_move) in
@@ -690,7 +816,7 @@ let legal_moves position =
     pin_candidates := other_candidates
   done;
   
-  let moves = position.moves.(ply) in
+  let moves = position.moves.(search_ply) in
   let number_of_moves = ref 0 in
   let friendly_occupancy = position.occupancy.(white_to_move) in
   let oponent_occupancy = position.occupancy.(white_to_move lxor 1)  in
@@ -745,11 +871,11 @@ let legal_moves position =
 
   let piece_attacks = generate_king_attacks king_square &&& (Int64.lognot all_attacks) in
   generate_normal_moves piece_attacks oponent_occupancy not_friendly_occupancy moves number_of_moves king_square;
-  position.number_of_moves.(ply) <- !number_of_moves 
+  position.number_of_moves.(search_ply) <- !number_of_moves 
 
 let make_null position =
-  let state = position.state.(position.ply) in
-  let new_state = position.state.(position.ply + 1) in
+  let state = position.state_array.(position.game_ply) in
+  let new_state = position.state_array.(position.game_ply + 1) in
   let white_to_move = position.white_to_move in
   let castling_rights = state.castling_rights in
   new_state.captured_piece <- 0;
@@ -761,16 +887,16 @@ let make_null position =
   end;
   new_state.ep_square <- (-1);
   new_state.half_moves <- state.half_moves + 1;
-  position.ply <- position.ply + 1;
+  position.game_ply <- position.game_ply + 1;
   new_state.in_check <- false
 
 let unmake_null position =
   position.white_to_move <- position.white_to_move lxor 1;
-  position.ply <- position.ply - 1
+  position.game_ply <- position.game_ply - 1
 
 let make position move =
-  let state = position.state.(position.ply) in
-  let new_state = position.state.(position.ply + 1) in
+  let state = position.state_array.(position.game_ply) in
+  let new_state = position.state_array.(position.game_ply + 1) in
   let mailbox = position.mailbox in
   let white_to_move = position.white_to_move in
   let pieces_bitboards = position.pieces in
@@ -791,7 +917,7 @@ let make position move =
   end;
   new_state.ep_square <- (-1);
   new_state.half_moves <- state.half_moves + 1;
-  position.ply <- position.ply + 1;
+  position.game_ply <- position.game_ply + 1;
   let flag = get_move_flag move in
   begin match flag with
     |0 ->
@@ -920,8 +1046,8 @@ let unmake position move =
   let to_ = get_move_to move in
   let piece = mailbox.(to_) in
   position.white_to_move <- white_to_move;
-  let captured_piece = position.state.(position.ply).captured_piece in
-  position.ply <- position.ply - 1;
+  let captured_piece = position.state_array.(position.game_ply).captured_piece in
+  position.game_ply <- position.game_ply - 1;
   let flag = get_move_flag move in match flag with
   |0|1 ->
     mailbox.(from) <- piece;
