@@ -39,15 +39,15 @@ let see position move =
   let attackers = ref (get_all_attackers to_ pieces_bitboards !total_occupancy) in
   let gain = Array.make 20 0 in
   if flag <> 5 then begin
-    gain.(0) <- tabvalue.(position.mailbox.(to_))
+    gain.(0) <- tabvalue.(position.board.(to_))
   end
   else begin
-    gain.(0) <- tabvalue.(position.mailbox.(from));
+    gain.(0) <- tabvalue.(position.board.(from));
     total_occupancy := !total_occupancy ^^^ single_bitboards_tab.(to_ - push_vects.(!current_side))
   end;
   let depth = ref 1 in
   let from_bitboard = ref (single_bitboards_tab.(from)) in
-  let attacker = ref (position.mailbox.(from)) in
+  let attacker = ref (position.board.(from)) in
   while !from_bitboard <> 0L do
     total_occupancy := !total_occupancy ^^^ !from_bitboard;
     attackers := !attackers &&& (Int64.lognot !from_bitboard);
@@ -73,10 +73,12 @@ let see position move =
 
 let killer_moves = Array.make (2 * max_depth) 0
 let history_moves = Array.make 8192 0
+let working_array = Array.init (max_depth + 40) (fun _ -> Array.make 218 0)
 
 type ordering_tables = {
   killer_moves : int array;
-  history_moves : int array
+  history_moves : int array;
+  working_array : int array array
 }
 
 let history_index white_to_move move =

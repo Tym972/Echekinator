@@ -227,7 +227,7 @@ type position = {
   pieces : int64 array;
   occupancy : int64 array;
   state_array : state array;
-  mailbox : int array;
+  board : int array;
   moves : int array array;
   number_of_moves : int array
 }
@@ -897,17 +897,17 @@ let unmake_null position =
 let make position move =
   let state = position.state_array.(position.game_ply) in
   let new_state = position.state_array.(position.game_ply + 1) in
-  let mailbox = position.mailbox in
+  let board = position.board in
   let white_to_move = position.white_to_move in
   let pieces_bitboards = position.pieces in
   let occupancy = position.occupancy in
   let from = get_move_from move in
   let to_ = get_move_to move in
-  let piece = mailbox.(from) in
+  let piece = board.(from) in
   let castling_rights = state.castling_rights in
   let player_pieces = pieces_rep.(white_to_move) in
   let oponent_pieces = pieces_rep.(white_to_move lxor 1) in
-  let captured_piece = mailbox.(to_) in
+  let captured_piece = board.(to_) in
   new_state.captured_piece <- captured_piece;
   position.white_to_move <- white_to_move lxor 1;
   new_state.castling_rights <- castling_rights;
@@ -921,8 +921,8 @@ let make position move =
   let flag = get_move_flag move in
   begin match flag with
     |0 ->
-      mailbox.(from) <- 0;
-      mailbox.(to_) <- piece;
+      board.(from) <- 0;
+      board.(to_) <- piece;
       new_state.zobrist <- new_state.zobrist ^^^ tab_zobrist.(zobrist_index from piece) ^^^ tab_zobrist.(zobrist_index to_ piece);
       pieces_bitboards.(piece) <- pieces_bitboards.(piece) ^^^ single_bitboards_tab.(from) ^^^ single_bitboards_tab.(to_);
       occupancy.(white_to_move) <- occupancy.(white_to_move) ^^^ single_bitboards_tab.(from) ^^^ single_bitboards_tab.(to_);
@@ -935,8 +935,8 @@ let make position move =
         new_state.half_moves <- 0
       end;
     |4 ->
-      mailbox.(from) <- 0;
-      mailbox.(to_) <- piece;
+      board.(from) <- 0;
+      board.(to_) <- piece;
       new_state.zobrist <- new_state.zobrist ^^^ tab_zobrist.(zobrist_index from piece) ^^^ tab_zobrist.(zobrist_index to_ piece) ^^^ tab_zobrist.(zobrist_index to_ captured_piece);
       pieces_bitboards.(piece) <- pieces_bitboards.(piece) ^^^ single_bitboards_tab.(from) ^^^ single_bitboards_tab.(to_);
       pieces_bitboards.(captured_piece) <- pieces_bitboards.(captured_piece) ^^^ single_bitboards_tab.(to_);
@@ -949,8 +949,8 @@ let make position move =
       end;
       new_state.half_moves <- 0
     |1 ->
-      mailbox.(from) <- 0;
-      mailbox.(to_) <- piece;
+      board.(from) <- 0;
+      board.(to_) <- piece;
       if (pieces_bitboards.(oponent_pieces.(pawn)) &&& enpassant_table.(to_) <> 0L) then begin
         new_state.ep_square <- (from + to_) / 2;
         new_state.zobrist <- new_state.zobrist ^^^ tab_zobrist.(769 + (from land 7))
@@ -965,10 +965,10 @@ let make position move =
       let player_castling_info = castling_infos.(white_to_move) in
       let from_rook = player_castling_info.from_short_rook in
       let to_rook = player_castling_info.to_short_rook in
-      mailbox.(from) <- 0;
-      mailbox.(to_) <- player_king;
-      mailbox.(from_rook) <- 0;
-      mailbox.(to_rook) <- player_rook;
+      board.(from) <- 0;
+      board.(to_) <- player_king;
+      board.(from_rook) <- 0;
+      board.(to_rook) <- player_rook;
       pieces_bitboards.(player_king) <- pieces_bitboards.(player_king) ^^^ single_bitboards_tab.(from) ^^^ single_bitboards_tab.(to_);
       pieces_bitboards.(player_rook) <- pieces_bitboards.(player_rook) ^^^ single_bitboards_tab.(from_rook) ^^^ single_bitboards_tab.(to_rook);
       occupancy.(white_to_move) <- occupancy.(white_to_move) ^^^ single_bitboards_tab.(from) ^^^ single_bitboards_tab.(to_) ^^^ single_bitboards_tab.(from_rook) ^^^ single_bitboards_tab.(to_rook);
@@ -984,10 +984,10 @@ let make position move =
       let player_castling_info = castling_infos.(white_to_move) in
       let from_rook = player_castling_info.from_long_rook in
       let to_rook = player_castling_info.to_long_rook in
-      mailbox.(from) <- 0;
-      mailbox.(to_) <- player_king;
-      mailbox.(from_rook) <- 0;
-      mailbox.(to_rook) <- player_rook;
+      board.(from) <- 0;
+      board.(to_) <- player_king;
+      board.(from_rook) <- 0;
+      board.(to_rook) <- player_rook;
       pieces_bitboards.(player_king) <- pieces_bitboards.(player_king) ^^^ single_bitboards_tab.(from) ^^^ single_bitboards_tab.(to_);
       pieces_bitboards.(player_rook) <- pieces_bitboards.(player_rook) ^^^ single_bitboards_tab.(from_rook) ^^^ single_bitboards_tab.(to_rook);
       occupancy.(white_to_move) <- occupancy.(white_to_move) ^^^ single_bitboards_tab.(from) ^^^ single_bitboards_tab.(to_) ^^^ single_bitboards_tab.(from_rook) ^^^ single_bitboards_tab.(to_rook);
@@ -998,13 +998,13 @@ let make position move =
         tab_zobrist.(zobrist_index from player_king) ^^^ tab_zobrist.(zobrist_index to_ player_king) ^^^
         tab_zobrist.(zobrist_index from_rook player_rook) ^^^ tab_zobrist.(zobrist_index to_rook player_rook)
     |5 ->
-      mailbox.(from) <- 0;
-      mailbox.(to_) <- piece;
+      board.(from) <- 0;
+      board.(to_) <- piece;
       let captured_pawn_square = (to_ - push_vects.(white_to_move)) in
-      mailbox.(captured_pawn_square) <- 0;
+      board.(captured_pawn_square) <- 0;
       let captured_pawn = oponent_pieces.(pawn) in
       new_state.captured_piece <- captured_pawn;
-      mailbox.(captured_pawn_square) <- 0;
+      board.(captured_pawn_square) <- 0;
       new_state.zobrist <- new_state.zobrist ^^^ tab_zobrist.(zobrist_index from piece) ^^^ tab_zobrist.(zobrist_index to_ piece) ^^^ tab_zobrist.(zobrist_index captured_pawn_square captured_pawn);
       pieces_bitboards.(piece) <- pieces_bitboards.(piece) ^^^ single_bitboards_tab.(from) ^^^ single_bitboards_tab.(to_);
       pieces_bitboards.(captured_pawn) <- pieces_bitboards.(captured_pawn) ^^^ single_bitboards_tab.(captured_pawn_square);
@@ -1014,8 +1014,8 @@ let make position move =
     |_ ->
       begin
         let promotion_piece = (flag lor 4) + - 10 +  6 * white_to_move in
-        mailbox.(from) <- 0;
-        mailbox.(to_) <- promotion_piece;
+        board.(from) <- 0;
+        board.(to_) <- promotion_piece;
         pieces_bitboards.(piece) <- pieces_bitboards.(piece) ^^^ single_bitboards_tab.(from);
         pieces_bitboards.(promotion_piece) <- pieces_bitboards.(promotion_piece) ^^^ single_bitboards_tab.(to_);
         occupancy.(white_to_move) <- occupancy.(white_to_move) ^^^ single_bitboards_tab.(from) ^^^ single_bitboards_tab.(to_);
@@ -1038,25 +1038,25 @@ let make position move =
   new_state.in_check <- is_attacked (lsb_index pieces_bitboards.(oponent_pieces.(king))) (white_to_move lxor 1) (occupancy.(0) ||| occupancy.(1)) pieces_bitboards player_pieces
 
 let unmake position move =
-  let mailbox = position.mailbox in
+  let board = position.board in
   let white_to_move = position.white_to_move lxor 1 in
   let pieces_bitboards = position.pieces in
   let occupancy = position.occupancy in
   let from = get_move_from move in
   let to_ = get_move_to move in
-  let piece = mailbox.(to_) in
+  let piece = board.(to_) in
   position.white_to_move <- white_to_move;
   let captured_piece = position.state_array.(position.game_ply).captured_piece in
   position.game_ply <- position.game_ply - 1;
   let flag = get_move_flag move in match flag with
   |0|1 ->
-    mailbox.(from) <- piece;
-    mailbox.(to_) <- 0;
+    board.(from) <- piece;
+    board.(to_) <- 0;
     pieces_bitboards.(piece) <- pieces_bitboards.(piece) ^^^ single_bitboards_tab.(from) ^^^ single_bitboards_tab.(to_);
     occupancy.(white_to_move) <- occupancy.(white_to_move) ^^^ single_bitboards_tab.(from) ^^^ single_bitboards_tab.(to_)
   |4 ->
-    mailbox.(from) <- piece;
-    mailbox.(to_) <- captured_piece;
+    board.(from) <- piece;
+    board.(to_) <- captured_piece;
     pieces_bitboards.(piece) <- pieces_bitboards.(piece) ^^^ single_bitboards_tab.(from) ^^^ single_bitboards_tab.(to_);
     pieces_bitboards.(captured_piece) <- pieces_bitboards.(captured_piece) ^^^ single_bitboards_tab.(to_);
     occupancy.(white_to_move) <- occupancy.(white_to_move) ^^^ single_bitboards_tab.(from) ^^^ single_bitboards_tab.(to_);
@@ -1068,10 +1068,10 @@ let unmake position move =
     let player_castling_info = castling_infos.(white_to_move) in
     let from_rook = player_castling_info.from_short_rook in
     let to_rook = player_castling_info.to_short_rook in
-    mailbox.(from) <- piece;
-    mailbox.(to_) <- 0;
-    mailbox.(from_rook) <- player_rook;
-    mailbox.(to_rook) <- 0;
+    board.(from) <- piece;
+    board.(to_) <- 0;
+    board.(from_rook) <- player_rook;
+    board.(to_rook) <- 0;
     pieces_bitboards.(player_king) <- pieces_bitboards.(player_king) ^^^ single_bitboards_tab.(from) ^^^ single_bitboards_tab.(to_);
     pieces_bitboards.(player_rook) <- pieces_bitboards.(player_rook) ^^^ single_bitboards_tab.(from_rook) ^^^ single_bitboards_tab.(to_rook);
     occupancy.(white_to_move) <- occupancy.(white_to_move) ^^^ single_bitboards_tab.(from) ^^^ single_bitboards_tab.(to_) ^^^ single_bitboards_tab.(from_rook) ^^^ single_bitboards_tab.(to_rook)
@@ -1082,18 +1082,18 @@ let unmake position move =
     let player_castling_info = castling_infos.(white_to_move) in
     let from_rook = player_castling_info.from_long_rook in
     let to_rook = player_castling_info.to_long_rook in
-    mailbox.(from) <- piece;
-    mailbox.(to_) <- 0;
-    mailbox.(from_rook) <- player_rook;
-    mailbox.(to_rook) <- 0;
+    board.(from) <- piece;
+    board.(to_) <- 0;
+    board.(from_rook) <- player_rook;
+    board.(to_rook) <- 0;
     pieces_bitboards.(player_king) <- pieces_bitboards.(player_king) ^^^ single_bitboards_tab.(from) ^^^ single_bitboards_tab.(to_);
     pieces_bitboards.(player_rook) <- pieces_bitboards.(player_rook) ^^^ single_bitboards_tab.(from_rook) ^^^ single_bitboards_tab.(to_rook);
     occupancy.(white_to_move) <- occupancy.(white_to_move) ^^^ single_bitboards_tab.(from) ^^^ single_bitboards_tab.(to_) ^^^ single_bitboards_tab.(from_rook) ^^^ single_bitboards_tab.(to_rook)
   |5 ->
-    mailbox.(from) <- piece;
-    mailbox.(to_) <- 0;
+    board.(from) <- piece;
+    board.(to_) <- 0;
     let captured_pawn_square = to_ - push_vects.(white_to_move) in
-    mailbox.(captured_pawn_square) <- captured_piece;
+    board.(captured_pawn_square) <- captured_piece;
     pieces_bitboards.(piece) <- pieces_bitboards.(piece) ^^^ single_bitboards_tab.(from) ^^^ single_bitboards_tab.(to_);
     pieces_bitboards.(captured_piece) <- pieces_bitboards.(captured_piece) ^^^ single_bitboards_tab.(captured_pawn_square);
     occupancy.(white_to_move) <- occupancy.(white_to_move) ^^^ single_bitboards_tab.(from) ^^^ single_bitboards_tab.(to_);
@@ -1102,8 +1102,8 @@ let unmake position move =
     begin
       let promotion_piece = (flag lor 4) - 10 +  6 * white_to_move in
       let player_pawn = 1 + white_to_move * 6 in
-      mailbox.(from) <- player_pawn;
-      mailbox.(to_) <- captured_piece;
+      board.(from) <- player_pawn;
+      board.(to_) <- captured_piece;
       pieces_bitboards.(player_pawn) <- pieces_bitboards.(player_pawn) ^^^ single_bitboards_tab.(from);
       pieces_bitboards.(promotion_piece) <- pieces_bitboards.(promotion_piece) ^^^ single_bitboards_tab.(to_);
       occupancy.(white_to_move) <- occupancy.(white_to_move) ^^^ single_bitboards_tab.(from) ^^^ single_bitboards_tab.(to_);
@@ -1116,17 +1116,17 @@ let unmake position move =
     (*Array used in print_board*)
 let tab_print = [|"   |"; " P |"; " N |"; " B |"; " R |"; " Q |"; " K |"; " p |"; " n |"; " b |"; " r |"; " q |"; " k |"|]
 
-let mailbox_of_bitboard pieces_bitboards =
-  let mailbox = Array.make 64 0 in
+let board_of_bitboard pieces_bitboards =
+  let board = Array.make 64 0 in
   let rec aux index piece = match index with
     |[] -> ()
     |h::t ->
-      mailbox.(h) <- piece;
+      board.(h) <- piece;
       aux t piece
   in for i = 1 to 12 do
     aux (index_list pieces_bitboards.(i)) i
   done;
-  mailbox
+  board
 
 let coord = [|
   "a1"; "b1"; "c1"; "d1"; "e1"; "f1"; "g1"; "h1";
@@ -1139,13 +1139,13 @@ let coord = [|
   "a8"; "b8"; "c8"; "d8"; "e8"; "f8"; "g8"; "h8"
 |]
 
-let zouk mailbox st =
+let zouk board st =
   let display = ref "   +---+---+---+---+---+---+---+---+\n"
   in for i = 8 downto 1 do
     let k_list = ref [] in
     let k = string_of_int i ^ "  |" in
     for j = 8 * (i - 1) to 8 * i - 1 do
-      let piece = mailbox.(j) in
+      let piece = board.(j) in
       k_list := tab_print.(piece) :: !k_list;
     done;
     k_list := List.rev !k_list;
@@ -1158,13 +1158,13 @@ let zouk mailbox st =
     close_out fichier_sortie
   end
 
-let print_board mailbox =
+let print_board board =
   let display = ref "   +---+---+---+---+---+---+---+---+\n"
   in for i = 8 downto 1 do
     let k_list = ref [] in
     let k = string_of_int i ^ "  |" in
     for j = 8 * (i - 1) to 8 * i - 1 do
-      let piece = mailbox.(j) in
+      let piece = board.(j) in
       k_list := tab_print.(piece) :: !k_list;
     done;
     k_list := List.rev !k_list;
@@ -1175,19 +1175,19 @@ let print_board mailbox =
 
 
 let print_bitboard bitboard =
-  let mailbox = Array.make 64 0 in
-  let rec aux_1 mailbox index = match index with
+  let board = Array.make 64 0 in
+  let rec aux_1 board index = match index with
     |[] -> ()
     |h::t ->
-      mailbox.(h) <- 6;
-      aux_1 mailbox t
-  in aux_1 mailbox (index_list bitboard);
+      board.(h) <- 6;
+      aux_1 board t
+  in aux_1 board (index_list bitboard);
   let display = ref "   +---+---+---+---+---+---+---+---+\n"
   in for i = 8 downto 1 do
     let k_list = ref [] in
     let k = string_of_int i ^ "  |" in
     for j = 8 * (i - 1) to 8 * i - 1 do
-      let piece = mailbox.(j) in
+      let piece = board.(j) in
       k_list := tab_print.(piece) :: !k_list;
     done;
     k_list := List.rev !k_list;

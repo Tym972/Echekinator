@@ -27,6 +27,26 @@ let repetition state game_ply =
   done;
   !repeat
 
+(*let repetition state game_ply search_ply =
+  let index = ref (game_ply - 2) in
+  let zobrist_position = state.(game_ply).zobrist in
+  let repeat = ref 0 in
+  let limit = (game_ply - state.(game_ply).half_moves) in
+  while !index >= limit && !repeat < 2 do
+    if !index >= search_ply - game_ply then begin
+      if state.(!index).zobrist = zobrist_position then begin
+        repeat := 2
+      end
+    end
+    else begin
+      if state.(!index).zobrist = zobrist_position then begin
+      incr repeat
+      end
+    end;
+    index := !index - 2;
+  done;
+  !repeat > 1*)
+
 let captures position moves number hash_move =
   let list = ref [] in
   for i = 0 to number - 1 do
@@ -112,7 +132,7 @@ let rec quiescence_search position ordering_tables thread depth search_ply alpha
           in if in_check then begin
             let move_loop_in_check () =
               legal_moves position search_ply;
-              let ordering_array = Array.make position.number_of_moves.(search_ply) 0 in
+              let ordering_array = ordering_tables.working_array.(search_ply) in
               move_ordering ordering_tables position moves position.number_of_moves.(search_ply) search_ply hash_move ordering_array;
               while !no_cut do
                 let move = move_picker moves ordering_array position.number_of_moves.(search_ply) in

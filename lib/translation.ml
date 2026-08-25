@@ -70,9 +70,9 @@ let mouvement_of_uci uci position =
   let to_ = ref (Hashtbl.find hash_coord (String.sub uci 2 2)) in
 
 
-  let piece = (position.mailbox.(from)) in
+  let piece = (position.board.(from)) in
   let promotion_piece = try Hashtbl.find hash_pieces (Char.uppercase_ascii uci.[4]) with _ -> 0 in
-  let capture = if position.mailbox.(!to_) = 0 then 0 else 4 in
+  let capture = if position.board.(!to_) = 0 then 0 else 4 in
   let player_castling_infos = castling_infos.(white_to_move) in
   let flag = 
     if piece = player_pieces.(pawn) && (from - !to_) mod 8 <> 0 && capture = 0 then 
@@ -89,27 +89,3 @@ let mouvement_of_uci uci position =
       capture
   in
   encode_move from !to_ flag
-
-let pv_finder depth =
-  let pv = ref [] in
-  for i = 0 to (min pv_length.(0) depth) - 1 do 
-    pv := !pv @ [pv_table.(i)]
-  done;
-  !pv
-
-open Transposition
-let pv_finder2 position depth =
-  let pv = ref [] in
-  let rec aux position d =
-    if d < depth then begin
-      let state = position.state_array.(position.game_ply) in
-      let _, _, _, hash_move, _ = probe state.zobrist in
-      if hash_move <> 0 then begin
-        pv := hash_move :: !pv;
-        make position hash_move;
-        aux position (d+1);
-        unmake position hash_move
-      end
-    end
-  in aux position 0;
-  List.rev !pv 

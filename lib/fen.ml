@@ -22,12 +22,12 @@ let is_possible_castling castling_rights castling =
 (*Fonction représentant un board en sa notation FEN*)
 let fen position =
   let state = position.state_array.(position.game_ply) in
-  let mailbox = position.mailbox in
+  let board = position.board in
   let castling_rights = state.castling_rights in
   let fen = ref "" in
   let empties = ref 0 in
   for i = 0 to 63 do
-    let square = mailbox.(flip i) in
+    let square = board.(flip i) in
     if square = 0 then begin
       empties := !empties + 1
     end
@@ -123,7 +123,7 @@ let position_of_fen chain position =
     position.game_ply <- (try (2 * (int_of_string (List.nth !split_fen 5)) - 1) with _ -> 0)
   end;
   let state = position.state_array.(position.game_ply) in
-  let mailbox = position.mailbox in
+  let board = position.board in
   let pieces_bitboards = position.pieces in
   state.castling_rights <- 0;
   state.captured_piece <- 0;
@@ -133,7 +133,7 @@ let position_of_fen chain position =
     pieces_bitboards.(piece) <- 0L
   done;
   for square = 0 to 63 do
-    mailbox.(square) <- 0
+    board.(square) <- 0
   done;
   let fen_length = List.length !split_fen in
   let pieces_position = (List.nth !split_fen 0) in
@@ -148,7 +148,7 @@ let position_of_fen chain position =
       let piece = try Hashtbl.find hash_fen elt with _ ->
         column := !column + (int_of_char elt - 48);
         0
-      in mailbox.(square) <- piece;
+      in board.(square) <- piece;
       if piece <> 0 then begin
         pieces_bitboards.(piece) <- pieces_bitboards.(piece) ||| single_bitboards_tab.(square);
         incr column

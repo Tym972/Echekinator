@@ -36,15 +36,6 @@ let max_depth = 255
 
 let max_moves = 2048
 
-(**)
-let max_pv_length = max_depth
-
-(**)
-let pv_table = Array.make ((max_pv_length) * (max_pv_length + 1) / 2) 0
-
-(**)
-let pv_length = Array.make max_pv_length 0
-
 (*SMP variables*)
 let threads_number = ref 1
 let min_threads_number = 1
@@ -108,7 +99,7 @@ let create_position () = {
   state_array = Array.init max_moves (fun _ -> create_empty_state ());
   pieces = Array.make 13 0L;
   occupancy = Array.make 2 0L;
-  mailbox = Array.make 64 0;
+  board = Array.make 64 0;
   moves = Array.init (max_depth + 40) (fun _ -> Array.make 218 0);
   number_of_moves = Array.make (max_depth + 40) 0
 }
@@ -119,7 +110,7 @@ let copy_position position = {
   state_array = Array.map copy_state position.state_array;
   pieces = Array.copy position.pieces;
   occupancy = Array.copy position.occupancy;
-  mailbox = Array.copy position.mailbox;
+  board = Array.copy position.board;
   moves = Array.map Array.copy position.moves;
   number_of_moves = Array.copy position.number_of_moves
   }

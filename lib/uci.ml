@@ -6,6 +6,7 @@ open Bitboards
 open Translation
 open Fen
 open Move_ordering
+open Quiescence
 open Transposition
 open Search
 open Evaluation
@@ -102,19 +103,19 @@ let position_uci instructions position =
   end
 
 (*let print_bitboard bitboard =
-  let mailbox = Array.make 64 0 in
-  let rec aux_1 mailbox index = match index with
+  let board = Array.make 64 0 in
+  let rec aux_1 board index = match index with
     |[] -> ()
     |h::t ->
-      mailbox.(h) <- 6;
-      aux_1 mailbox t
-  in aux_1 mailbox (index_list bitboard);
+      board.(h) <- 6;
+      aux_1 board t
+  in aux_1 board (index_list bitboard);
   let display = ref "   +---+---+---+---+---+---+---+---+\n"
   in for i = 8 downto 1 do
     let k_list = ref [] in
     let k = string_of_int i ^ "  |" in
     for j = 8 * (i - 1) to 8 * i - 1 do
-      let piece = mailbox.(j) in
+      let piece = board.(j) in
       k_list := tab_print.(piece) :: !k_list;
     done;
     k_list := List.rev !k_list;
@@ -197,6 +198,24 @@ let formate_score score var_mate alpha beta =
     end
   end
 
+let pv_finder position bestmove depth =
+  let pv = ref [bestmove] in
+  let rec aux position d =
+    if d > 0 && not (position.state_array.(position.game_ply).half_moves = 100 || repetition position.state_array position.game_ply (*depth - d*)) then begin
+      let state = position.state_array.(position.game_ply) in
+      let _, _, _, hash_move, _ = probe state.zobrist in
+      if hash_move <> 0 then begin
+        make position hash_move;
+        pv := hash_move :: !pv;
+        aux position (d - 1);
+        unmake position hash_move
+      end
+    end
+  in make position bestmove; 
+  aux position (depth - 1);
+  unmake position bestmove;
+  List.rev !pv 
+
 let iterative_deepening position ordering_tables depth mate thread =
   let var_depth = ref 0 in 
   let var_mate = ref max_int in
@@ -205,22 +224,10 @@ let iterative_deepening position ordering_tables depth mate thread =
   stop_search.(thread) <- false;
   while not (stop_search.(thread) || (thread = 0 && Mtime.Span.compare (Mtime_clock.count !start_time) !soft_bound > 0) || !var_depth + 1 > depth || total_counter node_counter + 1 > !node_limit || !var_mate < mate + 1 ) do
     incr var_depth;
-    let moves_copy = (Array.sub position.moves.(0) 0 position.number_of_moves.(0)) in
-    let number_of_moves_copy = (Array.copy position.number_of_moves) in
+    (*move_ordering ordering_tables position position.moves.(0) position.number_of_moves.(0) 0 0 ordering_tables.working_array.(0);*)
     for multi = 0 to (!number_of_pv - 1) do
-      let first_move =
-        let acc = ref 0 in
-        let counter = ref 0 in
-        while !acc = 0 && !counter < !number_of_pv do
-          let candidate = try List.hd !results.(thread).pvs.(!counter).pv with _ -> 0 in
-          if move_array_mem candidate moves_copy number_of_moves_copy.(0) then begin
-            acc := candidate
-          end;
-          incr counter
-        done;
-        !acc
-      in let new_score =
-        let score = ref (root_search position ordering_tables thread !var_depth 0 alpha_table.(multi) beta_table.(multi) first_move multi) in
+      let new_score =
+        let score = ref (pvs position ordering_tables thread !var_depth 0 alpha_table.(multi) beta_table.(multi) true) in
         while not (stop_search.(thread) || total_counter node_counter > !node_limit || (!score > alpha_table.(multi) && !score < beta_table.(multi))) do
           if !score <= alpha_table.(multi) then begin
             alpha_table.(multi) <- (-max_int)
@@ -228,7 +235,7 @@ let iterative_deepening position ordering_tables depth mate thread =
           else if !score >= beta_table.(multi) then begin
             beta_table.(multi) <- max_int
           end;
-          score := root_search position ordering_tables thread !var_depth 0 alpha_table.(multi) beta_table.(multi) first_move multi;
+          score := pvs position ordering_tables thread !var_depth 0 alpha_table.(multi) beta_table.(multi) true;
         done;
         !score
       in if new_score > (-max_int) then begin
@@ -255,8 +262,8 @@ let iterative_deepening position ordering_tables depth mate thread =
       let time =  (int_of_float (1000. *. exec_time)) in
       let order_of_multi = ref [] in
       for multi = 0 to !number_of_pv - 1 do
-        if !results.(0).pvs.(multi).depth = !var_depth then begin
-          order_of_multi := (!results.(0).pvs.(multi).score, multi) :: !order_of_multi
+        if !results.(multi).depth = !var_depth then begin
+          order_of_multi := (!results.(multi).score, multi) :: !order_of_multi
         end
       done;
       order_of_multi := merge_sort !order_of_multi;
@@ -266,8 +273,8 @@ let iterative_deepening position ordering_tables depth mate thread =
       let rec printer variations already_printed = match variations with
         |[] -> ()
         |(_, multi) :: other_variations ->
-          let score = formate_score !results.(0).pvs.(multi).score var_mate alpha_table.(multi) beta_table.(multi) in
-          let pv = (String.concat " " (List.map uci_of_mouvement !results.(0).pvs.(multi).pv)) in
+          let score = formate_score !results.(multi).score var_mate alpha_table.(multi) beta_table.(multi) in
+          let pv = (String.concat " " (List.map uci_of_mouvement (pv_finder position !results.(multi).bestmove depth))) in
           print_endline (Printf.sprintf "info depth %i seldepth %i multipv %i score %s nodes %i nps %i hashfull %i time %i pv %s" !var_depth !var_depth already_printed score (total_counter node_counter) nps hashfull time pv);
           printer other_variations (already_printed + 1)
       in printer !order_of_multi 1
@@ -293,7 +300,7 @@ let domain_loop position thread_id =
       done;
       my_job := !current_job;
     Mutex.unlock domain_mutex;
-    iterative_deepening (copy_position position) {killer_moves = Array.copy killer_moves; history_moves = Array.copy history_moves} max_depth (-1) thread_id;
+    iterative_deepening (copy_position position) {killer_moves = Array.copy killer_moves; history_moves = Array.copy history_moves; working_array = Array.map Array.copy working_array} max_depth (-1) thread_id;
     Mutex.lock domain_mutex;
       decr jobs_remaining;
       if !jobs_remaining = 0 then begin
@@ -324,10 +331,7 @@ let setoption position instructions =
       let value = value_of_instructions instructions in
       if value <> !multipv then begin
         type_spin value multipv min_multipv max_multipv;
-        results :=
-          (Array.init !threads_number (fun _ ->
-            { pvs = Array.make !multipv { depth = 0; score = 0; pv = [] } })
-          )
+        results := (Array.init !multipv (fun _ ->  {depth = 0; score = 0; bestmove = 0}))
         end
     |"name" :: "Hash" :: _ ->
       let value = value_of_instructions instructions in
@@ -342,10 +346,6 @@ let setoption position instructions =
         let old_value = !threads_number in
         type_spin value threads_number min_threads_number max_threads_number;
         if value > old_value then begin
-          results :=
-            (Array.init !threads_number (fun _ ->
-              { pvs = Array.make !multipv { depth = 0; score = 0; pv = [] } })
-            );
           domains := Array.init (!threads_number - old_value) (fun id ->
             Domain.spawn (fun () -> domain_loop position (id + old_value))
           )
@@ -366,7 +366,8 @@ let go instructions position =
     hard_bound := Mtime.Span.max_span;
     let ordering_tables = {
       killer_moves = killer_moves;
-      history_moves = history_moves
+      history_moves = history_moves;
+      working_array = working_array
     }
     in for thread = 0 to !threads_number - 1 do
       node_counter.(thread) <- 0
@@ -426,10 +427,7 @@ let go instructions position =
       time_management !wtime !btime !winc !binc !movetime position.white_to_move !movestogo soft_bound hard_bound
     end;
     number_of_pv := min !multipv position.number_of_moves.(0);
-    results :=
-      (Array.init !threads_number (fun _ ->
-        {pvs = Array.make !number_of_pv {depth = 0; score = 0; pv = []}})
-      );
+    results := (Array.init !multipv (fun _ ->  {depth = 0; score = 0; bestmove = 0}));
     if !threads_number > 1 then begin
       Mutex.lock domain_mutex;
         incr current_job;
@@ -446,8 +444,8 @@ let go instructions position =
       print_endline ("info depth 0 score cp 0" ^ "\n" ^ "bestmove (none)");
     end
     else begin
-      let print_bestmove = "bestmove " ^ try (uci_of_mouvement (List.hd !results.(0).pvs.(!best_line_id).pv)) with _ -> "(none)" in
-      let print_ponder = try (" ponder " ^ uci_of_mouvement (List.nth !results.(0).pvs.(!best_line_id).pv 1)) with _ -> "" in
+      let print_bestmove = "bestmove " ^ try (uci_of_mouvement (!results.(!best_line_id).bestmove)) with _ -> "(none)" in
+      let print_ponder = (*try (" ponder " ^ uci_of_mouvement (List.nth !results.(!best_line_id).pv 1)) with _ ->*) "" in
       print_endline (print_bestmove ^ print_ponder)
     end
   end
@@ -466,7 +464,7 @@ let checkers position =
   !checkers
 
 let display position =
-  print_board position.mailbox;
+  print_board position.board;
   print_endline (Printf.sprintf "Fen: %s" (fen position));
   print_endline (Printf.sprintf "Key: %LX" position.state_array.(0).zobrist);
   print_endline (Printf.sprintf "Checkers: %s" (checkers position))
