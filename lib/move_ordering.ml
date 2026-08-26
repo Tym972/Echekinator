@@ -127,3 +127,56 @@ let move_picker moves ordering_array number_of_moves =
   else begin
     0
   end
+
+type search_stage =
+  |Stage_TT
+  |Stage_Good_Captures
+  |Stage_Killers
+  |Stage_History
+  |Stage_Bad_Captures
+  |Stage_Done
+
+type picker = {
+  mutable hash_move : int;
+  mutable current_index : int;
+  mutable stage : search_stage
+  }
+
+let rec next_move picker moves ordering_tables = match picker.stage with
+  |Stage_TT ->
+    picker.stage <- Stage_Good_Captures;
+    if picker.hash_move <> 0 then begin
+      picker.hash_move
+    end
+    else begin
+      next_move picker moves ordering_tables
+    end
+  |Stage_Good_Captures ->
+    if true then begin
+    end
+    else begin
+      picker.stage <- Stage_Killers
+    end;
+    0
+  |Stage_Killers ->
+    if true then begin
+    end
+    else begin
+      picker.stage <- Stage_History
+    end;
+    0
+  |Stage_History ->
+    if true then begin
+    end
+    else begin
+      picker.stage <- Stage_Bad_Captures
+    end;
+    0
+  |Stage_Bad_Captures ->
+    if true then begin
+    end
+    else begin
+      picker.stage <- Stage_Done
+    end;
+    0
+  |Stage_Done -> 0

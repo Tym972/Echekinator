@@ -227,7 +227,7 @@ let iterative_deepening position ordering_tables depth mate thread =
     (*move_ordering ordering_tables position position.moves.(0) position.number_of_moves.(0) 0 0 ordering_tables.working_array.(0);*)
     for multi = 0 to (!number_of_pv - 1) do
       let new_score =
-        let score = ref (pvs position ordering_tables thread !var_depth 0 alpha_table.(multi) beta_table.(multi) true) in
+        let score = ref (pvs position ordering_tables thread multi !var_depth 0 alpha_table.(multi) beta_table.(multi) true) in
         while not (stop_search.(thread) || total_counter node_counter > !node_limit || (!score > alpha_table.(multi) && !score < beta_table.(multi))) do
           if !score <= alpha_table.(multi) then begin
             alpha_table.(multi) <- (-max_int)
@@ -235,7 +235,7 @@ let iterative_deepening position ordering_tables depth mate thread =
           else if !score >= beta_table.(multi) then begin
             beta_table.(multi) <- max_int
           end;
-          score := pvs position ordering_tables thread !var_depth 0 alpha_table.(multi) beta_table.(multi) true;
+          score := pvs position ordering_tables thread multi !var_depth 0 alpha_table.(multi) beta_table.(multi) true;
         done;
         !score
       in if new_score > (-max_int) then begin
@@ -387,20 +387,15 @@ let go instructions position =
     let depth = ref max_depth in
     let mate = ref (-1) in
     let aux_searchmoves list =
-      let commands = ["searchmoves"; "ponder"; "wtime"; "btime"; "winc"; "binc"; "movestogo"; "depth"; "nodes"; "mate"; "movetime"; "infinite"] in
       let index = ref 0 in
-      let control = ref true in
       let rec func move_list = match move_list with
-        |uci_move :: other_moves when !control ->
-          let move = mouvement_of_uci uci_move position in
+        |uci_move :: other_moves ->
+          let move = try mouvement_of_uci uci_move position with _ -> 0 in
           if move_array_mem move position.moves.(0) position.number_of_moves.(0) then begin
             position.moves.(0).(!index) <- move;
             incr index;
-          end
-          else if List.mem uci_move commands then begin
-            control := false
+            func other_moves
           end;
-          func other_moves
         |_ -> ()
       in func list;
       position.number_of_moves.(0) <- !index
