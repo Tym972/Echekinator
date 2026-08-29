@@ -13,39 +13,12 @@ let repetition state game_ply =
   let repeat = ref false in
   let limit = (game_ply - state.(game_ply).half_moves) in
   while !index >= limit && not !repeat do
-    if !index >= 0 then begin
-      if state.(!index).zobrist = zobrist_position then begin
-        repeat := true
-      end
-    end
-    else begin
-      if state.(!index).zobrist = zobrist_position then begin
-        repeat := true
-      end
+    if state.(!index).zobrist = zobrist_position then begin
+      repeat := true
     end;
     index := !index - 2;
   done;
   !repeat
-
-(*let repetition state game_ply search_ply =
-  let index = ref (game_ply - 2) in
-  let zobrist_position = state.(game_ply).zobrist in
-  let repeat = ref 0 in
-  let limit = (game_ply - state.(game_ply).half_moves) in
-  while !index >= limit && !repeat < 2 do
-    if !index >= search_ply - game_ply then begin
-      if state.(!index).zobrist = zobrist_position then begin
-        repeat := 2
-      end
-    end
-    else begin
-      if state.(!index).zobrist = zobrist_position then begin
-      incr repeat
-      end
-    end;
-    index := !index - 2;
-  done;
-  !repeat > 1*)
 
 let captures position moves number hash_move =
   let list = ref [] in
@@ -64,7 +37,7 @@ let captures position moves number hash_move =
     in List.map snd (merge_sort (aux !list))
 
 (*Fonction implémentant la recherche quiescente*)
-let rec quiescence_search position ordering_tables thread depth search_ply alpha beta ispv =
+let rec quiescence_search position search_tables thread depth search_ply alpha beta ispv =
 
   (*Check search limit*)
   if stop_search.(thread) then begin
@@ -112,7 +85,7 @@ let rec quiescence_search position ordering_tables thread depth search_ply alpha
           let counter = ref 0 in
           let move_loop move =
             make position move;
-            let score = - quiescence_search position ordering_tables thread (depth - 1) (search_ply + 1) (- !beta0) (- !alpha0) ispv
+            let score = - quiescence_search position search_tables thread (depth - 1) (search_ply + 1) (- !beta0) (- !alpha0) ispv
             in if score > !best_score then begin
               best_score := score;
               if score > !alpha0 then begin
@@ -132,8 +105,8 @@ let rec quiescence_search position ordering_tables thread depth search_ply alpha
           in if in_check then begin
             let move_loop_in_check () =
               legal_moves position search_ply;
-              let ordering_array = ordering_tables.working_array.(search_ply) in
-              move_ordering ordering_tables position moves position.number_of_moves.(search_ply) search_ply hash_move ordering_array;
+              let ordering_array = search_tables.ordering_array.(search_ply) in
+              move_ordering search_tables position moves position.number_of_moves.(search_ply) search_ply hash_move ordering_array;
               while !no_cut do
                 let move = move_picker moves ordering_array position.number_of_moves.(search_ply) in
                   if move <> 0 then begin

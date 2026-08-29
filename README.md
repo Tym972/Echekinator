@@ -45,7 +45,7 @@ dune exec bin/echekinator.exe
 Echekinator will be tested on the CCRL lists.
 
 - CCRL 40/15 rating: TBD
-- CCRL Blitz rating: TBD
+- CCRL Blitz rating: 2143
 
 
 No official rating available yet.
@@ -56,4 +56,4 @@ Special thanks to:
 - Fastchess for engine tournaments
 - Chess Programming Wiki
 - PeSTO for the evaluation
-- Arthurus on YouTube for the inspiration
+- CCRL for testing the engine

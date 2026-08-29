@@ -150,5 +150,23 @@ let position16 = "8/PPPk4/8/8/8/8/4Kppp/8 b - - 0 1"
 let position17 = "n1n5/PPPk4/8/8/8/8/4Kppp/5N1N b - - 0 1"
 let perft_test = [standard; kiwipete; position3; position4; position5; position6; position7; position8; position9; position10; position11; position12; position13; position14; position15; position16; position17]
 
+(*Perft Fischer*)
+let fischer1 = "bqnb1rkr/pp3ppp/3ppn2/2p5/5P2/P2P4/NPP1P1PP/BQ1BNRKR w HFhf - 2 9"
+let fischer2 = "2nnrbkr/p1qppppp/8/1ppb4/6PP/3PP3/PPP2P2/BQNNRBKR w HEhe - 1 9"
+let fischer3 = "b1q1rrkb/pppppppp/3nn3/8/P7/1PPP4/4PPPP/BQNNRKRB w GE - 1 9"
+let fischer4 = "qbbnnrkr/2pp2pp/p7/1p2pp2/8/P3PP2/1PPP1KPP/QBBNNR1R w hf - 0 9"
+let fischer5 = "1nbbnrkr/p1p1ppp1/3p4/1p3P1p/3Pq2P/8/PPP1P1P1/QNBBNRKR w HFhf - 0 9"
+let fischer6 = "qnbnr1kr/ppp1b1pp/4p3/3p1p2/8/2NPP3/PPP1BPPP/QNB1R1KR w HEhe - 1 9"
+let fischer7 = "q1bnrkr1/ppppp2p/2n2p2/4b1p1/2NP4/8/PPP1PPPP/QNB1RRKB w ge - 1 9"
+let fischer8 = "qbn1brkr/ppp1p1p1/2n4p/3p1p2/P7/6PP/QPPPPP2/1BNNBRKR w HFhf - 0 9"
+let fischer9 = "qnnbbrkr/1p2ppp1/2pp3p/p7/1P5P/2NP4/P1P1PPP1/Q1NBBRKR w HFhf - 0 9"
+let fischer10 = "qn1rbbkr/ppp2p1p/1n1pp1p1/8/3P4/P6P/1PP1PPPK/QNNRBB1R w hd - 2 9"
+let fischer54 = "nnbrqbkr/2p1p1pp/p4p2/1p1p4/8/NP6/P1PPPPPP/N1BRQBKR w HDhd - 0 9"
+let fischer78 = "n1rkqbbr/p1pp1pp1/np2p2p/8/8/N4PP1/PPPPP1BP/N1RKQ1BR w HChc - 0 9"
+let fischer112= "bbnqrn1r/ppppp2k/5p2/6pp/7P/1QP5/PP1PPPP1/B1N1RNKR w HE - 0 9"
+let fischer113 = "b1qbrnkr/ppp1pp2/2np4/6pp/4P3/2N4P/PPPP1PP1/BQ1BRNKR w HEhe - 0 9"
+
+let perft_fischer = [fischer1; fischer2; fischer3; fischer4; fischer5; fischer6; fischer7; fischer8; fischer9; fischer10; fischer54; fischer78; fischer112; fischer113]
+
 let london1= "r1b2r2/5p1k/1pn1pBp1/p2pP2p/q7/2P2P2/P2QBKP1/R4R2 b - - 2 23"
 let see_ordre1 = "4r1k1/p4n1p/1p6/1b3QpP/4p1P1/1Pq4N/P3r1B1/R3R1K1 w - - 1 33"

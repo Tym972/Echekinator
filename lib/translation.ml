@@ -79,9 +79,9 @@ let mouvement_of_uci uci position =
       5
     else if piece = player_pieces.(pawn) && abs (from - !to_) = 16 then
       1
-    else if piece = player_pieces.(king) && from = player_castling_infos.from_king && !to_ = player_castling_infos.to_short_king || (!chess_960 && !to_ = player_castling_infos.from_short_rook) then
+    else if piece = player_pieces.(king) && from = player_castling_infos.from_king && (!to_ = player_castling_infos.to_short_king || (!chess_960 && !to_ = player_castling_infos.from_short_rook)) then
       2
-    else if piece = player_pieces.(king) && from = player_castling_infos.from_king && !to_ = player_castling_infos.to_long_king || (!chess_960 && !to_ = player_castling_infos.from_long_rook) then
+    else if piece = player_pieces.(king) && from = player_castling_infos.from_king && (!to_ = player_castling_infos.to_long_king || (!chess_960 && !to_ = player_castling_infos.from_long_rook)) then
       3
     else if promotion_piece <> 0 then
       (promotion_piece + 6) lor capture

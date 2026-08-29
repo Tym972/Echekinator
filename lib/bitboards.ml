@@ -53,6 +53,8 @@ let rec index_list bitboard =
     []
   end
 
+let msb_index bitboard = List.hd (List.rev (index_list bitboard))
+
 let single_bitboards_tab = Array.init 64 (fun i -> Int64.shift_left 1L i)
 
 let pawn = 1
@@ -431,8 +433,22 @@ let rook_shifts = Array.make 64 0
 let bishop_table = Array.make 64 [||]
 let rook_table = Array.make 64 [||]
 
+let uninitialized = ref true
+
 let init_castling_info () =
+  for i = 0 to 63 do
+    castling_rights_masks.(i) <- 15
+  done;
+  for i = 0 to 3 do
+    ambiguity_masks.(i) <- 0L
+  done;
   let aux white_to_move castling_info =
+    castling_info.short_castling_mask <- 0L;
+    castling_info.long_castling_mask <- 0L;
+    castling_info.short_castling_safe_mask <- 0L;
+    castling_info.long_castling_safe_mask <- 0L;
+    castling_info.short_castling_empty_mask <- 0L;
+    castling_info.long_castling_empty_mask <- 0L;
     let from_king = castling_info.from_king in
     let from_short_rook = castling_info.from_short_rook in
     let from_long_rook = castling_info.from_long_rook in
@@ -448,25 +464,38 @@ let init_castling_info () =
     for square = from_short_rook - 1 downto castling_info.to_short_rook do
       castling_info.short_castling_empty_mask <- castling_info.short_castling_empty_mask ||| single_bitboards_tab.(square)
     done;
+    for square = from_short_rook + 1 to castling_info.to_short_rook do
+      castling_info.short_castling_empty_mask <- castling_info.short_castling_empty_mask ||| single_bitboards_tab.(square)
+    done;
+    castling_info.short_castling_empty_mask <- castling_info.short_castling_empty_mask &&& (Int64.lognot single_bitboards_tab.(from_short_rook)) &&& (Int64.lognot single_bitboards_tab.(from_king));
     for square = from_king - 1 downto castling_info.to_long_king do
+      castling_info.long_castling_safe_mask <- castling_info.long_castling_safe_mask ||| single_bitboards_tab.(square);
+      castling_info.long_castling_empty_mask <- castling_info.long_castling_empty_mask ||| single_bitboards_tab.(square)
+    done;
+    for square = from_king + 1 to castling_info.to_long_king do
       castling_info.long_castling_safe_mask <- castling_info.long_castling_safe_mask ||| single_bitboards_tab.(square);
       castling_info.long_castling_empty_mask <- castling_info.long_castling_empty_mask ||| single_bitboards_tab.(square)
     done;
     for square = from_long_rook + 1 to castling_info.to_long_rook do
       castling_info.long_castling_empty_mask <- castling_info.long_castling_empty_mask ||| single_bitboards_tab.(square)
     done;
+    for square = from_long_rook - 1 downto castling_info.to_long_rook do
+      castling_info.long_castling_empty_mask <- castling_info.long_castling_empty_mask ||| single_bitboards_tab.(square)
+    done;
+    castling_info.long_castling_empty_mask <- castling_info.long_castling_empty_mask &&& (Int64.lognot single_bitboards_tab.(from_long_rook)) &&& (Int64.lognot single_bitboards_tab.(from_king));
     let a_square, h_square = if white_to_move = 0 then
       0, 7
     else
       56, 63
     in for square = a_square to from_long_rook - 1 do
-      ambiguity_masks.(white_to_move) <- ambiguity_masks.(white_to_move) ||| single_bitboards_tab.(square)
+      ambiguity_masks.(white_to_move * 2 + 1) <- ambiguity_masks.(white_to_move * 2 + 1) ||| single_bitboards_tab.(square)
     done;
     for square = h_square downto from_short_rook + 1 do
-      ambiguity_masks.(white_to_move + 1) <- ambiguity_masks.(white_to_move + 1) ||| single_bitboards_tab.(square)
-    done;
+      ambiguity_masks.(white_to_move * 2) <- ambiguity_masks.(white_to_move * 2) ||| single_bitboards_tab.(square)
+    done
   in aux 0 white_castling_info;
-  aux 1 black_castling_info
+  aux 1 black_castling_info;
+  uninitialized := false
 
 let init_pawn () =
   let aux attack_table vect square =
@@ -590,7 +619,6 @@ let init_tables () =
 let () =
   init_pawn ();
   init_not_slidings ();
-  init_castling_info ();
   init_sliding_masks ();
   init_blockers ();
   init_sliding_moves ();
@@ -677,8 +705,8 @@ let [@inline] generate_all_attacks pieces_bitboards oponent_pieces occupancy whi
   aux pieces_bitboards.(oponent_pieces.(king)) generate_king_attacks;
   !all_attacks
 
-let [@inline] generate_pawn_moves pieces_bitboards white_to_move ep_square total_occupancy not_occupancy oponent_occupancy moves number_of_moves from king_square in_check check_mask pin_masks =
-  let legality_mask = check_mask &&& pin_masks.(from) in
+let [@inline] generate_pawn_moves pieces_bitboards white_to_move ep_square total_occupancy not_occupancy oponent_occupancy moves number_of_moves from king_square in_check check_mask pin_mask =
+  let legality_mask = check_mask &&& pin_mask.(from) in
   let promotion_rank = promotion_ranks.(white_to_move) in
   let pawn_attacks = generate_pawn_attacks from white_to_move in
   let single_push = single_bitboards_tab.(from + push_vects.(white_to_move)) &&& not_occupancy in
@@ -694,7 +722,7 @@ let [@inline] generate_pawn_moves pieces_bitboards white_to_move ep_square total
   in let captures = pawn_attacks &&& oponent_occupancy &&& legality_mask in
   let enpassant =
     if ep_square <> (-1) && not (is_sniped king_square (total_occupancy ^^^ single_bitboards_tab.(from) ^^^ single_bitboards_tab.(ep_square - push_vects.(white_to_move)) ||| single_bitboards_tab.(ep_square)) pieces_bitboards pieces_rep.(white_to_move lxor 1)) && (not in_check || check_mask = single_bitboards_tab.(ep_square - push_vects.(white_to_move))) then begin
-      pawn_attacks &&& single_bitboards_tab.(ep_square) &&& pin_masks.(from)
+      pawn_attacks &&& single_bitboards_tab.(ep_square) &&& pin_mask.(from)
     end
     else begin
       0L
@@ -722,17 +750,17 @@ let [@inline] generate_pawn_moves pieces_bitboards white_to_move ep_square total
     add_promotion_moves moves number_of_moves promotion_captures from 4
   end
 
-let [@inline] generate_castling_moves in_check all_attacks castling_rights white_to_move occupancy moves number_of_moves from =
+let [@inline] generate_castling_moves in_check all_attacks pin_mask castling_rights white_to_move occupancy moves number_of_moves from =
   let player_castling_info = castling_infos.(white_to_move) in
-  let [@inline] aux to_king castling_rights castling castling_flag empty_mask safe_mask =
-    if castling_rights land castling = castling && (empty_mask &&& occupancy = 0L) && (all_attacks &&& safe_mask = 0L) then begin
+  let [@inline] aux to_king from_rook castling_rights castling castling_flag empty_mask safe_mask =
+    if castling_rights land castling = castling && (empty_mask &&& occupancy = 0L) && (all_attacks &&& safe_mask = 0L) && (pin_mask.(from_rook) = 0xFFFFFFFFFFFFFFFFL) then begin
       moves.(!number_of_moves) <- encode_move from to_king castling_flag;
       incr number_of_moves;
-    end;
+    end
   in
   if not (in_check || from <> player_castling_info.from_king) then begin
-    aux player_castling_info.to_short_king castling_rights player_castling_info.short_castling 2 player_castling_info.short_castling_empty_mask player_castling_info.short_castling_safe_mask;
-    aux player_castling_info.to_long_king castling_rights player_castling_info.long_castling 3 player_castling_info.long_castling_empty_mask player_castling_info.long_castling_safe_mask
+    aux player_castling_info.to_short_king player_castling_info.from_short_rook castling_rights player_castling_info.short_castling 2 player_castling_info.short_castling_empty_mask player_castling_info.short_castling_safe_mask;
+    aux player_castling_info.to_long_king player_castling_info.from_long_rook castling_rights player_castling_info.long_castling 3 player_castling_info.long_castling_empty_mask player_castling_info.long_castling_safe_mask
   end
 
 let [@inline] generate_normal_moves sliding_attacks oponent_occupancy not_friendly_occupancy moves number_of_moves from =
@@ -796,8 +824,7 @@ let legal_moves position search_ply =
     else begin
       0xFFFFFFFFFFFFFFFFL
     end
-
-  in let pin_masks = Array.make 64 0xFFFFFFFFFFFFFFFFL in
+  in let pin_mask = Array.make 64 0xFFFFFFFFFFFFFFFFL in
   let pin_candidates = ref (
     (generate_bishop_attacks king_square 0L &&& (pieces_bitboards.(oponent_pieces.(bishop)) ||| pieces_bitboards.(oponent_pieces.(queen)))) |||
     (generate_rook_attacks king_square 0L &&& (pieces_bitboards.(oponent_pieces.(rook)) ||| pieces_bitboards.(oponent_pieces.(queen))))
@@ -810,7 +837,7 @@ let legal_moves position search_ply =
     if number_of_blockers = 2 then begin
       let pinned_square = lsb_index (blockers ^^^ single_bitboards_tab.(attacker_square)) in
       if occupancy.(white_to_move) &&& single_bitboards_tab.(pinned_square) <> 0L then begin
-        pin_masks.(pinned_square) <- ray
+        pin_mask.(pinned_square) <- ray
       end
     end;
     pin_candidates := other_candidates
@@ -829,18 +856,18 @@ let legal_moves position search_ply =
   let pawns_bitboard = ref pieces_bitboards.(player_pieces.(pawn)) in
   while !pawns_bitboard <> 0L do
     let from, other_pieces_bitboard = pop_lsb !pawns_bitboard in
-    generate_pawn_moves pieces_bitboards white_to_move state.ep_square total_occupancy not_occupancy oponent_occupancy moves number_of_moves from king_square state.in_check check_mask pin_masks;
+    generate_pawn_moves pieces_bitboards white_to_move state.ep_square total_occupancy not_occupancy oponent_occupancy moves number_of_moves from king_square state.in_check check_mask pin_mask;
     pawns_bitboard := other_pieces_bitboard
   done;
 
   (*Generate castling moves*)
-  generate_castling_moves state.in_check all_attacks state.castling_rights white_to_move total_occupancy moves number_of_moves (lsb_index pieces_bitboards.(player_pieces.(king)));
+  generate_castling_moves state.in_check all_attacks pin_mask state.castling_rights white_to_move total_occupancy moves number_of_moves king_square;
 
   (*Generate normal moves*)
   let bitboard = ref pieces_bitboards.(player_pieces.(knight)) in
   while !bitboard <> 0L do
     let from, other_pieces_bitboard = pop_lsb !bitboard in
-    let piece_attacks = generate_knight_attacks from &&& check_mask &&& pin_masks.(from) in
+    let piece_attacks = generate_knight_attacks from &&& check_mask &&& pin_mask.(from) in
     generate_normal_moves piece_attacks oponent_occupancy not_friendly_occupancy moves number_of_moves from;
     bitboard := other_pieces_bitboard
   done;
@@ -848,7 +875,7 @@ let legal_moves position search_ply =
   bitboard := pieces_bitboards.(player_pieces.(bishop));
   while !bitboard <> 0L do
     let from, other_pieces_bitboard = pop_lsb !bitboard in
-    let piece_attacks = generate_bishop_attacks from total_occupancy &&& check_mask &&& pin_masks.(from) in
+    let piece_attacks = generate_bishop_attacks from total_occupancy &&& check_mask &&& pin_mask.(from) in
     generate_normal_moves piece_attacks oponent_occupancy not_friendly_occupancy moves number_of_moves from;
     bitboard := other_pieces_bitboard
   done;
@@ -856,7 +883,7 @@ let legal_moves position search_ply =
   bitboard := pieces_bitboards.(player_pieces.(rook));
   while !bitboard <> 0L do
     let from, other_pieces_bitboard = pop_lsb !bitboard in
-    let piece_attacks = generate_rook_attacks from total_occupancy &&& check_mask &&& pin_masks.(from) in
+    let piece_attacks = generate_rook_attacks from total_occupancy &&& check_mask &&& pin_mask.(from) in
     generate_normal_moves piece_attacks oponent_occupancy not_friendly_occupancy moves number_of_moves from;
     bitboard := other_pieces_bitboard
   done;
@@ -864,7 +891,7 @@ let legal_moves position search_ply =
   bitboard := pieces_bitboards.(player_pieces.(queen));
   while !bitboard <> 0L do
     let from, other_pieces_bitboard = pop_lsb !bitboard in
-    let piece_attacks = generate_queen_attacks from total_occupancy &&& check_mask &&& pin_masks.(from) in
+    let piece_attacks = generate_queen_attacks from total_occupancy &&& check_mask &&& pin_mask.(from) in
     generate_normal_moves piece_attacks oponent_occupancy not_friendly_occupancy moves number_of_moves from;
     bitboard := other_pieces_bitboard
   done;
@@ -966,8 +993,8 @@ let make position move =
       let from_rook = player_castling_info.from_short_rook in
       let to_rook = player_castling_info.to_short_rook in
       board.(from) <- 0;
-      board.(to_) <- player_king;
       board.(from_rook) <- 0;
+      board.(to_) <- player_king;
       board.(to_rook) <- player_rook;
       pieces_bitboards.(player_king) <- pieces_bitboards.(player_king) ^^^ single_bitboards_tab.(from) ^^^ single_bitboards_tab.(to_);
       pieces_bitboards.(player_rook) <- pieces_bitboards.(player_rook) ^^^ single_bitboards_tab.(from_rook) ^^^ single_bitboards_tab.(to_rook);
@@ -985,8 +1012,8 @@ let make position move =
       let from_rook = player_castling_info.from_long_rook in
       let to_rook = player_castling_info.to_long_rook in
       board.(from) <- 0;
-      board.(to_) <- player_king;
       board.(from_rook) <- 0;
+      board.(to_) <- player_king;
       board.(to_rook) <- player_rook;
       pieces_bitboards.(player_king) <- pieces_bitboards.(player_king) ^^^ single_bitboards_tab.(from) ^^^ single_bitboards_tab.(to_);
       pieces_bitboards.(player_rook) <- pieces_bitboards.(player_rook) ^^^ single_bitboards_tab.(from_rook) ^^^ single_bitboards_tab.(to_rook);
@@ -1068,10 +1095,10 @@ let unmake position move =
     let player_castling_info = castling_infos.(white_to_move) in
     let from_rook = player_castling_info.from_short_rook in
     let to_rook = player_castling_info.to_short_rook in
-    board.(from) <- piece;
     board.(to_) <- 0;
-    board.(from_rook) <- player_rook;
     board.(to_rook) <- 0;
+    board.(from) <- piece;
+    board.(from_rook) <- player_rook;
     pieces_bitboards.(player_king) <- pieces_bitboards.(player_king) ^^^ single_bitboards_tab.(from) ^^^ single_bitboards_tab.(to_);
     pieces_bitboards.(player_rook) <- pieces_bitboards.(player_rook) ^^^ single_bitboards_tab.(from_rook) ^^^ single_bitboards_tab.(to_rook);
     occupancy.(white_to_move) <- occupancy.(white_to_move) ^^^ single_bitboards_tab.(from) ^^^ single_bitboards_tab.(to_) ^^^ single_bitboards_tab.(from_rook) ^^^ single_bitboards_tab.(to_rook)
@@ -1082,10 +1109,10 @@ let unmake position move =
     let player_castling_info = castling_infos.(white_to_move) in
     let from_rook = player_castling_info.from_long_rook in
     let to_rook = player_castling_info.to_long_rook in
-    board.(from) <- piece;
     board.(to_) <- 0;
-    board.(from_rook) <- player_rook;
     board.(to_rook) <- 0;
+    board.(from) <- piece;
+    board.(from_rook) <- player_rook;
     pieces_bitboards.(player_king) <- pieces_bitboards.(player_king) ^^^ single_bitboards_tab.(from) ^^^ single_bitboards_tab.(to_);
     pieces_bitboards.(player_rook) <- pieces_bitboards.(player_rook) ^^^ single_bitboards_tab.(from_rook) ^^^ single_bitboards_tab.(to_rook);
     occupancy.(white_to_move) <- occupancy.(white_to_move) ^^^ single_bitboards_tab.(from) ^^^ single_bitboards_tab.(to_) ^^^ single_bitboards_tab.(from_rook) ^^^ single_bitboards_tab.(to_rook)
@@ -1112,91 +1139,3 @@ let unmake position move =
         occupancy.(white_to_move lxor 1) <- occupancy.(white_to_move lxor 1) ^^^ single_bitboards_tab.(to_);
       end
     end
-
-    (*Array used in print_board*)
-let tab_print = [|"   |"; " P |"; " N |"; " B |"; " R |"; " Q |"; " K |"; " p |"; " n |"; " b |"; " r |"; " q |"; " k |"|]
-
-let board_of_bitboard pieces_bitboards =
-  let board = Array.make 64 0 in
-  let rec aux index piece = match index with
-    |[] -> ()
-    |h::t ->
-      board.(h) <- piece;
-      aux t piece
-  in for i = 1 to 12 do
-    aux (index_list pieces_bitboards.(i)) i
-  done;
-  board
-
-let coord = [|
-  "a1"; "b1"; "c1"; "d1"; "e1"; "f1"; "g1"; "h1";
-  "a2"; "b2"; "c2"; "d2"; "e2"; "f2"; "g2"; "h2";
-  "a3"; "b3"; "c3"; "d3"; "e3"; "f3"; "g3"; "h3";
-  "a4"; "b4"; "c4"; "d4"; "e4"; "f4"; "g4"; "h4";
-  "a5"; "b5"; "c5"; "d5"; "e5"; "f5"; "g5"; "h5";
-  "a6"; "b6"; "c6"; "d6"; "e6"; "f6"; "g6"; "h6";
-  "a7"; "b7"; "c7"; "d7"; "e7"; "f7"; "g7"; "h7";
-  "a8"; "b8"; "c8"; "d8"; "e8"; "f8"; "g8"; "h8"
-|]
-
-let zouk board st =
-  let display = ref "   +---+---+---+---+---+---+---+---+\n"
-  in for i = 8 downto 1 do
-    let k_list = ref [] in
-    let k = string_of_int i ^ "  |" in
-    for j = 8 * (i - 1) to 8 * i - 1 do
-      let piece = board.(j) in
-      k_list := tab_print.(piece) :: !k_list;
-    done;
-    k_list := List.rev !k_list;
-    let k_str = String.concat "" !k_list in
-    display := !display ^ (k ^ k_str ^ "\n" ^"   +---+---+---+---+---+---+---+---+\n");
-  done;
-  begin
-    let fichier_sortie = open_out_gen [Open_creat; Open_text; Open_append] 0o666 "Harry.txt"
-    in output_string fichier_sortie (st ^ "\n" ^ !display ^ "     a   b   c   d   e   f   g   h\n");
-    close_out fichier_sortie
-  end
-
-let print_board board =
-  let display = ref "   +---+---+---+---+---+---+---+---+\n"
-  in for i = 8 downto 1 do
-    let k_list = ref [] in
-    let k = string_of_int i ^ "  |" in
-    for j = 8 * (i - 1) to 8 * i - 1 do
-      let piece = board.(j) in
-      k_list := tab_print.(piece) :: !k_list;
-    done;
-    k_list := List.rev !k_list;
-    let k_str = String.concat "" !k_list in
-    display := !display ^ (k ^ k_str ^ "\n" ^"   +---+---+---+---+---+---+---+---+\n");
-  done;
-  print_endline (!display ^ "     a   b   c   d   e   f   g   h\n")
-
-
-let print_bitboard bitboard =
-  let board = Array.make 64 0 in
-  let rec aux_1 board index = match index with
-    |[] -> ()
-    |h::t ->
-      board.(h) <- 6;
-      aux_1 board t
-  in aux_1 board (index_list bitboard);
-  let display = ref "   +---+---+---+---+---+---+---+---+\n"
-  in for i = 8 downto 1 do
-    let k_list = ref [] in
-    let k = string_of_int i ^ "  |" in
-    for j = 8 * (i - 1) to 8 * i - 1 do
-      let piece = board.(j) in
-      k_list := tab_print.(piece) :: !k_list;
-    done;
-    k_list := List.rev !k_list;
-    let k_str = String.concat "" !k_list in
-    display := !display ^ (k ^ k_str ^ "\n" ^"   +---+---+---+---+---+---+---+---+\n");
-  done;
-  begin
-  let fichier_sortie = open_out_gen [Open_creat; Open_text; Open_append] 0o666 "Harry.txt"
-  in output_string fichier_sortie (!display ^ "     a   b   c   d   e   f   g   h\n");
-  close_out fichier_sortie
-end;
-  print_endline (!display ^ "     a   b   c   d   e   f   g   h\n")

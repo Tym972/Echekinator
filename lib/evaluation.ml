@@ -193,21 +193,3 @@ let hce position =
   let phase = min !gamephase 24 in
   let score = ((!mg_score * phase + !eg_score * (24 - phase)) / 24) in
   (- 2 * position.white_to_move + 1) * score
-
-(*let value = [| 100; 300; 300; 500; 900; 0|]
-
-let simple_eval board white_to_move =
-  let score = ref 0 in
-  for square = 0 to 63 do
-    let piece = board.(square) in
-    if piece > 0 then begin
-      score := !score + value.(piece - 1)
-    end
-    else if piece < 0 then begin
-      score := !score - value.(- piece - 1)
-    end;
-  done;
-  if white_to_move then
-    !score
-  else  
-    - !score*)

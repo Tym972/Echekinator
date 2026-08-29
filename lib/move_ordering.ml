@@ -71,33 +71,41 @@ let see position move =
   done;
   gain.(0)
 
-let killer_moves = Array.make (2 * max_depth) 0
-let history_moves = Array.make 8192 0
-let working_array = Array.init (max_depth + 40) (fun _ -> Array.make 218 0)
-
-type ordering_tables = {
+type search_tables = {
   killer_moves : int array;
   history_moves : int array;
-  working_array : int array array
+  ordering_array : int array array
+}
+
+let create_search_tables () = {   
+  killer_moves = Array.make (2 * max_depth) 0;
+  history_moves = Array.make 8192 0;
+  ordering_array = Array.init (max_depth + 40) (fun _ -> Array.make 218 0)
+}
+
+let copy_search_tables search_tables = {
+  killer_moves = Array.copy search_tables.killer_moves;
+  history_moves = Array.copy search_tables.history_moves;
+  ordering_array = Array.map Array.copy search_tables.ordering_array
 }
 
 let history_index white_to_move move =
   4096 * white_to_move + 64 * (get_move_from move) + get_move_to move
 
-let move_ordering ordering_tables position moves number_of_moves search_ply hash_move ordering_array =
+let move_ordering search_tables position moves number_of_moves search_ply hash_move ordering_array =
   let score move move_index =
     if move = hash_move then begin
       ordering_array.(move_index) <- - 1000000
     end
     else if isquiet move then begin
-      if ordering_tables.killer_moves.(2 * search_ply) = move land 0xfff then begin
+      if search_tables.killer_moves.(2 * search_ply) = move land 0xfff then begin
         ordering_array.(move_index) <- 2000000
       end
-      else if ordering_tables.killer_moves.(2 * search_ply + 1) = move land 0xfff then begin
+      else if search_tables.killer_moves.(2 * search_ply + 1) = move land 0xfff then begin
         ordering_array.(move_index) <- 1000000
       end
       else begin
-        ordering_array.(move_index) <- ordering_tables.history_moves.(history_index position.white_to_move move)
+        ordering_array.(move_index) <- search_tables.history_moves.(history_index position.white_to_move move)
       end
     end
     else begin
@@ -142,14 +150,14 @@ type picker = {
   mutable stage : search_stage
   }
 
-let rec next_move picker moves ordering_tables = match picker.stage with
+let rec next_move picker moves search_tables = match picker.stage with
   |Stage_TT ->
     picker.stage <- Stage_Good_Captures;
     if picker.hash_move <> 0 then begin
       picker.hash_move
     end
     else begin
-      next_move picker moves ordering_tables
+      next_move picker moves search_tables
     end
   |Stage_Good_Captures ->
     if true then begin

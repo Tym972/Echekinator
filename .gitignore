@@ -2,3 +2,5 @@ _build/
 /Results/
 config.json
 translation.txt
+perft960.txt
+tamerlan.txt

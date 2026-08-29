@@ -14,8 +14,6 @@ let tabfen_noir = [|"p"; "n"; "b"; "r"; "q"; "k"|]
 (*Tableau utilisé pour expliciter la notation des castlings dans la notation FEN en cas d'ambiguïté*)
 let castling_fen_tab = [|"q"; "b"; "c"; "d"; "e"; "f"; "g"; "k"|]
 
-let castlings_representations = [|"K"; "Q"; "k"; "q"|]
-
 let is_possible_castling castling_rights castling =
   castling_rights land castling = castling
 
@@ -53,8 +51,9 @@ let fen position =
   if !empties > 0 then begin
     fen := !fen ^ (string_of_int !empties)
   end;
-  if position.white_to_move = 0 then
+  if position.white_to_move = 0 then begin
     fen := !fen ^ " w "
+  end
   else begin
     fen := !fen ^ " b "
   end;
@@ -62,34 +61,40 @@ let fen position =
     fen := !fen ^ "-"
   end
   else begin
-    if !chess_960 then begin
-      castlings_representations.(0) <- "K";
-      castlings_representations.(1) <- "Q";
-      castlings_representations.(2) <- "k";
-      castlings_representations.(3) <- "q";
-      let white_rooks = position.pieces.(white_pieces.(rook)) in
-      let black_rooks = position.pieces.(black_pieces.(rook)) in
-      if Int64.logand white_rooks ambiguity_masks.(0) <> 0L then begin
-        castlings_representations.(0) <- String.uppercase_ascii (castling_fen_tab.(white_castling_info.from_short_rook));
-      end;
-      if Int64.logand white_rooks ambiguity_masks.(1) <> 0L then begin
-        castlings_representations.(1) <- String.uppercase_ascii (castling_fen_tab.(white_castling_info.from_long_rook));
-      end;
-      if Int64.logand black_rooks ambiguity_masks.(2) <> 0L then begin
-        castlings_representations.(2) <- castling_fen_tab.(black_castling_info.from_short_rook);
-      end;
-      if Int64.logand black_rooks ambiguity_masks.(3) <> 0L then begin
-        castlings_representations.(3) <- castling_fen_tab.(black_castling_info.from_long_rook);
-      end
+    let white_rooks = position.pieces.(white_pieces.(rook)) in
+    let black_rooks = position.pieces.(black_pieces.(rook)) in
+    if is_possible_castling castling_rights castling_infos.(0).short_castling then begin
+      let castlings_representation =
+        if Int64.logand white_rooks ambiguity_masks.(0) <> 0L then begin
+          String.uppercase_ascii (castling_fen_tab.(white_castling_info.from_short_rook mod 8)) end
+        else
+          "K"
+      in fen := !fen ^ castlings_representation
     end;
-    if is_possible_castling castling_rights castling_infos.(0).short_castling then
-      fen := !fen ^ castlings_representations.(0);
-    if is_possible_castling castling_rights castling_infos.(0).long_castling then
-      fen := !fen ^ castlings_representations.(1);
-    if is_possible_castling castling_rights castling_infos.(1).short_castling then
-      fen := !fen ^ castlings_representations.(2);
-    if is_possible_castling castling_rights castling_infos.(1).long_castling then
-      fen := !fen ^ castlings_representations.(3)
+    if is_possible_castling castling_rights castling_infos.(0).long_castling then begin
+      let castlings_representation =
+        if Int64.logand white_rooks ambiguity_masks.(1) <> 0L then
+          String.uppercase_ascii (castling_fen_tab.(white_castling_info.from_long_rook mod 8))
+        else
+          "Q"
+      in fen := !fen ^ castlings_representation
+    end;
+    if is_possible_castling castling_rights castling_infos.(1).short_castling then begin
+      let castlings_representation =
+        if Int64.logand black_rooks ambiguity_masks.(2) <> 0L then
+          String.uppercase_ascii (castling_fen_tab.(black_castling_info.from_short_rook mod 8))
+        else
+          "k"
+      in fen := !fen ^ castlings_representation
+    end;
+    if is_possible_castling castling_rights castling_infos.(1).long_castling then begin
+      let castlings_representation =
+        if Int64.logand black_rooks ambiguity_masks.(3) <> 0L then
+          String.uppercase_ascii (castling_fen_tab.(black_castling_info.from_long_rook mod 8))
+        else
+          "q"
+      in fen := !fen ^ castlings_representation
+    end
   end;
   !fen ^ " " ^ (if state.ep_square <> (-1) then coord.(state.ep_square) ^ " " else "- ") ^ string_of_int state.half_moves ^ " " ^ string_of_int (1 + position.game_ply / 2)
 
@@ -176,6 +181,9 @@ let position_of_fen chain position =
   let ep_square_string = (List.nth !split_fen 3) in
   if ep_square_string <> "-" then begin
     state.ep_square <- Hashtbl.find hash_coord ep_square_string
+  end
+  else begin
+    state.ep_square <- (-1)
   end;
   let castlings = (List.nth !split_fen 2) in
   if castlings <> "-" then begin
@@ -188,10 +196,8 @@ let position_of_fen chain position =
     let black_rooks_squares = index_list (Int64.logand rows.(7) position.pieces.(pieces_rep.(1).(rook))) in
     let castling_aux white_to_move number_of_castling player_castling_info from_king rooks_squares index =
       if number_of_castling <> 0 then begin
-        if !chess_960 then begin
-          player_castling_info.from_king <- from_king
-        end;
-        let aux castling_column edge_column edge_rook =
+        player_castling_info.from_king <- from_king;
+        let aux_rook castling_column edge_column edge_rook =
           if castling_column = edge_column then begin
             edge_rook
           end
@@ -200,27 +206,25 @@ let position_of_fen chain position =
           end
         in if number_of_castling = 2 then begin
           state.castling_rights <- state.castling_rights lxor player_castling_info.long_castling lxor player_castling_info.short_castling;
-          if !chess_960 then begin
+          if !uninitialized then begin
             let long_castling_column = Hashtbl.find hash_castling_xfen (Char.lowercase_ascii castlings.[index + 1]) in
             let short_castling_column = Hashtbl.find hash_castling_xfen (Char.lowercase_ascii castlings.[index]) in
-            if !chess_960 then begin
-              player_castling_info.from_long_rook <- aux long_castling_column 0 (List.hd rooks_squares);
-              player_castling_info.from_short_rook <- aux short_castling_column 7 (List.hd (List.rev rooks_squares))
-            end
+            player_castling_info.from_long_rook <- aux_rook long_castling_column 0 (List.hd rooks_squares);
+            player_castling_info.from_short_rook <- aux_rook short_castling_column 7 (List.hd (List.rev rooks_squares))
           end
         end
         else if number_of_castling = 1 then begin
           let castling_column = Hashtbl.find hash_castling_xfen (Char.lowercase_ascii castlings.[index]) in
           if castling_column < from_king mod 8 then begin
             state.castling_rights <- state.castling_rights lxor player_castling_info.long_castling;
-            if !chess_960 then begin
-              player_castling_info.from_long_rook <- aux castling_column 0 (List.hd rooks_squares)
+            if !uninitialized then begin
+              player_castling_info.from_long_rook <- aux_rook castling_column 0 (List.hd rooks_squares)
             end
           end
           else begin
             state.castling_rights <- state.castling_rights lxor player_castling_info.short_castling;
-            if !chess_960 then begin
-              player_castling_info.from_short_rook <- aux castling_column 7 (List.hd (List.rev rooks_squares))
+            if !uninitialized then begin
+              player_castling_info.from_short_rook <- aux_rook castling_column 7 (List.hd (List.rev rooks_squares))
             end
           end
         end
@@ -228,7 +232,7 @@ let position_of_fen chain position =
     in
     castling_aux 0 number_of_white_castlings white_castling_info from_white_king white_rooks_squares 0;
     castling_aux 1 number_of_black_castlings black_castling_info from_black_king black_rooks_squares number_of_white_castlings;
-    if !chess_960 then begin
+    if !uninitialized then begin
       init_castling_info ()
     end
   end;

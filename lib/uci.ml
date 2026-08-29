@@ -52,12 +52,13 @@ let binc = ref 0.
 let movestogo = ref 500.
 let movetime = ref (9. *. 10e8)
 
-let reset_hash () =
+let reset_hash search_tables =
   clear !tt;
   go_counter := 0;
   for i = 0 to 8191 do
-    history_moves.(i) <- 0
-  done
+    search_tables.history_moves.(i) <- 0
+  done;
+  uninitialized := true
 
 (*Fonction permettant de jouer une list de moves*)
 let make_list record position =
@@ -216,7 +217,7 @@ let pv_finder position bestmove depth =
   unmake position bestmove;
   List.rev !pv 
 
-let iterative_deepening position ordering_tables depth mate thread =
+let iterative_deepening position search_tables depth mate thread =
   let var_depth = ref 0 in 
   let var_mate = ref max_int in
   let alpha_table = Array.make !number_of_pv (- max_int) in
@@ -224,10 +225,10 @@ let iterative_deepening position ordering_tables depth mate thread =
   stop_search.(thread) <- false;
   while not (stop_search.(thread) || (thread = 0 && Mtime.Span.compare (Mtime_clock.count !start_time) !soft_bound > 0) || !var_depth + 1 > depth || total_counter node_counter + 1 > !node_limit || !var_mate < mate + 1 ) do
     incr var_depth;
-    (*move_ordering ordering_tables position position.moves.(0) position.number_of_moves.(0) 0 0 ordering_tables.working_array.(0);*)
+    (*move_ordering search_tables position position.moves.(0) position.number_of_moves.(0) 0 0 search_tables.ordering_array.(0);*)
     for multi = 0 to (!number_of_pv - 1) do
       let new_score =
-        let score = ref (pvs position ordering_tables thread multi !var_depth 0 alpha_table.(multi) beta_table.(multi) true) in
+        let score = ref (pvs position search_tables thread multi !var_depth 0 alpha_table.(multi) beta_table.(multi) true) in
         while not (stop_search.(thread) || total_counter node_counter > !node_limit || (!score > alpha_table.(multi) && !score < beta_table.(multi))) do
           if !score <= alpha_table.(multi) then begin
             alpha_table.(multi) <- (-max_int)
@@ -235,7 +236,7 @@ let iterative_deepening position ordering_tables depth mate thread =
           else if !score >= beta_table.(multi) then begin
             beta_table.(multi) <- max_int
           end;
-          score := pvs position ordering_tables thread multi !var_depth 0 alpha_table.(multi) beta_table.(multi) true;
+          score := pvs position search_tables thread multi !var_depth 0 alpha_table.(multi) beta_table.(multi) true;
         done;
         !score
       in if new_score > (-max_int) then begin
@@ -291,7 +292,7 @@ let jobs_remaining = ref 0
 
 let current_job = ref 0
 
-let domain_loop position thread_id =
+let domain_loop position search_tables thread_id =
   let my_job = ref (-1) in
   while thread_id < !threads_number do
     Mutex.lock domain_mutex;
@@ -300,7 +301,7 @@ let domain_loop position thread_id =
       done;
       my_job := !current_job;
     Mutex.unlock domain_mutex;
-    iterative_deepening (copy_position position) {killer_moves = Array.copy killer_moves; history_moves = Array.copy history_moves; working_array = Array.map Array.copy working_array} max_depth (-1) thread_id;
+    iterative_deepening (copy_position position) (copy_search_tables search_tables) max_depth (-1) thread_id;
     Mutex.lock domain_mutex;
       decr jobs_remaining;
       if !jobs_remaining = 0 then begin
@@ -310,7 +311,7 @@ let domain_loop position thread_id =
     Mutex.unlock domain_mutex;
   done
 
-let setoption position instructions =
+let setoption position search_tables instructions =
   let type_check instructions boolean =
     match instructions with
     |_ :: _ :: _ :: "value" :: value :: _ -> begin try boolean := (bool_of_string value) with _ -> () end
@@ -326,7 +327,7 @@ let setoption position instructions =
   in match (List.tl instructions) with
     |"name" :: "Ponder" :: _ -> type_check instructions option_ponder
     |"name" :: "UCI_Chess960" :: _ -> type_check instructions chess_960
-    |"name" :: "Clear" :: "Hash" :: _ -> reset_hash ()
+    |"name" :: "Clear" :: "Hash" :: _ -> reset_hash search_tables
     |"name" :: "MultiPV" :: _ ->
       let value = value_of_instructions instructions in
       if value <> !multipv then begin
@@ -347,14 +348,14 @@ let setoption position instructions =
         type_spin value threads_number min_threads_number max_threads_number;
         if value > old_value then begin
           domains := Array.init (!threads_number - old_value) (fun id ->
-            Domain.spawn (fun () -> domain_loop position (id + old_value))
+            Domain.spawn (fun () -> domain_loop position search_tables (id + old_value))
           )
         end
       end
     |_ -> ()
 
 (*Answer to the command "go"*)
-let go instructions position =
+let go instructions position search_tables =
   if position.number_of_moves.(0) = 0 then begin
     let result = if true then "mate" else "cp" in
     print_endline (Printf.sprintf "info depth 0 score %s 0" result);
@@ -364,16 +365,11 @@ let go instructions position =
     start_time := Mtime_clock.counter ();
     soft_bound := Mtime.Span.max_span;
     hard_bound := Mtime.Span.max_span;
-    let ordering_tables = {
-      killer_moves = killer_moves;
-      history_moves = history_moves;
-      working_array = working_array
-    }
-    in for thread = 0 to !threads_number - 1 do
+    for thread = 0 to !threads_number - 1 do
       node_counter.(thread) <- 0
     done;
     for i = 0 to (2 * max_depth) - 1 do
-      killer_moves.(i) <- 0
+      search_tables.killer_moves.(i) <- 0
     done;
     incr go_counter;
     let is_pondering = ref false in
@@ -431,7 +427,7 @@ let go instructions position =
         Condition.broadcast domain_cond;
       Mutex.unlock domain_mutex
     end;
-    iterative_deepening position ordering_tables !depth !mate 0;
+    iterative_deepening position search_tables !depth !mate 0;
     for thread = 1 to !threads_number - 1 do
       stop_search.(thread) <- true
     done;
@@ -467,7 +463,9 @@ let display position =
 (*Fonction lançant le programme*)
 let echekinator () =
   let position = create_position () in
+  let search_tables = create_search_tables () in
   position_uci ["position"; "startpos"] position;
+  uninitialized := true;
   print_endline (project_name ^ " by Timothée Fixy");
   let exit = ref false in
   let hot_command = Mutex.create () in
@@ -478,14 +476,14 @@ let echekinator () =
     match instructions with
       |"uci" :: _ -> uci ()
       |"isready" :: _ -> print_endline "readyok"
-      |"setoption" :: _ -> process (fun () -> setoption position instructions)
-      |"ucinewgame" :: _ -> process (fun () -> reset_hash ())
+      |"setoption" :: _ -> process (fun () -> setoption position search_tables instructions)
+      |"ucinewgame" :: _ -> process (fun () -> reset_hash search_tables)
       |"position" :: _ -> process (fun () -> position_uci instructions position)
       |"go" :: "perft" :: depth :: _ when is_integer_string depth ->
         print_endline ("\n" ^ "Nodes searched : " ^ (string_of_int (algoperft position (int_of_string depth) 0)));
       |"go" :: _ ->
         let _ = Thread.create
-          (fun () -> process (fun () -> go instructions (copy_position position))) ()
+          (fun () -> process (fun () -> go instructions position search_tables)) ()
         in ()
       |"quit" :: _ -> exit := true
       |"stop" :: _ ->

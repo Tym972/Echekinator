@@ -22,7 +22,7 @@ let zugzwang position =
   position.pieces.(player_pieces.(rook)) = 0L &&
   position.pieces.(player_pieces.(queen)) = 0L
 
-let rec pvs position ordering_tables thread multi depth search_ply alpha beta ispv =
+let rec pvs position search_tables thread multi depth search_ply alpha beta ispv =
   let game_ply = position.game_ply in
   let state = position.state_array.(game_ply) in
   let in_check = state.in_check in
@@ -41,7 +41,7 @@ let rec pvs position ordering_tables thread multi depth search_ply alpha beta is
 
   (*Quiescense search*)
   else if depth = 0 then begin
-    quiescence_search position ordering_tables thread depth search_ply alpha beta ispv
+    quiescence_search position search_tables thread depth search_ply alpha beta ispv
   end
 
   (*Normal search*)
@@ -97,7 +97,7 @@ let rec pvs position ordering_tables thread multi depth search_ply alpha beta is
             end
             else if !static_eval >= !beta0 then begin
               make_null position;
-              let score = - pvs position ordering_tables thread multi (depth - 3) (search_ply + 1) (- !beta0) (- !beta0 + 1) false
+              let score = - pvs position search_tables thread multi (depth - 3) (search_ply + 1) (- !beta0) (- !beta0 + 1) false
               in if score >= !beta0 then begin
                 if is_win score then begin
                   best_score := beta  
@@ -115,12 +115,12 @@ let rec pvs position ordering_tables thread multi depth search_ply alpha beta is
           if !no_cut then begin
             let counter = ref 0 in
             let moves = position.moves.(search_ply) in
-            let ordering_array = ordering_tables.working_array.(search_ply) in
+            let ordering_array = search_tables.ordering_array.(search_ply) in
             let move_loop move =
               make position move;
               let score =
                 if !counter = 0 then begin
-                  - pvs position ordering_tables thread multi (depth - 1) (search_ply + 1) (- !beta0) (- !alpha0) ispv
+                  - pvs position search_tables thread multi (depth - 1) (search_ply + 1) (- !beta0) (- !alpha0) ispv
                 end
                 else begin
                   let score_lmr =
@@ -136,14 +136,14 @@ let rec pvs position ordering_tables thread multi depth search_ply alpha beta is
                         end)
                         (depth - 1)
                     in if not (grossiere_erreur || depth < 3 || reduction = 0) then begin
-                      - pvs position ordering_tables thread multi (depth - 1 - reduction) (search_ply + 1) (- !alpha0 - 1) (- !alpha0) false
+                      - pvs position search_tables thread multi (depth - 1 - reduction) (search_ply + 1) (- !alpha0 - 1) (- !alpha0) false
                     end
                     else
                       !alpha0 + 1
                   in if score_lmr > !alpha0 then begin
-                    let score_0 = - pvs position ordering_tables thread multi (depth - 1) (search_ply + 1) (- !alpha0 - 1) (- !alpha0) false
+                    let score_0 = - pvs position search_tables thread multi (depth - 1) (search_ply + 1) (- !alpha0 - 1) (- !alpha0) false
                     in if (score_0 > !alpha0 && ispv) then begin
-                      - pvs position ordering_tables thread multi (depth - 1) (search_ply + 1) (- !beta0) (- !alpha0) ispv
+                      - pvs position search_tables thread multi (depth - 1) (search_ply + 1) (- !beta0) (- !alpha0) ispv
                     end
                     else begin
                       score_0
@@ -164,12 +164,12 @@ let rec pvs position ordering_tables thread multi depth search_ply alpha beta is
                 if score >= !beta0 then begin
                   no_cut := false;
                   if isquiet move then begin
-                    ordering_tables.history_moves.(history_index (position.white_to_move lxor 1) move) <- depth * depth;
+                    search_tables.history_moves.(history_index (position.white_to_move lxor 1) move) <- depth * depth;
                     let quiet_move = move land 0xfff in
-                    let killer0 = ordering_tables.killer_moves.(2 * search_ply) in
+                    let killer0 = search_tables.killer_moves.(2 * search_ply) in
                     if quiet_move <> killer0 then begin
-                      ordering_tables.killer_moves.(2 * search_ply) <- quiet_move;
-                      ordering_tables.killer_moves.(2 * search_ply + 1) <- killer0
+                      search_tables.killer_moves.(2 * search_ply) <- quiet_move;
+                      search_tables.killer_moves.(2 * search_ply + 1) <- killer0
                     end
                   end
                 end
@@ -181,7 +181,7 @@ let rec pvs position ordering_tables thread multi depth search_ply alpha beta is
               if !no_cut then begin
                 if search_ply <> 0 || true then begin
                   legal_moves position search_ply;
-                  move_ordering ordering_tables position moves position.number_of_moves.(search_ply) search_ply hash_move ordering_array
+                  move_ordering search_tables position moves position.number_of_moves.(search_ply) search_ply hash_move ordering_array
                 end;
                 while !no_cut do
                   let move = move_picker moves ordering_array position.number_of_moves.(search_ply) in
@@ -197,7 +197,7 @@ let rec pvs position ordering_tables thread multi depth search_ply alpha beta is
             else begin
               if search_ply <> 0 || true then begin
                 legal_moves position search_ply;
-                move_ordering ordering_tables position moves position.number_of_moves.(search_ply) search_ply 0 ordering_array
+                move_ordering search_tables position moves position.number_of_moves.(search_ply) search_ply 0 ordering_array
               end;
               while !no_cut do
                 let move = move_picker moves ordering_array position.number_of_moves.(search_ply)in
