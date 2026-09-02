@@ -22,13 +22,13 @@ let [@inline] lsb_index bitboard =
   index64.(Int64.to_int (Int64.shift_right_logical (Int64.mul de_bruijn_constant (lsb bitboard)) 58))
 
 let [@inline] population_count bitboard =
-  let count = ref 0 in
-  let bb = ref bitboard in
-  while !bb <> 0L do
-    incr count;
-    bb := !bb ^^^ (lsb !bb)
-  done;
-  !count
+  let x = Int64.sub bitboard (Int64.logand (Int64.shift_right_logical bitboard 1) 0x5555_5555_5555_5555L) in
+  let x = Int64.add (Int64.logand x 0x3333_3333_3333_3333L) (Int64.logand (Int64.shift_right_logical x 2) 0x3333_3333_3333_3333L) in
+  let x = Int64.logand (Int64.add x (Int64.shift_right_logical x 4)) 0x0F0F_0F0F_0F0F_0F0FL in
+  let x = Int64.add x (Int64.shift_right_logical x 8) in
+  let x = Int64.add x (Int64.shift_right_logical x 16) in
+  let x = Int64.add x (Int64.shift_right_logical x 32) in
+  Int64.to_int x land 0x7F
 
 (*Renvoie l'indice du lsb et le dégage du bitboard*)
 let [@inline] pop_lsb bitboard =
@@ -649,12 +649,10 @@ let [@inline] generate_king_attacks from =
   king_table.(from)
 
 let [@inline] generate_bishop_attacks from occupancy =
-  let blocker = bishop_masks.(from) &&& occupancy in
-  bishop_table.(from).(index bishop_magics.(from) blocker bishop_shifts.(from))
+  bishop_table.(from).(index bishop_magics.(from) (bishop_masks.(from) &&& occupancy) bishop_shifts.(from))
 
 let [@inline] generate_rook_attacks from occupancy =
-  let blocker = rook_masks.(from) &&& occupancy in
-  rook_table.(from).(index rook_magics.(from) blocker rook_shifts.(from))
+  rook_table.(from).(index rook_magics.(from) (rook_masks.(from) &&& occupancy) rook_shifts.(from))
 
 let [@inline] generate_queen_attacks from occupancy =
   (generate_bishop_attacks from occupancy) ||| (generate_rook_attacks from occupancy)
@@ -763,8 +761,8 @@ let [@inline] generate_castling_moves in_check all_attacks pin_mask castling_rig
     aux player_castling_info.to_long_king player_castling_info.from_long_rook castling_rights player_castling_info.long_castling 3 player_castling_info.long_castling_empty_mask player_castling_info.long_castling_safe_mask
   end
 
-let [@inline] generate_normal_moves sliding_attacks oponent_occupancy not_friendly_occupancy moves number_of_moves from =
-  let captures_bitboard = sliding_attacks &&& oponent_occupancy in
+let [@inline] generate_normal_moves attacks oponent_occupancy not_friendly_occupancy moves number_of_moves from =
+  let captures_bitboard = attacks &&& oponent_occupancy in
   let [@inline] aux moves_bitboard capture =
     let bitboard = ref moves_bitboard in
     while !bitboard <> 0L do
@@ -774,7 +772,7 @@ let [@inline] generate_normal_moves sliding_attacks oponent_occupancy not_friend
       bitboard := other_moves_bitboard
     done;
   in aux captures_bitboard 4;
-  aux (sliding_attacks &&& (Int64.logxor not_friendly_occupancy captures_bitboard)) 0
+  aux (attacks &&& (Int64.logxor not_friendly_occupancy captures_bitboard)) 0
 
 let [@inline] zobrist_index square piece =
   square * 12 + piece - 1

@@ -492,9 +492,9 @@ let echekinator () =
         done;
       |"d" :: _ -> display position
       |"eval" :: _ ->
-        for i = 0 to position.number_of_moves.(0) - 1 do
+        (*for i = 0 to position.number_of_moves.(0) - 1 do
           print_endline (Printf.sprintf "%s : see %i" (uci_of_mouvement position.moves.(0).(i)) (see position position.moves.(0).(i)))
-        done;
+        done;*)
         let eval =
           if position.white_to_move = 0 then
             (float_of_int (hce position)) /. 100.
