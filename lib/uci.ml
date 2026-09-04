@@ -445,7 +445,7 @@ let checkers position =
   let checkers = ref "" in
   let white_to_move = position.white_to_move in
   let total_occupancy = (position.occupancy.(0) ||| position.occupancy.(1)) in
-  let king_position = (lsb_index position.pieces.(pieces_rep.(white_to_move).(king))) in
+  let king_position = (lsb_index position.pieces.(king + 6 * white_to_move)) in
   let attackers = ref (get_all_attackers king_position position.pieces total_occupancy &&& position.occupancy.(white_to_move lxor 1)) in
   while !attackers <> 0L do
     let to_, other_atatckers = pop_lsb !attackers in

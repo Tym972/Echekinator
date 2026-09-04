@@ -15,12 +15,11 @@ type pv_info = {
 
 let results = ref (Array.init !multipv (fun _ ->  {depth = 0; score = 0; bestmove = 0}))
 
-let zugzwang position =
-  let player_pieces = pieces_rep.(position.white_to_move) in
-  position.pieces.(player_pieces.(knight)) = 0L &&
-  position.pieces.(player_pieces.(bishop)) = 0L &&
-  position.pieces.(player_pieces.(rook)) = 0L &&
-  position.pieces.(player_pieces.(queen)) = 0L
+let zugzwang pieces white_to_move =
+  pieces.(knight + 6 * white_to_move) = 0L &&
+  pieces.(bishop + 6 * white_to_move) = 0L &&
+  pieces.(rook + 6 * white_to_move) = 0L &&
+  pieces.(queen + 6 * white_to_move) = 0L
 
 let rec pvs position search_tables thread multi depth search_ply alpha beta ispv =
   let game_ply = position.game_ply in
@@ -83,7 +82,7 @@ let rec pvs position search_tables thread multi depth search_ply alpha beta ispv
         if !no_cut then begin
           
           (*Reverse futility pruning and null move pruning*)
-          if not (in_check || ispv || is_loss !beta0 || zugzwang position) then begin
+          if not (in_check || ispv || is_loss !beta0 || zugzwang position.pieces position.white_to_move) then begin
             if hash_static_eval = (-max_int) then begin
               static_eval := hce position
             end;

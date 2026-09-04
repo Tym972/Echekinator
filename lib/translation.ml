@@ -65,7 +65,6 @@ let move_array_mem move legal_moves number_of_legal_moves =
 (*Fonction interprétant la notation UCI*)
 let mouvement_of_uci uci position =
   let white_to_move = position.white_to_move in
-  let player_pieces = pieces_rep.(white_to_move) in
   let from = Hashtbl.find hash_coord (String.sub uci 0 2) in
   let to_ = ref (Hashtbl.find hash_coord (String.sub uci 2 2)) in
 
@@ -75,13 +74,13 @@ let mouvement_of_uci uci position =
   let capture = if position.board.(!to_) = 0 then 0 else 4 in
   let player_castling_infos = castling_infos.(white_to_move) in
   let flag = 
-    if piece = player_pieces.(pawn) && (from - !to_) mod 8 <> 0 && capture = 0 then 
+    if piece = pawn + 6 * white_to_move && (from - !to_) mod 8 <> 0 && capture = 0 then 
       5
-    else if piece = player_pieces.(pawn) && abs (from - !to_) = 16 then
+    else if piece = pawn + 6 * white_to_move && abs (from - !to_) = 16 then
       1
-    else if piece = player_pieces.(king) && from = player_castling_infos.from_king && (!to_ = player_castling_infos.to_short_king || (!chess_960 && !to_ = player_castling_infos.from_short_rook)) then
+    else if piece = king + 6 * white_to_move && from = player_castling_infos.from_king && (!to_ = player_castling_infos.to_short_king || (!chess_960 && !to_ = player_castling_infos.from_short_rook)) then
       2
-    else if piece = player_pieces.(king) && from = player_castling_infos.from_king && (!to_ = player_castling_infos.to_long_king || (!chess_960 && !to_ = player_castling_infos.from_long_rook)) then
+    else if piece = king + 6 * white_to_move && from = player_castling_infos.from_king && (!to_ = player_castling_infos.to_long_king || (!chess_960 && !to_ = player_castling_infos.from_long_rook)) then
       3
     else if promotion_piece <> 0 then
       (promotion_piece + 6) lor capture

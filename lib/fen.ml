@@ -61,8 +61,8 @@ let fen position =
     fen := !fen ^ "-"
   end
   else begin
-    let white_rooks = position.pieces.(white_pieces.(rook)) in
-    let black_rooks = position.pieces.(black_pieces.(rook)) in
+    let white_rooks = position.pieces.(rook) in
+    let black_rooks = position.pieces.(black_rook) in
     if is_possible_castling castling_rights castling_infos.(0).short_castling then begin
       let castlings_representation =
         if Int64.logand white_rooks ambiguity_masks.(0) <> 0L then begin
@@ -167,8 +167,8 @@ let position_of_fen chain position =
   for piece = 7 to 12 do
     position.occupancy.(1) <- position.occupancy.(1) ||| pieces_bitboards.(piece)
   done;
-  let from_white_king = lsb_index pieces_bitboards.(white_pieces.(king)) in
-  let from_black_king = lsb_index pieces_bitboards.(black_pieces.(king)) in
+  let from_white_king = lsb_index pieces_bitboards.(king) in
+  let from_black_king = lsb_index pieces_bitboards.(black_king) in
   let complete longueur = 
     let rec aux acc longueur = match longueur with
       |5 -> aux ("1" :: acc) 6
@@ -192,8 +192,8 @@ let position_of_fen chain position =
       (fun (white_castlings, black_castlings) c -> 
         if Char.uppercase_ascii c = c then white_castlings + 1, black_castlings else white_castlings, black_castlings + 1
       ) (0, 0) castlings
-    in let white_rooks_squares = index_list (Int64.logand rows.(0) position.pieces.(pieces_rep.(0).(rook))) in
-    let black_rooks_squares = index_list (Int64.logand rows.(7) position.pieces.(pieces_rep.(1).(rook))) in
+    in let white_rooks_squares = index_list (Int64.logand ranks.(0) position.pieces.(rook)) in
+    let black_rooks_squares = index_list (Int64.logand ranks.(7) position.pieces.(black_rook)) in
     let castling_aux white_to_move number_of_castling player_castling_info from_king rooks_squares index =
       if number_of_castling <> 0 then begin
         player_castling_info.from_king <- from_king;
@@ -238,4 +238,4 @@ let position_of_fen chain position =
   end;
   state.half_moves <- (try int_of_string (List.nth !split_fen 4) with _ -> 0);
   state.zobrist <- zobrist position;
-  state.in_check <- is_attacked (lsb_index pieces_bitboards.(pieces_rep.(position.white_to_move).(king))) (position.white_to_move) (position.occupancy.(0) ||| position.occupancy.(1)) pieces_bitboards pieces_rep.(position.white_to_move lxor 1)
+  state.in_check <- is_attacked (lsb_index pieces_bitboards.(king + 6 * position.white_to_move)) (position.white_to_move) (position.occupancy.(0) ||| position.occupancy.(1)) pieces_bitboards

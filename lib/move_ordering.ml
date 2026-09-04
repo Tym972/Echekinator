@@ -16,14 +16,14 @@ let get_all_attackers target pieces_bitboards total_occupancy =
     pieces_bitboards.(black_queen) ||| pieces_bitboards.(black_rook))) |||
   (king_table.(target) &&& (pieces_bitboards.(king) ||| pieces_bitboards.(black_king)))
 
-let get_least_valuable_piece attackers pieces_bitboards player_pieces attacker_type =
+let get_least_valuable_piece attackers pieces_bitboards attacker_type white_to_move =
   let lvp_bitboard = ref 0L in
-  let piece = ref 1 in (* 0 = pion, 1 = cavalier, etc. dans ton tableau player_pieces *)
+  let piece = ref 1 in
   while !lvp_bitboard = 0L && !piece <= 6 do
-    let subset = attackers &&& pieces_bitboards.(player_pieces.(!piece)) in
+    let subset = attackers &&& pieces_bitboards.(!piece + 6 * white_to_move) in
     if subset <> 0L then begin
       lvp_bitboard := lsb subset;
-      attacker_type := player_pieces.(!piece)
+      attacker_type := !piece + 6 * white_to_move
     end;
     incr piece
   done;
@@ -64,7 +64,7 @@ let see position move =
             pieces_bitboards.(queen) ||| pieces_bitboards.(black_queen))) 
       in attackers := !attackers ||| (sliders &&& !total_occupancy)
     end;
-    from_bitboard := get_least_valuable_piece !attackers pieces_bitboards pieces_rep.(!current_side) attacker
+    from_bitboard := get_least_valuable_piece !attackers pieces_bitboards attacker !current_side
   done;
   for i = (!depth - 2) downto 1 do
     gain.(i - 1) <- - (max (-gain.(i - 1)) gain.(i))
