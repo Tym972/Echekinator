@@ -17,13 +17,13 @@ let mailbox_of_bitboard pieces_bitboards =
   done;
   mailbox
 
-let print_board mailbox =
+let print_board board =
   let display = ref "   +---+---+---+---+---+---+---+---+\n"
   in for i = 8 downto 1 do
     let k_list = ref [] in
     let k = string_of_int i ^ "  |" in
     for j = 8 * (i - 1) to 8 * i - 1 do
-      let piece = mailbox.(j) in
+      let piece = board.(j) in
       k_list := tab_print.(piece) :: !k_list;
     done;
     k_list := List.rev !k_list;
@@ -45,3 +45,25 @@ let word_detection chain =
 let is_integer_string chain =
   let i = try int_of_string chain with _ -> (-1) in
   i > 0
+
+let print_bitboard bitboard =
+  let board = Array.make 64 0 in
+  let rec aux_1 board index = match index with
+    |[] -> ()
+    |h::t ->
+      board.(h) <- 6;
+      aux_1 board t
+  in aux_1 board (index_list bitboard);
+  let display = ref "   +---+---+---+---+---+---+---+---+\n"
+  in for i = 8 downto 1 do
+    let k_list = ref [] in
+    let k = string_of_int i ^ "  |" in
+    for j = 8 * (i - 1) to 8 * i - 1 do
+      let piece = board.(j) in
+      k_list := tab_print.(piece) :: !k_list;
+    done;
+    k_list := List.rev !k_list;
+    let k_str = String.concat "" !k_list in
+    display := !display ^ (k ^ k_str ^ "\n" ^"   +---+---+---+---+---+---+---+---+\n");
+  done;
+  print_endline (!display ^ "     a   b   c   d   e   f   g   h\n")
