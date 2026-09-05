@@ -1,5 +1,5 @@
 open Libs.Board
-open Libs.Generator
+open Libs.Bitboards
 open Libs.Zobrist
 open Libs.Uci
 open Libs.Fen
@@ -12,7 +12,10 @@ let j = ref 0
 
 let nodes_to_search = 50000
 
-let is_quiet_position board white_to_move in_check provisional_score =
+let is_quiet_position position provisional_score =
+  let game_ply = position.game_ply in
+  let state = position.state_array.(game_ply) in
+  let in_check = state.in_check in
   let quiet = ref true in
   let m1 = 60 in
   let m2 = 70 in
@@ -20,8 +23,8 @@ let is_quiet_position board white_to_move in_check provisional_score =
     quiet := false
   end
   else begin
-    let static_eval = hce board white_to_move in
-    if abs (static_eval - quiescence_search 0 0 0 (-max_int) max_int true ) > m1 then begin
+    let static_eval = hce position in
+    if abs (static_eval - quiescence_search position 0 0 0 (-max_int) max_int true ) > m1 then begin
       quiet := false
     end
     else begin
@@ -85,7 +88,7 @@ let select_position moves_string evals initial_fen result =
   let board_record = ref [!zobrist_position] in
   let half_moves = ref 0 in
   let board = boards.(0) in
-  position_of_fen initial_fen board white_to_move last_move castling_rights king_position in_check moves_record zobrist_position board_record half_moves;
+  position_of_fen initial_fen position;
   let moves = move_list_of_algebric_list (List.map remove moves_string) !white_to_move !last_move !castling_rights board in
   let score = func_scores (List.hd evals) !white_to_move in
   if is_quiet_position board !white_to_move !in_check score then begin
@@ -104,7 +107,7 @@ let select_position moves_string evals initial_fen result =
       king_position := index_array board (king !white_to_move);
       in_check := threatened board !king_position !white_to_move;
       moves_record := move :: !moves_record;
-      let fen_position = fen board !white_to_move !last_move !castling_rights !moves_record !half_moves in
+      let fen_position = fen position in
       let score = func_scores eval_string !white_to_move in
       if is_quiet_position board !white_to_move !in_check score then begin
         let b = Printf.sprintf "%s | %i | %s" fen_position score result in
