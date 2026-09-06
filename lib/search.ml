@@ -87,14 +87,15 @@ let rec pvs position search_tables thread multi depth search_ply alpha beta ispv
               static_eval := hce position
             end;
             (*let _ = evaluate () in*)
-            if depth < 3 then begin
-              let margin = 100 * depth in
-              if !static_eval - margin >= !beta0 then begin
-                best_score := !static_eval - margin;
-                no_cut := false
-              end
-            end
-            else if !static_eval >= !beta0 then begin
+            if depth <= 7 && !static_eval - 70 * depth >= !beta0 then begin
+              best_score := !static_eval - 70 * depth;
+              no_cut := false
+            end;
+            (*if !no_cut && (depth <= 3 && !static_eval + 300 + 60 * depth < !alpha0) then begin
+              best_score := quiescence_search position search_tables thread depth search_ply alpha beta ispv;
+              no_cut := false
+            end;*)
+            if !no_cut && depth > 2 && !static_eval >= !beta0 then begin
               make_null position;
               let score = - pvs position search_tables thread multi (depth - 3) (search_ply + 1) (- !beta0) (- !beta0 + 1) false
               in if score >= !beta0 then begin

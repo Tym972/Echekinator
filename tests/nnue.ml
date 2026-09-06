@@ -213,11 +213,6 @@ let () =
     process_pgn_file "/home/tym972/Echekinator/Results/Pgn_fastchess.pgn";
     print_endline (string_of_int !j)
   end
-  else if false then begin
-    let size_in_words x = Obj.size (Obj.repr x)  (* nombre de mots *) in
-    let bytes = size_in_words !transposition_table.(1) * Sys.word_size / 8 in
-    print_endline (string_of_int bytes);
-  end
   else begin
         (* Travail CPU lourd, purement arithmétique *)
     let work n =
