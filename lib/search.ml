@@ -54,7 +54,7 @@ let rec pvs position search_tables thread multi depth search_ply alpha beta ispv
     end; *)
 
     (*Check repetion or fifty moves rule*)
-    if search_ply > 0 && (repetition position.state_array game_ply (*search_ply*) || (state.half_moves = 100 && (not in_check || (legal_moves position search_ply; position.number_of_moves.(search_ply) <> 0)))) then begin
+    if search_ply > 0 && (repetition position.state_array game_ply || (state.half_moves = 100 && (not in_check || (legal_moves position search_ply; position.number_of_moves.(search_ply) <> 0)))) then begin
       0
     end
 
@@ -81,7 +81,7 @@ let rec pvs position search_tables thread multi depth search_ply alpha beta ispv
 
         if !no_cut then begin
           
-          (*Reverse futility pruning and null move pruning*)
+          (*Reverse futility pruning razoring and null move pruning*)
           if not (in_check || ispv || is_loss !beta0 || zugzwang position.pieces position.white_to_move) then begin
             if hash_static_eval = (-max_int) then begin
               static_eval := hce position
@@ -91,10 +91,10 @@ let rec pvs position search_tables thread multi depth search_ply alpha beta ispv
               best_score := !static_eval - 70 * depth;
               no_cut := false
             end;
-            (*if !no_cut && (depth <= 3 && !static_eval + 300 + 60 * depth < !alpha0) then begin
+            if !no_cut && (depth <= 3 && !static_eval + 300 + 60 * depth < !alpha0) then begin
               best_score := quiescence_search position search_tables thread depth search_ply alpha beta ispv;
               no_cut := false
-            end;*)
+            end;
             if !no_cut && depth > 2 && !static_eval >= !beta0 then begin
               make_null position;
               let score = - pvs position search_tables thread multi (depth - 3) (search_ply + 1) (- !beta0) (- !beta0 + 1) false

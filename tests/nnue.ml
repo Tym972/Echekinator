@@ -24,7 +24,7 @@ let is_quiet_position position provisional_score =
   end
   else begin
     let static_eval = hce position in
-    if abs (static_eval - quiescence_search position 0 0 0 (-max_int) max_int true ) > m1 then begin
+    if abs (static_eval - quiescence_search position search_tables 0 0 0 (-max_int) max_int true ) > m1 then begin
       quiet := false
     end
     else begin
