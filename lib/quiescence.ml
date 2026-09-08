@@ -37,7 +37,7 @@ let captures position moves number hash_move =
     in List.map snd (merge_sort (aux !list))
 
 (*Fonction implémentant la recherche quiescente*)
-let rec quiescence_search position search_tables thread depth search_ply alpha beta ispv =
+let rec quiescence_search position search_tables thread search_ply alpha beta ispv =
 
   (*Check search limit*)
   if stop_search.(thread) then begin
@@ -56,7 +56,7 @@ let rec quiescence_search position search_tables thread depth search_ply alpha b
 
     else begin
       let best_move = ref 0 in
-      let hash_depth, hash_lower_bound, hash_upper_bound, hash_move, hash_static_eval = probe state.zobrist in
+      let _, hash_lower_bound, hash_upper_bound, hash_move, hash_static_eval = probe state.zobrist in
       let static_eval = ref hash_static_eval in
       let no_cut = ref true in
       let best_score = ref (- max_int) in
@@ -64,7 +64,7 @@ let rec quiescence_search position search_tables thread depth search_ply alpha b
       let beta0 = ref beta in
 
       (*Use TT informations*)
-      if not (ispv || depth > hash_depth) then begin
+      if not ispv then begin
         hash_treatment hash_lower_bound hash_upper_bound alpha0 beta0 best_score no_cut search_ply
       end;
       if !no_cut then begin
@@ -85,7 +85,7 @@ let rec quiescence_search position search_tables thread depth search_ply alpha b
           let counter = ref 0 in
           let move_loop move =
             make position move;
-            let score = - quiescence_search position search_tables thread (depth - 1) (search_ply + 1) (- !beta0) (- !alpha0) ispv
+            let score = - quiescence_search position search_tables thread (search_ply + 1) (- !beta0) (- !alpha0) ispv
             in if score > !best_score then begin
               best_score := score;
               if score > !alpha0 then begin
@@ -180,7 +180,7 @@ let rec quiescence_search position search_tables thread depth search_ply alpha b
           lower_bound := stored_value;
           upper_bound := stored_value
         end;
-      store thread state.zobrist depth !lower_bound !upper_bound !best_move !static_eval !go_counter
+      store thread state.zobrist 0 !lower_bound !upper_bound !best_move !static_eval !go_counter
       end;
     !best_score
     end

@@ -159,14 +159,14 @@ let span_of_milliseconds (s : float) : Mtime.span =
 let time_management wtime btime winc binc movetime white_to_move movestogo soft_bound hard_bound =
   let soft_bound_ms, hard_bound_ms =
     if wtime < 0. && btime < 0. then begin
-      movetime, movetime
+      max 1. movetime, max 1. movetime
     end
     else begin
       if white_to_move = 0 then begin
-        (wtime /. (min movestogo 22.)) +. winc /. 2., (wtime /. (min movestogo 18.)) +. winc /. 2.
+        max 1. ((wtime /. (min movestogo 22.)) +. winc /. 2.), max 1. ((wtime /. (min movestogo 18.)) +. winc /. 2.)
       end
       else begin
-        (btime /. (min movestogo 22.)) +. binc /. 2., (btime /. (min movestogo 18.)) +. binc /. 2.
+        max 1. ((btime /. (min movestogo 22.)) +. binc /. 2.), max 1. ((btime /. (min movestogo 18.)) +. binc /. 2.)
       end
     end
   in soft_bound := span_of_milliseconds soft_bound_ms;
@@ -436,7 +436,7 @@ let go instructions position search_tables =
     end
     else begin
       let print_bestmove = "bestmove " ^ try (uci_of_mouvement (!results.(!best_line_id).bestmove)) with _ -> "(none)" in
-      let print_ponder = (*try (" ponder " ^ uci_of_mouvement (List.nth !results.(!best_line_id).pv 1)) with _ ->*) "" in
+      let print_ponder = try " ponder " ^ uci_of_mouvement (List.nth (pv_finder position !results.(!best_line_id).bestmove !results.(!best_line_id).depth) 1) with _ -> "" in
       print_endline (print_bestmove ^ print_ponder)
     end
   end

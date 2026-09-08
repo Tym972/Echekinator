@@ -40,7 +40,7 @@ let rec pvs position search_tables thread multi depth search_ply alpha beta ispv
 
   (*Quiescense search*)
   else if depth = 0 then begin
-    quiescence_search position search_tables thread depth search_ply alpha beta ispv
+    quiescence_search position search_tables thread search_ply alpha beta ispv
   end
 
   (*Normal search*)
@@ -92,7 +92,7 @@ let rec pvs position search_tables thread multi depth search_ply alpha beta ispv
               no_cut := false
             end;
             if !no_cut && (depth <= 3 && !static_eval + 300 + 60 * depth < !alpha0) then begin
-              best_score := quiescence_search position search_tables thread depth search_ply alpha beta ispv;
+              best_score := quiescence_search position search_tables thread search_ply alpha beta ispv;
               no_cut := false
             end;
             if !no_cut && depth > 2 && !static_eval >= !beta0 then begin

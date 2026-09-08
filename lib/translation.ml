@@ -67,8 +67,6 @@ let mouvement_of_uci uci position =
   let white_to_move = position.white_to_move in
   let from = Hashtbl.find hash_coord (String.sub uci 0 2) in
   let to_ = ref (Hashtbl.find hash_coord (String.sub uci 2 2)) in
-
-
   let piece = (position.board.(from)) in
   let promotion_piece = try Hashtbl.find hash_pieces (Char.uppercase_ascii uci.[4]) with _ -> 0 in
   let capture = if position.board.(!to_) = 0 then 0 else 4 in

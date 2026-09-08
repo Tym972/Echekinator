@@ -4,16 +4,20 @@
  brouillon
  nnue
  magics
- bitboards)
+ bitboards
+ extractor
+ texel)
  (modules
  perft
  brouillon
  config
  positions
- to_algebraic
  bitboards
  nnue
- magics)
+ magics
+ extractor
+ algebraic
+ texel)
  (libraries 
  unix
  threads
