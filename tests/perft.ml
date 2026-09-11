@@ -3,6 +3,7 @@ open Libs.Fen
 open Libs.Bitboards
 open Libs.Miscellaneous
 open Libs.Uci
+open Libs.Move_ordering
 
 let nodes_total = ref 0
 
@@ -11,16 +12,16 @@ type perft_test =
   mutable depth : int;
   mutable result : int}
 
-let algoperftime position depth =
+let algoperftime position pickers depth =
   let start_time = Mtime_clock.counter () in
-  let fx = algoperft position depth 0 in
+  let fx = algoperft position pickers depth 0 in
   let exec_time =
     let span = Mtime_clock.count start_time in
     Mtime.Span.to_float_ns span /. 1e9
   in fx, exec_time
 
-let perft position depth =
-  let nodes, time = algoperftime position depth in
+let perft position pickers depth =
+  let nodes, time = algoperftime position pickers depth in
   nodes_total := !nodes_total + nodes;
   print_newline ();
   print_board position.board;
@@ -34,15 +35,16 @@ let perft position depth =
 let go_perft perft_test number  =
   let start_time = Mtime_clock.counter () in
   let position = create_position () in
+  let search_tables = create_search_tables () in
   for i = 0 to number - 1 do
     let test = perft_test.(i) in
     let fen = test.fen in
     let depth = test.depth in
     let result = test.result in
     uninitialized := true;
-    position_uci (word_detection ("position fen " ^ fen)) position;
+    position_uci (word_detection ("position fen " ^ fen)) position search_tables;
     print_endline (Printf.sprintf "#%i" (i + 1));
-    let nodes = perft position depth in if nodes <> result then begin
+    let nodes = perft position search_tables.pickers depth in if nodes <> result then begin
       print_endline "ERREUR";
       raise Exit
     end;

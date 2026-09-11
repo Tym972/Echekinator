@@ -6,22 +6,22 @@ open Libs.Evaluation
 open Libs.Quiescence
 open Algebraic
 
-let process_pgn_file filename engine1 engine2 = print_endline "SA";
+let process_pgn_file filename engine1 engine2 =
   let ic = open_in filename in
   let oc = open_out_gen [Open_creat; Open_text; Open_append] 0o666 "Extracted.txt" in
-  let i = ref 1 in
+  let moves_regexp = Str.regexp {|\([KQRBN]?[a-h]?[1-8]?x?[a-h][1-8]\(=[QRBN]\)?\|[a-h][1-8][a-h][1-8][qrbn]?\|O-O-O\|O-O\)|} in
+  let eval_regexp = Str.regexp {|{\(\([+-]?[0-9]*\.[0-9]+\)\|\([+-]M[0-9]+\)\)/[0-9][0-9]*[^}]*}|} in
+  let game_count = ref 0 in
   let position = create_position () in
   let search_tables = create_search_tables () in
-  let j = ref 1 in
   let rec read_games () =
-    print_endline (string_of_int !j); incr j;
     try
       let line = input_line ic in
       (* Détecte le début d'une partie *)
-      if String.starts_with ~prefix:"[Event" line then
+      if String.starts_with ~prefix:"[Event" line then begin
         process_game ic
-      else
-        read_games ()
+      end;
+      read_games ()
     with End_of_file -> close_in ic
   
   and process_game ic =
@@ -95,10 +95,10 @@ let process_pgn_file filename engine1 engine2 = print_endline "SA";
           read_moves ()
         end
         
-        (*Next game*)
+        (*Next game
         else begin
           read_games ()
-        end
+        end*)
 
       with End_of_file -> close_in ic
     
@@ -118,16 +118,17 @@ let process_pgn_file filename engine1 engine2 = print_endline "SA";
       in loop 0 []
 
     and extract_moves line =
-      extract_all (Str.regexp {|\([KQRBN]?[a-h]?[1-8]?x?[a-h][1-8]\(=[QRBN]\)?\|[a-h][1-8][a-h][1-8][qrbn]?\|O-O-O\|O-O\)|}) line
+      extract_all moves_regexp line
 
     and extract_evals line =
-      extract_all (Str.regexp {|{\(\([+-]?[0-9]*\.[0-9]+\)\|\([+-]M[0-9]+\)\)/[0-9][0-9]*[^}]*}|}) line
+      extract_all eval_regexp line
 
     and select_position engine moves engine_evals fen_string result =
-      print_endline (Printf.sprintf "Game #%i" !i);
-      incr i;
+      incr game_count;
+      if !game_count mod 1000 = 0 then begin
+        print_endline (Printf.sprintf "Game #%i" !game_count);
+      end;
       position_of_fen fen_string position;
-      Libs.Uci.reset_hash search_tables;
       let rec moves_loop moves engine_evals = match moves, engine_evals with
         |[], _ | _, [] -> ()
         |move :: other_moves, engine_eval :: other_engine_evals ->
@@ -143,7 +144,7 @@ let process_pgn_file filename engine1 engine2 = print_endline "SA";
       not (position.state_array.(position.game_ply).in_check || String.contains engine_eval 'M') &&
       begin
         let static_eval = hce position in
-        (abs (static_eval -  (int_of_float ((float_of_string engine_eval) *. 100.)))) <= 70 && (abs (static_eval - quiescence_search position search_tables 0 0 (- max_int) max_int true)) <= 60
+        (abs (static_eval - (int_of_float ((float_of_string engine_eval) *. 100.)))) <= 70 && (abs (static_eval - quiescence_search position search_tables 0 0 (- max_int) max_int true)) <= 60
       end
     
     and format_score engine_eval white_to_move =

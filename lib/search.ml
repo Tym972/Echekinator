@@ -52,9 +52,9 @@ let rec pvs position search_tables thread multi depth search_ply alpha beta ispv
       print_board board; print_board (board_of_vector board_vector);*)
       print_endline (string_of_float (evaluate ()) ^ " " ^ string_of_float (make_output_layer board_vector))
     end; *)
-
+    let picker = search_tables.pickers.(search_ply) in
     (*Check repetion or fifty moves rule*)
-    if search_ply > 0 && (repetition position.state_array game_ply || (state.half_moves = 100 && (not in_check || (legal_moves position search_ply; position.number_of_moves.(search_ply) <> 0)))) then begin
+    if search_ply > 0 && (repetition position.state_array game_ply || (state.half_moves = 100 && (not in_check || (legal_moves position picker phase_all; picker.number_of_captures + picker.number_of_quiets <> 0)))) then begin
       0
     end
 
@@ -114,101 +114,77 @@ let rec pvs position search_tables thread multi depth search_ply alpha beta ispv
           (*Move loop*)
           if !no_cut then begin
             let counter = ref 0 in
-            let moves = position.moves.(search_ply) in
-            let ordering_array = search_tables.ordering_array.(search_ply) in
-            let move_loop move =
-              make position move;
-              let score =
-                if !counter = 0 then begin
-                  - pvs position search_tables thread multi (depth - 1) (search_ply + 1) (- !beta0) (- !alpha0) ispv
-                end
-                else begin
-                  let score_lmr =
-                    let reduction =
-                      let float_depth = float_of_int depth in
-                      let float_counter = float_of_int (!counter - 1) in
-                      min
-                        (int_of_float begin
-                          if isquiet move then
-                            1.35 +. log (float_depth) *. log (float_counter) /. 2.75
-                          else
-                            0.20 +. log (float_depth) *. log (float_counter) /. 3.35
-                        end)
-                        (depth - 1)
-                    in if not (grossiere_erreur || depth < 3 || reduction = 0) then begin
-                      - pvs position search_tables thread multi (depth - 1 - reduction) (search_ply + 1) (- !alpha0 - 1) (- !alpha0) false
+            picker.stage <- Stage_TT;
+            picker.hash_move <- hash_move;
+            picker.number_of_captures <- 0;
+            picker.number_of_quiets <- 0;
+            while !no_cut do
+              let move = next_move position picker search_tables in
+              if move <> 0 then begin
+                make position move;
+                let score =
+                  if !counter = 0 then begin
+                    - pvs position search_tables thread multi (depth - 1) (search_ply + 1) (- !beta0) (- !alpha0) ispv
+                  end
+                  else begin
+                    let score_lmr =
+                      let reduction =
+                        let float_depth = float_of_int depth in
+                        let float_counter = float_of_int (!counter - 1) in
+                        min
+                          (int_of_float begin
+                            if isquiet move then
+                              1.35 +. log (float_depth) *. log (float_counter) /. 2.75
+                            else
+                              0.20 +. log (float_depth) *. log (float_counter) /. 3.35
+                          end)
+                          (depth - 1)
+                      in if not (grossiere_erreur || depth < 3 || reduction = 0) then begin
+                        - pvs position search_tables thread multi (depth - 1 - reduction) (search_ply + 1) (- !alpha0 - 1) (- !alpha0) false
+                      end
+                      else
+                        !alpha0 + 1
+                    in if score_lmr > !alpha0 then begin
+                      let score_0 = - pvs position search_tables thread multi (depth - 1) (search_ply + 1) (- !alpha0 - 1) (- !alpha0) false
+                      in if (score_0 > !alpha0 && ispv) then begin
+                        - pvs position search_tables thread multi (depth - 1) (search_ply + 1) (- !beta0) (- !alpha0) ispv
+                      end
+                      else begin
+                        score_0
+                      end
                     end
                     else
-                      !alpha0 + 1
-                  in if score_lmr > !alpha0 then begin
-                    let score_0 = - pvs position search_tables thread multi (depth - 1) (search_ply + 1) (- !alpha0 - 1) (- !alpha0) false
-                    in if (score_0 > !alpha0 && ispv) then begin
-                      - pvs position search_tables thread multi (depth - 1) (search_ply + 1) (- !beta0) (- !alpha0) ispv
-                    end
-                    else begin
-                      score_0
-                    end
+                      score_lmr
                   end
-                  else
-                    score_lmr
-                end
-              in if score > !best_score then begin
-                best_score := score;
-                if score > !alpha0 then begin
-                  best_move := move;
-                  alpha0 := score;
-                  if thread + search_ply = 0 && not (stop_search.(thread) || total_counter node_counter >= !node_limit) then begin
-                    !results.(multi) <- {depth = depth; score = score; bestmove = move}
+                in if score > !best_score then begin
+                  best_score := score;
+                  if score > !alpha0 then begin
+                    best_move := move;
+                    alpha0 := score;
+                    if thread + search_ply = 0 && not (stop_search.(thread) || total_counter node_counter >= !node_limit) then begin
+                      !results.(multi) <- {depth = depth; score = score; bestmove = move}
+                    end
+                  end;
+                  if score >= !beta0 then begin
+                    no_cut := false;
+                    if isquiet move then begin
+                      search_tables.history_moves.(history_index (position.white_to_move lxor 1) move) <- depth * depth;
+                      let quiet_move = move land 0xfff in
+                      let killer1 = picker.killer1 in
+                      if quiet_move <> killer1 then begin
+                        picker.killer1 <- quiet_move;
+                        picker.killer2 <- killer1
+                      end
+                    end
                   end
                 end;
-                if score >= !beta0 then begin
-                  no_cut := false;
-                  if isquiet move then begin
-                    search_tables.history_moves.(history_index (position.white_to_move lxor 1) move) <- depth * depth;
-                    let quiet_move = move land 0xfff in
-                    let killer0 = search_tables.killer_moves.(2 * search_ply) in
-                    if quiet_move <> killer0 then begin
-                      search_tables.killer_moves.(2 * search_ply) <- quiet_move;
-                      search_tables.killer_moves.(2 * search_ply + 1) <- killer0
-                    end
-                  end
-                end
-              end;
-              unmake position move;
-              incr counter
-            in if hash_move <> 0 then begin
-              move_loop hash_move;
-              if !no_cut then begin
-                if search_ply <> 0 || true then begin
-                  legal_moves position search_ply;
-                  move_ordering search_tables position moves position.number_of_moves.(search_ply) search_ply hash_move ordering_array
-                end;
-                while !no_cut do
-                  let move = move_picker moves ordering_array position.number_of_moves.(search_ply) in
-                  if move <> 0 then begin
-                    move_loop move 
-                  end 
-                  else begin
-                    no_cut := false
-                  end
-                done
+                unmake position move;
+                incr counter
               end
-            end
-            else begin
-              if search_ply <> 0 || true then begin
-                legal_moves position search_ply;
-                move_ordering search_tables position moves position.number_of_moves.(search_ply) search_ply 0 ordering_array
-              end;
-              while !no_cut do
-                let move = move_picker moves ordering_array position.number_of_moves.(search_ply)in
-                if move <> 0 then begin
-                  move_loop move 
-                end 
-                else begin
-                  no_cut := false
-                end
-              done
-            end;
+              else begin
+                no_cut := false
+              end
+            done;
             if !counter = 0 then begin
               if in_check then begin
                 best_score := search_ply - 99999

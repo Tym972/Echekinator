@@ -26,16 +26,16 @@ let fen position =
   let empties = ref 0 in
   for i = 0 to 63 do
     let square = board.(flip i) in
-    if square = 0 then begin
+    if square = empty then begin
       empties := !empties + 1
     end
     else begin
       if !empties > 0 then begin
-        fen := !fen ^ (string_of_int !empties) ^ (if square < 7 then tabfen_blanc.(square - 1) else tabfen_noir.(square - 7));
+        fen := !fen ^ (string_of_int !empties) ^ (if square < 6 then tabfen_blanc.(square) else tabfen_noir.(square - 6));
         empties := 0
       end
       else begin
-        fen := !fen ^ (if square < 7 then tabfen_blanc.(square - 1) else tabfen_noir.(square - 7))
+        fen := !fen ^ (if square < 6 then tabfen_blanc.(square) else tabfen_noir.(square - 6))
       end
     end;
     if (i + 1) mod 8 = 0 then begin
@@ -102,7 +102,7 @@ let fen position =
 let hash_fen =
   let ht = Hashtbl.create 13 in
   List.iter (fun (key, value) -> Hashtbl.add ht key value)
-  [ ('P', 1); ('N', 2); ('B', 3); ('R', 4); ('Q', 5); ('K', 6);  ('p', 7); ('n', 8); ('b', 9); ('r', 10); ('q', 11); ('k', 12);];
+  [ ('P', pawn); ('N', knight); ('B', bishop); ('R', rook); ('Q', queen); ('K', king);  ('p', black_pawn); ('n', black_knight); ('b', black_bishop); ('r', black_rook); ('q', black_queen); ('k', black_king);];
   ht
 
 (*Tableau utilisé pour expliciter la notation des castlings dans la notation FEN en cas d'ambiguïté*)
@@ -134,11 +134,11 @@ let position_of_fen chain position =
   state.captured_piece <- 0;
   position.occupancy.(0) <- 0L;
   position.occupancy.(1) <- 0L;
-  for piece = 1 to 12 do
+  for piece = pawn to black_king do
     pieces_bitboards.(piece) <- 0L
   done;
   for square = 0 to 63 do
-    board.(square) <- 0
+    board.(square) <- empty
   done;
   let fen_length = List.length !split_fen in
   let pieces_position = (List.nth !split_fen 0) in
@@ -152,19 +152,19 @@ let position_of_fen chain position =
       let elt = row_string.[!row_index] in
       let piece = try Hashtbl.find hash_fen elt with _ ->
         column := !column + (int_of_char elt - 48);
-        0
+        empty
       in board.(square) <- piece;
-      if piece <> 0 then begin
+      if piece <> empty then begin
         pieces_bitboards.(piece) <- pieces_bitboards.(piece) ||| single_bitboards_tab.(square);
         incr column
       end;
       incr row_index
     done
   done;
-  for piece = 1 to 6 do
+  for piece = pawn to king do
     position.occupancy.(0) <- position.occupancy.(0) ||| pieces_bitboards.(piece)
   done;
-  for piece = 7 to 12 do
+  for piece = pawn + 6 to king + 6 do
     position.occupancy.(1) <- position.occupancy.(1) ||| pieces_bitboards.(piece)
   done;
   let from_white_king = lsb_index pieces_bitboards.(king) in

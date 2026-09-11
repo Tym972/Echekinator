@@ -77,7 +77,7 @@ let number_of_pv = ref 1
 let best_line_id = ref (-1)
 
 (*Answer to the command "command"*)
-let position_uci instructions position =
+let position_uci instructions position search_tables =
   begin match instructions with
     |"position" :: str :: _ when List.mem str ["fen"; "startpos"] -> begin
         let index_moves = ref 2 in
@@ -91,14 +91,14 @@ let position_uci instructions position =
         in if str = "fen" then begin
           position_of_fen (aux_fen (pop instructions 2)) position
         end
-        else begin 
+        else begin
           position_of_fen startpos position;
         end;
         if ((List.length instructions) > !index_moves && List.nth instructions !index_moves = "moves") then begin
           let record = (word_detection (String.concat " " (pop instructions (!index_moves + 1)))) in
           make_list record position
         end;
-        legal_moves position 0
+        legal_moves position search_tables.pickers.(0) phase_all
       end
     |_ -> ()
   end
@@ -130,24 +130,27 @@ let position_uci instructions position =
 end;
   print_endline (!display ^ "     a   b   c   d   e   f   g   h\n")*)
 
-let rec algoperft position depth search_ply =
+let rec algoperft position pickers depth search_ply =
   if depth = 0 then begin
     1
   end
   else begin
-    legal_moves position search_ply;
+    let picker = pickers.(search_ply) in
+    legal_moves position picker phase_all;
     let nodes = ref 0 in
-    let moves = position.moves.(search_ply) in
-    for i = 0 to position.number_of_moves.(search_ply) - 1 do
-      let move = moves.(i) in
-      make position move;
-      let perft = (algoperft position (depth - 1) (search_ply + 1)) in
-      nodes := !nodes + perft;
-      if search_ply = 0 then begin
-        print_endline (uci_of_mouvement move ^ ": " ^ string_of_int perft)
-      end;
-      unmake position move
-    done;
+    let aux moves number_of_moves =
+      for i = 0 to number_of_moves - 1 do
+        let move = moves.(i) in
+        make position move;
+        let perft = (algoperft position pickers (depth - 1) (search_ply + 1)) in
+        nodes := !nodes + perft;
+        if search_ply = 0 then begin
+          print_endline (uci_of_mouvement move ^ ": " ^ string_of_int perft)
+        end;
+        unmake position move
+      done
+    in aux picker.capture_moves picker.number_of_captures;
+    aux picker.quiet_moves picker.number_of_quiets;
     !nodes
   end
 
@@ -267,7 +270,7 @@ let iterative_deepening position search_tables depth mate thread =
           order_of_multi := (!results.(multi).score, multi) :: !order_of_multi
         end
       done;
-      order_of_multi := merge_sort !order_of_multi;
+      order_of_multi := List.sort (fun x y -> compare y x) !order_of_multi;
       begin try
         best_line_id := snd (List.hd !order_of_multi) with _ -> ()
       end;
@@ -356,7 +359,8 @@ let setoption position search_tables instructions =
 
 (*Answer to the command "go"*)
 let go instructions position search_tables =
-  if position.number_of_moves.(0) = 0 then begin
+  let picker = search_tables.pickers.(0) in
+  if picker.number_of_captures + picker.number_of_quiets = 0 then begin
     let result = if true then "mate" else "cp" in
     print_endline (Printf.sprintf "info depth 0 score %s 0" result);
     print_endline "bestmove (none)"
@@ -368,8 +372,9 @@ let go instructions position search_tables =
     for thread = 0 to !threads_number - 1 do
       node_counter.(thread) <- 0
     done;
-    for i = 0 to (2 * max_depth) - 1 do
-      search_tables.killer_moves.(i) <- 0
+    for i = 0 to (max_depth + 40) - 1 do
+      search_tables.pickers.(i).killer1 <- 0;
+      search_tables.pickers.(i).killer2 <- 0
     done;
     incr go_counter;
     let is_pondering = ref false in
@@ -382,7 +387,7 @@ let go instructions position search_tables =
     node_limit := max_int;
     let depth = ref max_depth in
     let mate = ref (-1) in
-    let aux_searchmoves list =
+    (*let aux_searchmoves list =
       let index = ref 0 in
       let rec func move_list = match move_list with
         |uci_move :: other_moves ->
@@ -395,10 +400,10 @@ let go instructions position search_tables =
         |_ -> ()
       in func list;
       position.number_of_moves.(0) <- !index
-    in let rec aux instruction = match instruction with
+    in*) let rec aux instruction = match instruction with
       |h :: g :: t ->
         begin match h with
-          |"searchmoves" -> aux_searchmoves (g :: t)
+          (*|"searchmoves" -> aux_searchmoves (g :: t)*)
           |"ponder" -> is_pondering := true
           |"wtime" -> wtime := (float_of_string g)
           |"btime" -> btime := (float_of_string g)
@@ -417,7 +422,7 @@ let go instructions position search_tables =
     if not !is_pondering then begin
       time_management !wtime !btime !winc !binc !movetime position.white_to_move !movestogo soft_bound hard_bound
     end;
-    number_of_pv := min !multipv position.number_of_moves.(0);
+    number_of_pv := min !multipv (picker.number_of_captures + picker.number_of_quiets);
     results := (Array.init !multipv (fun _ ->  {depth = 0; score = 0; bestmove = 0}));
     if !threads_number > 1 then begin
       Mutex.lock domain_mutex;
@@ -464,7 +469,7 @@ let display position =
 let echekinator () =
   let position = create_position () in
   let search_tables = create_search_tables () in
-  position_uci ["position"; "startpos"] position;
+  position_uci ["position"; "startpos"] position search_tables;
   uninitialized := true;
   print_endline (project_name ^ " by Timothée Fixy");
   let exit = ref false in
@@ -478,9 +483,9 @@ let echekinator () =
       |"isready" :: _ -> print_endline "readyok"
       |"setoption" :: _ -> process (fun () -> setoption position search_tables instructions)
       |"ucinewgame" :: _ -> process (fun () -> reset_hash search_tables)
-      |"position" :: _ -> process (fun () -> position_uci instructions position)
+      |"position" :: _ -> process (fun () -> position_uci instructions position search_tables)
       |"go" :: "perft" :: depth :: _ when is_integer_string depth ->
-        print_endline ("\n" ^ "Nodes searched : " ^ (string_of_int (algoperft position (int_of_string depth) 0)));
+        print_endline ("\n" ^ "Nodes searched : " ^ (string_of_int (algoperft position search_tables.pickers (int_of_string depth) 0)));
       |"go" :: _ ->
         let _ = Thread.create
           (fun () -> process (fun () -> go instructions position search_tables)) ()
@@ -492,9 +497,9 @@ let echekinator () =
         done;
       |"d" :: _ -> display position
       |"eval" :: _ ->
-        (*for i = 0 to position.number_of_moves.(0) - 1 do
-          print_endline (Printf.sprintf "%s : see %i" (uci_of_mouvement position.moves.(0).(i)) (see position position.moves.(0).(i)))
-        done;*)
+        for i = 0 to search_tables.pickers.(0).number_of_captures - 1 do
+          print_endline (Printf.sprintf "%s : see %i" (uci_of_mouvement search_tables.pickers.(0).capture_moves.(i)) (see position search_tables.pickers.(0).capture_moves.(i)))
+        done;
         let eval =
           if position.white_to_move = 0 then
             (float_of_int (hce position)) /. 100.

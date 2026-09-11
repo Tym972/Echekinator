@@ -20,22 +20,6 @@ let repetition state game_ply =
   done;
   !repeat
 
-let captures position moves number hash_move =
-  let list = ref [] in
-  for i = 0 to number - 1 do
-    if get_move_flag moves.(i) > 3 && moves.(i) <> hash_move then
-      list := moves.(i) :: !list
-  done;
-  let rec aux list = match list with
-    |[] -> []
-    |move :: t ->
-      let note = see position move in
-      if note >= 0 then
-        (note, move) :: aux t
-      else
-        aux t
-    in List.map snd (merge_sort (aux !list))
-
 (*Fonction implémentant la recherche quiescente*)
 let rec quiescence_search position search_tables thread search_ply alpha beta ispv =
 
@@ -45,12 +29,13 @@ let rec quiescence_search position search_tables thread search_ply alpha beta is
   end
 
   else begin
+    let picker = search_tables.pickers.(search_ply) in
     let game_ply = position.game_ply in
     let state = position.state_array.(game_ply) in
     let in_check = state.in_check in
     
     (*Check repetion or fifty moves rule*)
-    if repetition position.state_array game_ply || (state.half_moves = 100 && (not in_check || (legal_moves position search_ply; position.number_of_moves.(search_ply) <> 0))) then begin
+    if repetition position.state_array game_ply || (state.half_moves = 100 && (not in_check || (legal_moves position picker phase_all; picker.number_of_captures + picker.number_of_quiets <> 0))) then begin
       0
     end
 
@@ -77,12 +62,15 @@ let rec quiescence_search position search_tables thread search_ply alpha beta is
 
         (*Stand pat verification then move loop*)
         if !best_score < beta then begin
-          let moves = position.moves.(search_ply) in
           if !best_score > !alpha0 then begin
             alpha0 := !best_score
           end;
 
           let counter = ref 0 in
+          picker.stage <- Stage_TT;
+          picker.hash_move <- hash_move;
+          picker.number_of_captures <- 0;
+          picker.number_of_quiets <- 0;
           let move_loop move =
             make position move;
             let score = - quiescence_search position search_tables thread (search_ply + 1) (- !beta0) (- !alpha0) ispv
@@ -103,28 +91,16 @@ let rec quiescence_search position search_tables thread search_ply alpha beta is
 
           (*If in check search for all moves*)
           in if in_check then begin
-            let move_loop_in_check () =
-              legal_moves position search_ply;
-              let ordering_array = search_tables.ordering_array.(search_ply) in
-              move_ordering search_tables position moves position.number_of_moves.(search_ply) search_ply hash_move ordering_array;
-              while !no_cut do
-                let move = move_picker moves ordering_array position.number_of_moves.(search_ply) in
-                  if move <> 0 then begin
-                    move_loop move 
-                  end 
-                  else begin
-                    no_cut := false
-                  end
-              done
-            in if hash_move <> 0 then begin
-              move_loop hash_move;
-              if !no_cut then begin
-                move_loop_in_check ()
+            
+            while !no_cut do
+              let move = next_move position picker search_tables in
+              if move <> 0 then begin
+                move_loop move 
+              end 
+              else begin
+                no_cut := false
               end
-            end
-            else begin
-              move_loop_in_check ()
-            end;
+            done;
 
             (*Check for mate*)
             if !best_score = (- max_int) then begin
@@ -135,22 +111,17 @@ let rec quiescence_search position search_tables thread search_ply alpha beta is
 
           (*Else only search for captures and promotions*)
           else begin
-            let move_loop_normal () =
-              legal_moves position search_ply;
-              let captures = ref (captures position moves position.number_of_moves.(search_ply) hash_move) in
-              while !no_cut && !captures <> [] do
-                move_loop (List.hd !captures);
-                captures := List.tl !captures
-              done
-            in if hash_move <> 0 && not (isquiet hash_move) then begin
-              move_loop hash_move;
-              if !no_cut then begin
-                move_loop_normal ()
+            
+            while !no_cut do
+              let move = qsearch_next_move position picker search_tables in
+              if move <> 0 then begin
+                move_loop move
+              end 
+              else begin
+                no_cut := false
               end
-            end
-            else begin
-              move_loop_normal ()
-            end
+            done
+
           end
 
         end

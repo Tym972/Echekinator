@@ -70,26 +70,28 @@ let [@inline] msb_index bitboard =
 
 let single_bitboards_tab = Array.init 64 (fun i -> Int64.shift_left 1L i)
 
-let pawn = 1
-let knight = 2
-let bishop = 3
-let rook = 4
-let queen = 5
-let king = 6
+let pawn = 0
+let knight = 1
+let bishop = 2
+let rook = 3
+let queen = 4
+let king = 5
 
-let black_pawn = 7
-let black_knight = 8
-let black_bishop = 9
-let black_rook = 10
-let black_queen = 11
-let black_king = 12
+let black_pawn = 6
+let black_knight = 7
+let black_bishop = 8
+let black_rook = 9
+let black_queen = 10
+let black_king = 11
 
-let [@inline] is_pawn piece = piece mod 6 = 1
-let [@inline] is_knight piece = piece mod 6 = 2
-let [@inline] is_bishop piece = piece mod 6 = 3
-let [@inline] is_rook piece = piece mod 6 = 4
-let [@inline] is_queen piece = piece mod 6 = 5
-let [@inline] is_king piece = piece mod 6 = 0
+let empty = 12
+
+let [@inline] is_pawn piece = piece mod 6 = pawn
+let [@inline] is_knight piece = piece mod 6 = knight
+let [@inline] is_bishop piece = piece mod 6 = bishop
+let [@inline] is_rook piece = piece mod 6 = rook
+let [@inline] is_queen piece = piece mod 6 = queen
+let [@inline] is_king piece = piece mod 6 = king
 
 (*          binary move bits                       hexidecimal constants
     
@@ -130,9 +132,6 @@ let [@inline] get_move_to move =
 
 let [@inline] get_move_flag move =
   (move land 0xf000) lsr 12
-
-let [@inline] is_capture flag =
-  flag land 4 <> 0
 
 let [@inline] isquiet move =
   (move land 0xf000) lsr 12 < 4
@@ -237,10 +236,29 @@ type position = {
   pieces : int64 array;
   occupancy : int64 array;
   state_array : state array;
-  board : int array;
-  moves : int array array;
-  number_of_moves : int array
+  board : int array
 }
+
+type search_stage =
+  |Stage_TT
+  |Stage_Good_Captures
+  |Stage_Killers
+  |Stage_History
+  |Stage_Bad_Captures
+  |Stage_Done
+
+type picker = {
+  mutable hash_move : int;
+  mutable killer1 : int;
+  mutable killer2 : int;
+  quiet_moves : int array;
+  mutable number_of_quiets : int;
+  quiet_scores : int array;
+  capture_moves : int array;
+  mutable number_of_captures : int;
+  captures_scores : int array;
+  mutable stage : search_stage
+  }
 
 (* 120-element array where -1 represents an off-board square *)
 let tab120 = [| 
@@ -711,67 +729,13 @@ let [@inline] generate_all_attacks pieces occupancy white_to_move =
   aux pieces.(king + 6 * white_to_move) generate_king_attacks;
   !all_attacks
 
-let [@inline] generate_pawn_moves pieces white_to_move ep_square total_occupancy not_occupancy oponent_occupancy moves number_of_moves from king_square in_check check_mask pin_mask =
-  let legality_mask = check_mask &&& pin_mask.(from) in
-  let promotion_rank = promotion_ranks.(white_to_move) in
-  let pawn_attacks = generate_pawn_attacks from white_to_move in
-  let single_push = single_bitboards_tab.(from + push_vects.(white_to_move)) &&& not_occupancy in
-  let double_push =
-    begin
-      if single_push = 0L || single_bitboards_tab.(from) &&& double_push_ranks.(white_to_move) = 0L then begin
-        0L
-      end
-      else begin
-        single_bitboards_tab.(from + 2 * push_vects.(white_to_move)) &&& not_occupancy &&& legality_mask
-      end
-    end
-  in let captures = pawn_attacks &&& oponent_occupancy &&& legality_mask in
-  let enpassant =
-    if ep_square <> (-1) && not (is_sniped king_square white_to_move (total_occupancy ^^^ single_bitboards_tab.(from) ^^^ single_bitboards_tab.(ep_square - push_vects.(white_to_move)) ||| single_bitboards_tab.(ep_square)) pieces) && (not in_check || check_mask = single_bitboards_tab.(ep_square - push_vects.(white_to_move))) then begin
-      pawn_attacks &&& single_bitboards_tab.(ep_square) &&& pin_mask.(from)
-    end
-    else begin
-      0L
-    end
-  in let promotion_push = promotion_rank &&& single_push &&& legality_mask in
-  let promotion_captures = promotion_rank &&& captures in
-  if single_push &&& legality_mask <> 0L && promotion_push = 0L then begin
-    moves.(!number_of_moves) <- encode_move from (lsb_index single_push) 0;
-    incr number_of_moves
-  end;
-  if double_push <> 0L then begin
-    moves.(!number_of_moves) <- encode_move from (lsb_index double_push) 1;
-    incr number_of_moves
-  end;
-  if captures <> 0L && promotion_captures = 0L then begin
-    add_pawn_moves moves number_of_moves captures from 4
-  end;
-  if enpassant <> 0L then begin
-    add_pawn_moves moves number_of_moves enpassant from 5
-  end;
-  if promotion_push <> 0L then begin
-    add_promotion_moves moves number_of_moves promotion_push from 0
-  end;
-  if promotion_captures <> 0L then begin
-    add_promotion_moves moves number_of_moves promotion_captures from 4
-  end
+let phase_capture = 1
+let phase_quiet = 2
+let phase_all = 3
 
-let [@inline] generate_castling_moves in_check all_attacks pin_mask castling_rights white_to_move occupancy moves number_of_moves from =
-  let player_castling_info = castling_infos.(white_to_move) in
-  let [@inline] aux to_king from_rook castling_rights castling castling_flag empty_mask safe_mask =
-    if castling_rights land castling = castling && (empty_mask &&& occupancy = 0L) && (all_attacks &&& safe_mask = 0L) && (pin_mask.(from_rook) = 0xFFFFFFFFFFFFFFFFL) then begin
-      moves.(!number_of_moves) <- encode_move from to_king castling_flag;
-      incr number_of_moves;
-    end
-  in
-  if not (in_check || from <> player_castling_info.from_king) then begin
-    aux player_castling_info.to_short_king player_castling_info.from_short_rook castling_rights player_castling_info.short_castling 2 player_castling_info.short_castling_empty_mask player_castling_info.short_castling_safe_mask;
-    aux player_castling_info.to_long_king player_castling_info.from_long_rook castling_rights player_castling_info.long_castling 3 player_castling_info.long_castling_empty_mask player_castling_info.long_castling_safe_mask
-  end
-
-let [@inline] generate_normal_moves attacks oponent_occupancy not_friendly_occupancy moves number_of_moves from =
+let [@inline] generate_normal_moves attacks oponent_occupancy not_friendly_occupancy capture_moves number_of_captures quiet_moves number_of_quiets from phase =
   let captures_bitboard = attacks &&& oponent_occupancy in
-  let [@inline] aux moves_bitboard capture =
+  let [@inline] aux moves number_of_moves moves_bitboard capture =
     let bitboard = ref moves_bitboard in
     while !bitboard <> 0L do
       let to_, other_moves_bitboard = pop_lsb !bitboard in
@@ -779,11 +743,15 @@ let [@inline] generate_normal_moves attacks oponent_occupancy not_friendly_occup
       incr number_of_moves;
       bitboard := other_moves_bitboard
     done;
-  in aux captures_bitboard 4;
-  aux (attacks &&& (Int64.logxor not_friendly_occupancy captures_bitboard)) 0
+  in if phase land phase_capture <> 0 then begin
+    aux capture_moves number_of_captures captures_bitboard 4
+  end;
+  if phase land phase_quiet <> 0 then begin
+    aux quiet_moves number_of_quiets (attacks &&& (Int64.logxor not_friendly_occupancy captures_bitboard)) 0
+  end
 
 let [@inline] zobrist_index square piece =
-  square * 12 + piece - 1
+  square * 12 + piece
 
 (*Création d'un tableau de nombres pseudo aléatoires. 12 * 64 cases
   pour chaque pièce de chaque case, + 1 case pour indiquer le trait + 4 cases
@@ -792,7 +760,7 @@ let tab_zobrist = Array.make 781 0L
 
 let tab_zobrist_castling = Array.make 16 0L
 
-let legal_moves position search_ply =
+let legal_moves position picker phase =
   let state = position.state_array.(position.game_ply) in
   let white_to_move = position.white_to_move in
   let pieces = position.pieces in
@@ -804,15 +772,15 @@ let legal_moves position search_ply =
   
   let check_mask =
     if in_check then begin
-    let direct_checkers = 
-      ((generate_pawn_attacks king_square white_to_move) &&& pieces.(pawn + 6 * (white_to_move lxor 1))) |||
-      (knight_table.(king_square) &&& pieces.(knight + 6 * (white_to_move lxor 1)))
-    in let all_checkers =
-      direct_checkers |||
-      (generate_bishop_attacks king_square total_occupancy &&& (pieces.(queen + 6 * (white_to_move lxor 1)) ||| pieces.(bishop + 6 * (white_to_move lxor 1)))) |||
-      (generate_rook_attacks king_square total_occupancy &&& (pieces.(queen + 6 * (white_to_move lxor 1)) ||| pieces.(rook + 6 * (white_to_move lxor 1))))
-    in let number_of_cheks = population_count all_checkers in
-      if number_of_cheks > 1 then begin
+      let direct_checkers = 
+        ((generate_pawn_attacks king_square white_to_move) &&& pieces.(pawn + 6 * (white_to_move lxor 1))) |||
+        (knight_table.(king_square) &&& pieces.(knight + 6 * (white_to_move lxor 1)))
+      in let all_checkers =
+        direct_checkers |||
+        (generate_bishop_attacks king_square total_occupancy &&& (pieces.(queen + 6 * (white_to_move lxor 1)) ||| pieces.(bishop + 6 * (white_to_move lxor 1)))) |||
+        (generate_rook_attacks king_square total_occupancy &&& (pieces.(queen + 6 * (white_to_move lxor 1)) ||| pieces.(rook + 6 * (white_to_move lxor 1))))
+      in let number_of_checks = population_count all_checkers in
+      if number_of_checks > 1 then begin
         0L
       end
       else begin
@@ -828,6 +796,7 @@ let legal_moves position search_ply =
     else begin
       0xFFFFFFFFFFFFFFFFL
     end
+  
   in let pin_mask = Array.make 64 0xFFFFFFFFFFFFFFFFL in
   let pin_candidates = ref (
     (generate_bishop_attacks king_square 0L &&& (pieces.(bishop + 6 * (white_to_move lxor 1)) ||| pieces.(queen + 6 * (white_to_move lxor 1)))) |||
@@ -835,7 +804,7 @@ let legal_moves position search_ply =
     )
   in while !pin_candidates <> 0L do
     let attacker_square, other_candidates = pop_lsb !pin_candidates in
-    let ray =  ray_table.(king_square).(attacker_square) in
+    let ray = ray_table.(king_square).(attacker_square) in
     let blockers = ray &&& total_occupancy in
     let number_of_blockers = population_count blockers in
     if number_of_blockers = 2 then begin
@@ -847,31 +816,90 @@ let legal_moves position search_ply =
     pin_candidates := other_candidates
   done;
   
-  let moves = position.moves.(search_ply) in
-  let number_of_moves = ref 0 in
   let friendly_occupancy = position.occupancy.(white_to_move) in
   let oponent_occupancy = position.occupancy.(white_to_move lxor 1)  in
   let not_occupancy = Int64.lognot total_occupancy in
   let not_friendly_occupancy = Int64.lognot friendly_occupancy in
   let pieces = position.pieces in
+  let capture_moves = picker.capture_moves in
+  let number_of_captures = ref 0 in
+  let quiet_moves = picker.quiet_moves in
+  let number_of_quiets = ref 0 in
 
   (*Generate pawns moves*)
   let pawns_bitboard = ref pieces.(pawn + 6 * white_to_move) in
   while !pawns_bitboard <> 0L do
     let from, other_pieces_bitboard = pop_lsb !pawns_bitboard in
-    generate_pawn_moves pieces white_to_move state.ep_square total_occupancy not_occupancy oponent_occupancy moves number_of_moves from king_square state.in_check check_mask pin_mask;
+    let legality_mask = check_mask &&& pin_mask.(from) in
+    let single_push = single_bitboards_tab.(from + push_vects.(white_to_move)) &&& not_occupancy in
+    let promotion_rank = promotion_ranks.(white_to_move) in
+    let promotion_push = promotion_rank &&& single_push &&& legality_mask in
+    if phase land phase_quiet <> 0 then begin
+      let double_push =
+        if single_push = 0L || single_bitboards_tab.(from) &&& double_push_ranks.(white_to_move) = 0L then begin
+          0L
+        end
+        else begin
+          single_bitboards_tab.(from + 2 * push_vects.(white_to_move)) &&& not_occupancy &&& legality_mask
+        end
+      in if single_push &&& legality_mask <> 0L && promotion_push = 0L then begin
+        quiet_moves.(!number_of_quiets) <- encode_move from (lsb_index single_push) 0;
+        incr number_of_quiets
+      end;
+      if double_push <> 0L then begin
+        quiet_moves.(!number_of_quiets) <- encode_move from (lsb_index double_push) 1;
+        incr number_of_quiets
+      end
+    end;
+    if phase land phase_capture <> 0 then begin
+      let pawn_attacks = generate_pawn_attacks from white_to_move in
+      let captures = pawn_attacks &&& oponent_occupancy &&& legality_mask in
+      let ep_square = state.ep_square in
+      let enpassant =
+        if ep_square <> (-1) && not (is_sniped king_square white_to_move (total_occupancy ^^^ single_bitboards_tab.(from) ^^^ single_bitboards_tab.(ep_square - push_vects.(white_to_move)) ||| single_bitboards_tab.(ep_square)) pieces) && (not in_check || check_mask = single_bitboards_tab.(ep_square - push_vects.(white_to_move))) then begin
+          pawn_attacks &&& single_bitboards_tab.(ep_square) &&& pin_mask.(from)
+        end
+        else begin
+          0L
+        end
+      in let promotion_push = promotion_rank &&& single_push &&& legality_mask in
+      let promotion_captures = promotion_rank &&& captures in
+      if captures <> 0L && promotion_captures = 0L then begin
+        add_pawn_moves capture_moves number_of_captures captures from 4
+      end;
+      if enpassant <> 0L then begin
+        add_pawn_moves capture_moves number_of_captures enpassant from 5
+      end;
+      if promotion_push <> 0L then begin
+        add_promotion_moves capture_moves number_of_captures promotion_push from 0
+      end;
+      if promotion_captures <> 0L then begin
+        add_promotion_moves capture_moves number_of_captures promotion_captures from 4
+      end
+    end;
     pawns_bitboard := other_pieces_bitboard
   done;
 
   (*Generate castling moves*)
-  generate_castling_moves state.in_check all_attacks pin_mask state.castling_rights white_to_move total_occupancy moves number_of_moves king_square;
+  let castling_rights = state.castling_rights in
+  let player_castling_info = castling_infos.(white_to_move) in
+  if not (in_check || king_square <> player_castling_info.from_king || phase land phase_quiet = 0) then begin
+    let [@inline] aux to_king from_rook castling_rights castling castling_flag empty_mask safe_mask =
+      if castling_rights land castling = castling && (empty_mask &&& total_occupancy = 0L) && (all_attacks &&& safe_mask = 0L) && (pin_mask.(from_rook) = 0xFFFFFFFFFFFFFFFFL) then begin
+        quiet_moves.(!number_of_quiets) <- encode_move king_square to_king castling_flag;
+        incr number_of_quiets;
+      end
+    in 
+    aux player_castling_info.to_short_king player_castling_info.from_short_rook castling_rights player_castling_info.short_castling 2 player_castling_info.short_castling_empty_mask player_castling_info.short_castling_safe_mask;
+    aux player_castling_info.to_long_king player_castling_info.from_long_rook castling_rights player_castling_info.long_castling 3 player_castling_info.long_castling_empty_mask player_castling_info.long_castling_safe_mask
+  end;
 
   (*Generate normal moves*)
   let bitboard = ref pieces.(knight + 6 * white_to_move) in
   while !bitboard <> 0L do
     let from, other_pieces_bitboard = pop_lsb !bitboard in
     let piece_attacks = generate_knight_attacks from &&& check_mask &&& pin_mask.(from) in
-    generate_normal_moves piece_attacks oponent_occupancy not_friendly_occupancy moves number_of_moves from;
+    generate_normal_moves piece_attacks oponent_occupancy not_friendly_occupancy capture_moves number_of_captures quiet_moves number_of_quiets from phase;
     bitboard := other_pieces_bitboard
   done;
 
@@ -879,7 +907,7 @@ let legal_moves position search_ply =
   while !bitboard <> 0L do
     let from, other_pieces_bitboard = pop_lsb !bitboard in
     let piece_attacks = generate_bishop_attacks from total_occupancy &&& check_mask &&& pin_mask.(from) in
-    generate_normal_moves piece_attacks oponent_occupancy not_friendly_occupancy moves number_of_moves from;
+    generate_normal_moves piece_attacks oponent_occupancy not_friendly_occupancy capture_moves number_of_captures quiet_moves number_of_quiets from phase;
     bitboard := other_pieces_bitboard
   done;
 
@@ -887,7 +915,7 @@ let legal_moves position search_ply =
   while !bitboard <> 0L do
     let from, other_pieces_bitboard = pop_lsb !bitboard in
     let piece_attacks = generate_rook_attacks from total_occupancy &&& check_mask &&& pin_mask.(from) in
-    generate_normal_moves piece_attacks oponent_occupancy not_friendly_occupancy moves number_of_moves from;
+    generate_normal_moves piece_attacks oponent_occupancy not_friendly_occupancy capture_moves number_of_captures quiet_moves number_of_quiets from phase;
     bitboard := other_pieces_bitboard
   done;
 
@@ -895,13 +923,18 @@ let legal_moves position search_ply =
   while !bitboard <> 0L do
     let from, other_pieces_bitboard = pop_lsb !bitboard in
     let piece_attacks = generate_queen_attacks from total_occupancy &&& check_mask &&& pin_mask.(from) in
-    generate_normal_moves piece_attacks oponent_occupancy not_friendly_occupancy moves number_of_moves from;
+    generate_normal_moves piece_attacks oponent_occupancy not_friendly_occupancy capture_moves number_of_captures quiet_moves number_of_quiets from phase;
     bitboard := other_pieces_bitboard
   done;
 
   let piece_attacks = generate_king_attacks king_square &&& (Int64.lognot all_attacks) in
-  generate_normal_moves piece_attacks oponent_occupancy not_friendly_occupancy moves number_of_moves king_square;
-  position.number_of_moves.(search_ply) <- !number_of_moves 
+  generate_normal_moves piece_attacks oponent_occupancy not_friendly_occupancy capture_moves number_of_captures quiet_moves number_of_quiets king_square phase;
+  if phase land phase_capture <> 0 then begin
+    picker.number_of_captures <- !number_of_captures
+  end;
+  if phase land phase_quiet <> 0 then begin
+    picker.number_of_quiets <- !number_of_quiets
+  end
 
 let make_null position =
   let state = position.state_array.(position.game_ply) in
@@ -949,7 +982,7 @@ let make position move =
   let flag = get_move_flag move in
   begin match flag with
     |0 ->
-      board.(from) <- 0;
+      board.(from) <- empty;
       board.(to_) <- piece;
       new_state.zobrist <- new_state.zobrist ^^^ tab_zobrist.(zobrist_index from piece) ^^^ tab_zobrist.(zobrist_index to_ piece);
       pieces.(piece) <- pieces.(piece) ^^^ single_bitboards_tab.(from) ^^^ single_bitboards_tab.(to_);
@@ -963,7 +996,7 @@ let make position move =
         new_state.half_moves <- 0
       end;
     |4 ->
-      board.(from) <- 0;
+      board.(from) <- empty;
       board.(to_) <- piece;
       new_state.zobrist <- new_state.zobrist ^^^ tab_zobrist.(zobrist_index from piece) ^^^ tab_zobrist.(zobrist_index to_ piece) ^^^ tab_zobrist.(zobrist_index to_ captured_piece);
       pieces.(piece) <- pieces.(piece) ^^^ single_bitboards_tab.(from) ^^^ single_bitboards_tab.(to_);
@@ -977,7 +1010,7 @@ let make position move =
       end;
       new_state.half_moves <- 0
     |1 ->
-      board.(from) <- 0;
+      board.(from) <- empty;
       board.(to_) <- piece;
       if (pieces.(pawn + 6 * (white_to_move lxor 1)) &&& enpassant_table.(to_) <> 0L) then begin
         new_state.ep_square <- (from + to_) / 2;
@@ -993,8 +1026,8 @@ let make position move =
       let player_castling_info = castling_infos.(white_to_move) in
       let from_rook = player_castling_info.from_short_rook in
       let to_rook = player_castling_info.to_short_rook in
-      board.(from) <- 0;
-      board.(from_rook) <- 0;
+      board.(from) <- empty;
+      board.(from_rook) <- empty;
       board.(to_) <- player_king;
       board.(to_rook) <- player_rook;
       pieces.(player_king) <- pieces.(player_king) ^^^ single_bitboards_tab.(from) ^^^ single_bitboards_tab.(to_);
@@ -1012,8 +1045,8 @@ let make position move =
       let player_castling_info = castling_infos.(white_to_move) in
       let from_rook = player_castling_info.from_long_rook in
       let to_rook = player_castling_info.to_long_rook in
-      board.(from) <- 0;
-      board.(from_rook) <- 0;
+      board.(from) <- empty;
+      board.(from_rook) <- empty;
       board.(to_) <- player_king;
       board.(to_rook) <- player_rook;
       pieces.(player_king) <- pieces.(player_king) ^^^ single_bitboards_tab.(from) ^^^ single_bitboards_tab.(to_);
@@ -1026,13 +1059,12 @@ let make position move =
         tab_zobrist.(zobrist_index from player_king) ^^^ tab_zobrist.(zobrist_index to_ player_king) ^^^
         tab_zobrist.(zobrist_index from_rook player_rook) ^^^ tab_zobrist.(zobrist_index to_rook player_rook)
     |5 ->
-      board.(from) <- 0;
+      board.(from) <- empty;
       board.(to_) <- piece;
       let captured_pawn_square = (to_ - push_vects.(white_to_move)) in
-      board.(captured_pawn_square) <- 0;
+      board.(captured_pawn_square) <- empty;
       let captured_pawn = pawn + 6 * (white_to_move lxor 1) in
       new_state.captured_piece <- captured_pawn;
-      board.(captured_pawn_square) <- 0;
       new_state.zobrist <- new_state.zobrist ^^^ tab_zobrist.(zobrist_index from piece) ^^^ tab_zobrist.(zobrist_index to_ piece) ^^^ tab_zobrist.(zobrist_index captured_pawn_square captured_pawn);
       pieces.(piece) <- pieces.(piece) ^^^ single_bitboards_tab.(from) ^^^ single_bitboards_tab.(to_);
       pieces.(captured_pawn) <- pieces.(captured_pawn) ^^^ single_bitboards_tab.(captured_pawn_square);
@@ -1041,8 +1073,8 @@ let make position move =
       new_state.half_moves <- 0
     |_ ->
       begin
-        let promotion_piece = (flag lor 4) + - 10 +  6 * white_to_move in
-        board.(from) <- 0;
+        let promotion_piece = (flag lor 4) + - 11 +  6 * white_to_move in
+        board.(from) <- empty;
         board.(to_) <- promotion_piece;
         pieces.(piece) <- pieces.(piece) ^^^ single_bitboards_tab.(from);
         pieces.(promotion_piece) <- pieces.(promotion_piece) ^^^ single_bitboards_tab.(to_);
@@ -1079,7 +1111,7 @@ let unmake position move =
   let flag = get_move_flag move in match flag with
   |0|1 ->
     board.(from) <- piece;
-    board.(to_) <- 0;
+    board.(to_) <- empty;
     pieces.(piece) <- pieces.(piece) ^^^ single_bitboards_tab.(from) ^^^ single_bitboards_tab.(to_);
     occupancy.(white_to_move) <- occupancy.(white_to_move) ^^^ single_bitboards_tab.(from) ^^^ single_bitboards_tab.(to_)
   |4 ->
@@ -1095,8 +1127,8 @@ let unmake position move =
     let player_castling_info = castling_infos.(white_to_move) in
     let from_rook = player_castling_info.from_short_rook in
     let to_rook = player_castling_info.to_short_rook in
-    board.(to_) <- 0;
-    board.(to_rook) <- 0;
+    board.(to_) <- empty;
+    board.(to_rook) <- empty;
     board.(from) <- piece;
     board.(from_rook) <- player_rook;
     pieces.(player_king) <- pieces.(player_king) ^^^ single_bitboards_tab.(from) ^^^ single_bitboards_tab.(to_);
@@ -1108,8 +1140,8 @@ let unmake position move =
     let player_castling_info = castling_infos.(white_to_move) in
     let from_rook = player_castling_info.from_long_rook in
     let to_rook = player_castling_info.to_long_rook in
-    board.(to_) <- 0;
-    board.(to_rook) <- 0;
+    board.(to_) <- empty;
+    board.(to_rook) <- empty;
     board.(from) <- piece;
     board.(from_rook) <- player_rook;
     pieces.(player_king) <- pieces.(player_king) ^^^ single_bitboards_tab.(from) ^^^ single_bitboards_tab.(to_);
@@ -1117,7 +1149,7 @@ let unmake position move =
     occupancy.(white_to_move) <- occupancy.(white_to_move) ^^^ single_bitboards_tab.(from) ^^^ single_bitboards_tab.(to_) ^^^ single_bitboards_tab.(from_rook) ^^^ single_bitboards_tab.(to_rook)
   |5 ->
     board.(from) <- piece;
-    board.(to_) <- 0;
+    board.(to_) <- empty;
     let captured_pawn_square = to_ - push_vects.(white_to_move) in
     board.(captured_pawn_square) <- captured_piece;
     pieces.(piece) <- pieces.(piece) ^^^ single_bitboards_tab.(from) ^^^ single_bitboards_tab.(to_);
@@ -1126,8 +1158,8 @@ let unmake position move =
     occupancy.(white_to_move lxor 1) <- occupancy.(white_to_move lxor 1) ^^^ single_bitboards_tab.(captured_pawn_square)
   |_ ->
     begin
-      let promotion_piece = (flag lor 4) - 10 +  6 * white_to_move in
-      let player_pawn = 1 + white_to_move * 6 in
+      let promotion_piece = (flag lor 4) - 11 +  6 * white_to_move in
+      let player_pawn = white_to_move * 6 in
       board.(from) <- player_pawn;
       board.(to_) <- captured_piece;
       pieces.(player_pawn) <- pieces.(player_pawn) ^^^ single_bitboards_tab.(from);

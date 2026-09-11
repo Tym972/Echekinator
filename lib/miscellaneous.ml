@@ -3,7 +3,7 @@
 open Bitboards
 
 (*Array used in print_board*)
-let tab_print = [|"   |"; " P |"; " N |"; " B |"; " R |"; " Q |"; " K |"; " p |"; " n |"; " b |"; " r |"; " q |"; " k |"|]
+let tab_print = [|" P |"; " N |"; " B |"; " R |"; " Q |"; " K |"; " p |"; " n |"; " b |"; " r |"; " q |"; " k |"; "   |"|]
 
 let mailbox_of_bitboard pieces_bitboards =
   let mailbox = Array.make 64 0 in

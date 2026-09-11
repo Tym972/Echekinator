@@ -19,7 +19,7 @@ let zobrist position =
       h := Int64.logxor !h tab_zobrist.(zobrist_index from piece);
       bitboard := other_pieces_bitboard
     done
-  in for piece = 1 to 12 do
+  in for piece = pawn to black_king do
     aux position.pieces piece
   done;
   if position.white_to_move = 0 then begin

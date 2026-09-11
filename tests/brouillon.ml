@@ -1,5 +1,7 @@
-open Libs.Bitboards open Libs.Generator
-open Libs.Board open Libs.Uci
+open Libs.Bitboards
+open Libs.Board open Libs.Uci open Libs.Move_ordering
+
+let mvv_lva_tab = Array.init 13 (fun victim -> Array.init 13 (fun attacker -> tabvalue.(victim) - tabvalue.(attacker)))
 
 let r = [|0L;second_row; 66L; 36L; 129L; 0xFF00L; 8L|]
 let p = (ref (0, 0)) 
@@ -110,12 +112,13 @@ if tyland then begin
   close_out fichier_sortie
 end;
 
+fastchess  -openings order=random file=/home/tym972/openbench-books-master/UHO_Lichess_4852_v1.epd  -engine name=new cmd=/home/tym972/Echekinator/_build/default/bin/echekinator.exe  -engine name=base cmd=/home/tym972/Base/_build/default/bin/echekinator.exe  -concurrency 16  -each nodes=20000 -rounds 8000 -repeat -recover   -sprt alpha=0.05 beta=0.10 elo0=-10 elo1=0 -pgnout file=/home/tym972/Pgn_fastchess.pgn -pgnout notation=san file=/home/tym972/Echekinator/Results/Pgn_fastchess.pgn
 fastchess  -openings order=random file=/home/tym972/openbench-books-master/UHO_Lichess_4852_v1.epd  -engine name=new cmd=/home/tym972/Echekinator/_build/default/bin/echekinator.exe  -engine name=base cmd=/home/tym972/Base/_build/default/bin/echekinator.exe  -concurrency 16  -each tc=10+0.1 -rounds 8000 -repeat -recover   -sprt alpha=0.05 beta=0.10 elo0=0 elo1=10 -pgnout file=/home/tym972/Pgn_fastchess.pgn -pgnout notation=san file=/home/tym972/Echekinator/Results/Pgn_fastchess.pgn
 fastchess  -openings order=random file=/home/tym972/openbench-books-master/UHO_Lichess_4852_v1.epd  -engine name=new cmd=/home/tym972/Echekinator/_build/default/bin/echekinator.exe  -engine name=base cmd=/home/tym972/Base/_build/default/bin/echekinator.exe  -concurrency 16  -each tc=60+0.6 -rounds 8000 -repeat -recover   -sprt alpha=0.05 beta=0.10 elo0=0 elo1=10 -pgnout file=/home/tym972/Pgn_fastchess.pgn -pgnout notation=san file=/home/tym972/Echekinator/Results/Pgn_fastchess.pgn
 
-fastchess  -openings order=random file=/home/tym972/openbench-books-master/UHO_Lichess_4852_v1.epd  -engine name=new cmd=/home/tym972/Echekinator/_build/default/bin/echekinator.exe  -engine name=base cmd=/home/tym972/Base/_build/default/bin/echekinator.exe  -concurrency 16  -each nodes=20000 -rounds 8000 -repeat -recover   -sprt alpha=0.05 beta=0.10 elo0=-10 elo1=0 -pgnout file=/home/tym972/Pgn_fastchess.pgn -pgnout notation=san file=/home/tym972/Echekinator/Results/Pgn_fastchess.pgn -log file=/home/tym972/Echekinator/Results/fastchess.log level=info engine=true
 fastchess  -openings order=random file=/home/tym972/openbench-books-master/UHO_Lichess_4852_v1.epd  -engine name=new cmd=/home/tym972/Echekinator/_build/default/bin/echekinator.exe  -engine name=base cmd=/home/tym972/Base/_build/default/bin/echekinator.exe  -concurrency 1   -each tc=600  option.Threads=16 option.Hash=512  -rounds 8000 -repeat -recover   -sprt alpha=0.05 beta=0.10 elo0=-10 elo1=0 -pgnout file=/home/tym972/Pgn_fastchess.pgn -pgnout notation=san file=/home/tym972/Echekinator/Results/Pgn_fastchess.pgn -log file=/home/tym972/Echekinator/Results/fastchess.log level=info engine=true
 fastchess -config file=config.json -recover
+-log file=/home/tym972/Echekinator/Results/fastchess.log level=info engine=true
 
          (*let gives_check move position =
   let capture = ref 0 in

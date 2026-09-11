@@ -69,7 +69,7 @@ let mouvement_of_uci uci position =
   let to_ = ref (Hashtbl.find hash_coord (String.sub uci 2 2)) in
   let piece = (position.board.(from)) in
   let promotion_piece = try Hashtbl.find hash_pieces (Char.uppercase_ascii uci.[4]) with _ -> 0 in
-  let capture = if position.board.(!to_) = 0 then 0 else 4 in
+  let capture = if position.board.(!to_) = empty then 0 else 4 in
   let player_castling_infos = castling_infos.(white_to_move) in
   let flag = 
     if piece = pawn + 6 * white_to_move && (from - !to_) mod 8 <> 0 && capture = 0 then 

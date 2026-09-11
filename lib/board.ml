@@ -17,20 +17,6 @@ let coord = [|
   "a8"; "b8"; "c8"; "d8"; "e8"; "f8"; "g8"; "h8"
 |]
 
-(*Merge sort*)
-let merge_sort l =
-  let rec split l = match l with
-    |[] -> [], []
-    |[x] -> [x] , []
-    |h::g::t -> let tg, td = split t in h::tg, g::td
-  in let rec merge l1 l2 = match (l1, l2) with
-    |[], l | l, [] -> l
-    |h1 :: t1, h2 :: t2 -> if h1 >= h2 then h1 :: merge t1 l2 else h2 :: merge t2 l1
-  in let rec tri_f l = match l with
-    |[] | [_] -> l
-    |_ -> let lg, ld = split l in merge (tri_f lg) (tri_f ld)
-  in tri_f l
-
 (*Max depth reached by the search*)
 let max_depth = 255
 
@@ -97,11 +83,9 @@ let create_position () = {
   white_to_move = 0;
   game_ply = 0;
   state_array = Array.init max_moves (fun _ -> create_empty_state ());
-  pieces = Array.make 13 0L;
+  pieces = Array.make 12 0L;
   occupancy = Array.make 2 0L;
-  board = Array.make 64 0;
-  moves = Array.init (max_depth + 40) (fun _ -> Array.make 218 0);
-  number_of_moves = Array.make (max_depth + 40) 0
+  board = Array.make 64 empty
 }
 
 let copy_position position = {
@@ -110,9 +94,7 @@ let copy_position position = {
   state_array = Array.map copy_state position.state_array;
   pieces = Array.copy position.pieces;
   occupancy = Array.copy position.occupancy;
-  board = Array.copy position.board;
-  moves = Array.map Array.copy position.moves;
-  number_of_moves = Array.copy position.number_of_moves
+  board = Array.copy position.board
   }
 
 let startpos = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
