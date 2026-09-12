@@ -30,7 +30,8 @@ let get_least_valuable_piece attackers pieces_bitboards attacker_type white_to_m
   !lvp_bitboard
 
 let see position move =
-  let from = get_move_from move in
+  let board = position.board
+  in let from = get_move_from move in
   let to_ = get_move_to move in
   let flag = get_move_flag move in
   let total_occupancy = ref (position.occupancy.(0) ||| position.occupancy.(1)) in
@@ -39,15 +40,15 @@ let see position move =
   let attackers = ref (get_all_attackers to_ pieces_bitboards !total_occupancy) in
   let gain = Array.make 20 0 in
   if flag <> 5 then begin
-    gain.(0) <- tabvalue.(position.board.(to_) mod 6)
+    gain.(0) <- tabvalue.(board.(to_) mod 6)
   end
   else begin
-    gain.(0) <- tabvalue.(position.board.(from) mod 6);
+    gain.(0) <- tabvalue.(board.(from) mod 6);
     total_occupancy := !total_occupancy ^^^ single_bitboards_tab.(to_ - push_vects.(!current_side))
   end;
   let depth = ref 1 in
   let from_bitboard = ref (single_bitboards_tab.(from)) in
-  let attacker = ref (position.board.(from) mod 6) in
+  let attacker = ref (board.(from) mod 6) in
   while !from_bitboard <> 0L do
     total_occupancy := !total_occupancy ^^^ !from_bitboard;
     attackers := !attackers &&& (Int64.lognot !from_bitboard);
@@ -138,23 +139,49 @@ let move_picker moves number_of_moves scores min_score =
     0
   end
 
-let rec next_move position picker search_tables = match picker.stage with
+let is_pseudo_legal move position =
+  let board = position.board in
+  let from = get_move_from move in
+  let piece = board.(from) in
+  let white_to_move = position.white_to_move in
+  piece <> empty && piece / 6 = white_to_move && begin
+    let to_ = get_move_to move in
+    let piece_on_to = board.(to_) in
+    let flag = get_move_flag move in 
+    let geometric_ok = match piece mod 6 with
+      |2 -> generate_bishop_attacks from (position.occupancy.(0) ||| position.occupancy.(1)) &&& single_bitboards_tab.(to_) <> 0L
+      |3 -> generate_rook_attacks from (position.occupancy.(0) ||| position.occupancy.(1)) &&& single_bitboards_tab.(to_) <> 0L
+      |4 -> generate_queen_attacks from (position.occupancy.(0) ||| position.occupancy.(1)) &&& single_bitboards_tab.(to_) <> 0L
+      |_ -> true
+    in geometric_ok && match flag with
+    |0 -> piece_on_to = empty
+    |1 -> piece_on_to = empty && piece mod 6 = pawn
+    |2 -> piece mod 6 = king && begin let castling_info = castling_infos.(white_to_move) in castling_info.from_king = from && to_ = castling_info.to_short_king end
+    |3 -> piece mod 6 = king && begin let castling_info = castling_infos.(white_to_move) in castling_info.from_king = from && to_ = castling_info.to_long_king end
+    |4 -> piece_on_to / 6 = white_to_move lxor 1
+    |5 -> piece mod 6 = pawn && piece_on_to = empty && board.(to_ - push_vects.(white_to_move)) = (white_to_move lxor 1) * 6 + pawn
+    |_ -> piece mod 6 = pawn && promotion_ranks.(white_to_move) &&& single_bitboards_tab.(to_) <> 0L && ((flag land 4 <> 0 && piece_on_to / 6 = white_to_move lxor 1) || (flag land 4 = 0 && piece_on_to = empty))
+  end
+
+let rec next_move position picker search_tables search_ply = match picker.stage with
   |Stage_TT ->
-    picker.stage <- Stage_Good_Captures;
+    picker.stage <- Stage_Sort_Captures;
     let hash_move = picker.hash_move in
-    if hash_move <> 0 then begin
+    if hash_move <> 0 && is_pseudo_legal hash_move position then begin
       hash_move
     end
     else begin
-      next_move position picker search_tables
+      next_move position picker search_tables search_ply
     end
-  |Stage_Good_Captures ->
+  |Stage_Sort_Captures ->
+    picker.stage <- Stage_Good_Captures;
     let hash_move = picker.hash_move in
-    let capture_moves = picker.capture_moves in
-    let captures_scores = picker.captures_scores in
-    if picker.number_of_captures = 0 then begin
-      legal_moves position picker phase_all;
+    if search_ply <> 0 then begin
+      legal_moves position picker phase_all
+    end;
       let board = position.board in
+      let capture_moves = picker.capture_moves in
+      let captures_scores = picker.captures_scores in
       for index = 0 to picker.number_of_captures - 1 do
         let capture = capture_moves.(index) in
         if capture <> hash_move then begin
@@ -184,8 +211,11 @@ let rec next_move position picker search_tables = match picker.stage with
         else begin
           captures_scores.(index) <- - 1000
         end
-      done
-    end;
+      done;
+    next_move position picker search_tables search_ply
+  |Stage_Good_Captures ->
+    let capture_moves = picker.capture_moves in
+    let captures_scores = picker.captures_scores in
     let move = move_picker capture_moves picker.number_of_captures captures_scores 9999 in
     if move = 0 then begin
       picker.stage <- Stage_Killers;
@@ -211,7 +241,7 @@ let rec next_move position picker search_tables = match picker.stage with
           quiet_scores.(index) <- - 1000
         end
       done;
-      next_move position picker search_tables
+      next_move position picker search_tables search_ply
     end
     else begin
       move
@@ -220,7 +250,7 @@ let rec next_move position picker search_tables = match picker.stage with
     let move = move_picker picker.quiet_moves picker.number_of_quiets picker.quiet_scores 99999 in
     if move = 0 then begin
       picker.stage <- Stage_History;
-      next_move position picker search_tables
+      next_move position picker search_tables search_ply
     end
     else begin
       move
@@ -229,7 +259,7 @@ let rec next_move position picker search_tables = match picker.stage with
     let move = move_picker picker.quiet_moves picker.number_of_quiets picker.quiet_scores (-1) in
     if move = 0 then begin
       picker.stage <- Stage_Bad_Captures;
-      next_move position picker search_tables
+      next_move position picker search_tables search_ply
     end
     else begin
       move
@@ -238,7 +268,7 @@ let rec next_move position picker search_tables = match picker.stage with
     let move = move_picker picker.capture_moves picker.number_of_captures picker.captures_scores 0 in
     if move = 0 then begin
       picker.stage <- Stage_Done;
-      next_move position picker search_tables
+      next_move position picker search_tables search_ply
     end
     else begin
       move
@@ -251,52 +281,55 @@ Phase 2 : Good Captures*)
 
 let rec qsearch_next_move position picker search_tables = match picker.stage with
   |Stage_TT ->
-    picker.stage <- Stage_Good_Captures;
+    picker.stage <- Stage_Sort_Captures;
     let hash_move = picker.hash_move in
-    if not (isquiet hash_move) then begin
+    if not (isquiet hash_move) && is_pseudo_legal hash_move position then begin
       hash_move
     end
     else begin
       qsearch_next_move position picker search_tables
     end
-  |Stage_Good_Captures ->
+  |Stage_Sort_Captures ->
+    picker.stage <- Stage_Good_Captures;
     let hash_move = picker.hash_move in
+    legal_moves position picker phase_capture;
+    let board = position.board in
     let capture_moves = picker.capture_moves in
     let captures_scores = picker.captures_scores in
-    if picker.number_of_captures = 0 then begin
-      legal_moves position picker phase_capture;
-      let board = position.board in
-      for index = 0 to picker.number_of_captures - 1 do
-        let capture = capture_moves.(index) in
-        if capture <> hash_move then begin
-          let to_square = get_move_to capture in
-          let from_square = get_move_from capture in
-          let victim_piece = board.(to_square) mod 6 in
-          let attacker_piece = board.(from_square) mod 6 in
-          let victim_value = tabvalue.(victim_piece) in
-          let attacker_value = tabvalue.(attacker_piece) in
-          let flag = get_move_flag capture in
-          if flag > 7 then begin
-            captures_scores.(index) <- 20000 + 100 * (flag lxor 4) + mvv_lva_tab.(attacker_piece).(victim_piece)
-          end
-          else if victim_value >= attacker_value then begin
+    for index = 0 to picker.number_of_captures - 1 do
+      let capture = capture_moves.(index) in
+      if capture <> hash_move then begin
+        let to_square = get_move_to capture in
+        let from_square = get_move_from capture in
+        let victim_piece = board.(to_square) mod 6 in
+        let attacker_piece = board.(from_square) mod 6 in
+        let victim_value = tabvalue.(victim_piece) in
+        let attacker_value = tabvalue.(attacker_piece) in
+        let flag = get_move_flag capture in
+        if flag > 7 then begin
+          captures_scores.(index) <- 20000 + 100 * (flag lxor 4) + mvv_lva_tab.(attacker_piece).(victim_piece)
+        end
+        else if victim_value >= attacker_value then begin
+          captures_scores.(index) <- 10000 + mvv_lva_tab.(attacker_piece).(victim_piece)
+        end
+        else begin
+          let see_capture = see position capture in
+          if see_capture >= 0 then begin
             captures_scores.(index) <- 10000 + mvv_lva_tab.(attacker_piece).(victim_piece)
           end
           else begin
-            let see_capture = see position capture in
-            if see_capture >= 0 then begin
-              captures_scores.(index) <- 10000 + mvv_lva_tab.(attacker_piece).(victim_piece)
-            end
-            else begin
-              captures_scores.(index) <- - 1000
-            end
+            captures_scores.(index) <- - 1000
           end
         end
-        else begin
-          captures_scores.(index) <- - 1000
-        end
-      done
-    end;
+      end
+      else begin
+        captures_scores.(index) <- - 1000
+      end
+    done;
+    qsearch_next_move position picker search_tables
+  |Stage_Good_Captures ->
+    let capture_moves = picker.capture_moves in
+    let captures_scores = picker.captures_scores in
     let move = move_picker capture_moves picker.number_of_captures captures_scores 9999 in
     if move = 0 then begin
       picker.stage <- Stage_Done;

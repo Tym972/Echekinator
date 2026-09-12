@@ -241,6 +241,7 @@ type position = {
 
 type search_stage =
   |Stage_TT
+  |Stage_Sort_Captures
   |Stage_Good_Captures
   |Stage_Killers
   |Stage_History
@@ -929,12 +930,8 @@ let legal_moves position picker phase =
 
   let piece_attacks = generate_king_attacks king_square &&& (Int64.lognot all_attacks) in
   generate_normal_moves piece_attacks oponent_occupancy not_friendly_occupancy capture_moves number_of_captures quiet_moves number_of_quiets king_square phase;
-  if phase land phase_capture <> 0 then begin
-    picker.number_of_captures <- !number_of_captures
-  end;
-  if phase land phase_quiet <> 0 then begin
-    picker.number_of_quiets <- !number_of_quiets
-  end
+  picker.number_of_captures <- !number_of_captures;
+  picker.number_of_quiets <- !number_of_quiets
 
 let make_null position =
   let state = position.state_array.(position.game_ply) in

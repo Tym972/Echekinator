@@ -69,8 +69,6 @@ let rec quiescence_search position search_tables thread search_ply alpha beta is
           let counter = ref 0 in
           picker.stage <- Stage_TT;
           picker.hash_move <- hash_move;
-          picker.number_of_captures <- 0;
-          picker.number_of_quiets <- 0;
           let move_loop move =
             make position move;
             let score = - quiescence_search position search_tables thread (search_ply + 1) (- !beta0) (- !alpha0) ispv
@@ -93,7 +91,7 @@ let rec quiescence_search position search_tables thread search_ply alpha beta is
           in if in_check then begin
             
             while !no_cut do
-              let move = next_move position picker search_tables in
+              let move = next_move position picker search_tables search_ply in
               if move <> 0 then begin
                 move_loop move 
               end 

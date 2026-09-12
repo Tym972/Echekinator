@@ -22,6 +22,48 @@ let rec pop list n =
       |_ :: t -> pop t (n - 1)
   end
 
+let add_move move picker =
+  if isquiet move then begin
+    picker.quiet_moves.(picker.number_of_quiets) <- move;
+    picker.number_of_quiets <- picker.number_of_quiets + 1
+  end
+  else begin
+    picker.capture_moves.(picker.number_of_captures) <- move;
+    picker.number_of_captures <- picker.number_of_captures + 1
+  end
+
+let remove_move move picker =
+  let index = ref 0 in
+  let exit = ref false in
+  if isquiet move then begin
+    let quiet_moves = picker.quiet_moves in
+    let number_of_quiets = picker.number_of_quiets in
+    while !index < number_of_quiets && not !exit do
+      if quiet_moves.(!index) = move then begin
+        quiet_moves.(!index) <- quiet_moves.(number_of_quiets - 1);
+        picker.number_of_quiets <- number_of_quiets - 1;
+        exit := true
+      end
+      else begin
+        incr index
+      end
+    done;
+  end
+  else begin
+    let capture_moves = picker.capture_moves in
+    let number_of_captures = picker.number_of_captures in
+    while !index < number_of_captures && not !exit do
+      if capture_moves.(!index) = move then begin
+        capture_moves.(!index) <- capture_moves.(number_of_captures - 1);
+        picker.number_of_captures <- number_of_captures - 1;
+        exit := true
+      end
+      else begin
+        incr index
+      end
+    done
+  end
+
 (*Fonction permettant la lecture d'une réponse*)
 let lire_entree message =
   print_string message;
@@ -73,6 +115,9 @@ let make_list record position =
   in func record
 
 let number_of_pv = ref 1
+
+let current_position = ref (create_position ())
+let current_search_tables = ref (create_search_tables ())
 
 let best_line_id = ref (-1)
 
@@ -225,10 +270,11 @@ let iterative_deepening position search_tables depth mate thread =
   let var_mate = ref max_int in
   let alpha_table = Array.make !number_of_pv (- max_int) in
   let beta_table = Array.make !number_of_pv max_int in
-  stop_search.(thread) <- false;
+  let picker = search_tables.pickers.(0) in
+  let zobrist = position.state_array.(0).zobrist in
+  let tt_index = Int64.to_int (Int64.rem zobrist !slots) in
   while not (stop_search.(thread) || (thread = 0 && Mtime.Span.compare (Mtime_clock.count !start_time) !soft_bound > 0) || !var_depth + 1 > depth || total_counter node_counter + 1 > !node_limit || !var_mate < mate + 1 ) do
     incr var_depth;
-    (*move_ordering search_tables position position.moves.(0) position.number_of_moves.(0) 0 0 search_tables.ordering_array.(0);*)
     for multi = 0 to (!number_of_pv - 1) do
       let new_score =
         let score = ref (pvs position search_tables thread multi !var_depth 0 alpha_table.(multi) beta_table.(multi) true) in
@@ -248,14 +294,13 @@ let iterative_deepening position search_tables depth mate thread =
           beta_table.(multi) <- new_score + 25
         end;
         if !number_of_pv > multi + 1 then begin
-          (*for index = 0 to number_of_moves_copy.(0) - 1 do
-            if pv_table.(0) = moves_copy.(index) then begin
-              moves_copy.(index) <- moves_copy.(number_of_moves_copy.(0) - 1);
-              number_of_moves_copy.(0) <- number_of_moves.(0) - 1;
-            end
-          done*)
+          remove_move !results.(multi).bestmove picker;
+          clear_entry !tt tt_index;
         end
       end
+    done;
+    for multi = 0 to (!number_of_pv - 2) do
+      add_move !results.(multi).bestmove picker
     done;
     if thread = 0 then begin
       let exec_time =
@@ -271,6 +316,10 @@ let iterative_deepening position search_tables depth mate thread =
         end
       done;
       order_of_multi := List.sort (fun x y -> compare y x) !order_of_multi;
+      if !number_of_pv > 1 then begin
+        let score, multi = List.hd !order_of_multi in
+        store thread zobrist depth score score !results.(multi).bestmove (hce position) !go_counter
+      end;
       begin try
         best_line_id := snd (List.hd !order_of_multi) with _ -> ()
       end;
@@ -295,7 +344,7 @@ let jobs_remaining = ref 0
 
 let current_job = ref 0
 
-let domain_loop position search_tables thread_id =
+let domain_loop thread_id =
   let my_job = ref (-1) in
   while thread_id < !threads_number do
     Mutex.lock domain_mutex;
@@ -303,18 +352,21 @@ let domain_loop position search_tables thread_id =
         Condition.wait domain_cond domain_mutex
       done;
       my_job := !current_job;
+      let pos_copy = copy_position !current_position in
+      let tables_copy = copy_search_tables !current_search_tables in
+      stop_search.(thread_id) <- false;
     Mutex.unlock domain_mutex;
-    iterative_deepening (copy_position position) (copy_search_tables search_tables) max_depth (-1) thread_id;
+    iterative_deepening pos_copy tables_copy max_depth (-1) thread_id;
     Mutex.lock domain_mutex;
       decr jobs_remaining;
       if !jobs_remaining = 0 then begin
         work_available := false;
-        Condition.signal domain_cond
+        Condition.broadcast domain_cond
       end;
     Mutex.unlock domain_mutex;
   done
 
-let setoption position search_tables instructions =
+let setoption search_tables instructions =
   let type_check instructions boolean =
     match instructions with
     |_ :: _ :: _ :: "value" :: value :: _ -> begin try boolean := (bool_of_string value) with _ -> () end
@@ -351,7 +403,7 @@ let setoption position search_tables instructions =
         type_spin value threads_number min_threads_number max_threads_number;
         if value > old_value then begin
           domains := Array.init (!threads_number - old_value) (fun id ->
-            Domain.spawn (fun () -> domain_loop position search_tables (id + old_value))
+            Domain.spawn (fun () -> domain_loop (id + old_value))
           )
         end
       end
@@ -370,7 +422,8 @@ let go instructions position search_tables =
     soft_bound := Mtime.Span.max_span;
     hard_bound := Mtime.Span.max_span;
     for thread = 0 to !threads_number - 1 do
-      node_counter.(thread) <- 0
+      node_counter.(thread) <- 0;
+      stop_search.(thread) <- false;
     done;
     for i = 0 to (max_depth + 40) - 1 do
       search_tables.pickers.(i).killer1 <- 0;
@@ -387,23 +440,9 @@ let go instructions position search_tables =
     node_limit := max_int;
     let depth = ref max_depth in
     let mate = ref (-1) in
-    (*let aux_searchmoves list =
-      let index = ref 0 in
-      let rec func move_list = match move_list with
-        |uci_move :: other_moves ->
-          let move = try mouvement_of_uci uci_move position with _ -> 0 in
-          if move_array_mem move position.moves.(0) position.number_of_moves.(0) then begin
-            position.moves.(0).(!index) <- move;
-            incr index;
-            func other_moves
-          end;
-        |_ -> ()
-      in func list;
-      position.number_of_moves.(0) <- !index
-    in*) let rec aux instruction = match instruction with
+    let rec aux instruction = match instruction with
       |h :: g :: t ->
         begin match h with
-          (*|"searchmoves" -> aux_searchmoves (g :: t)*)
           |"ponder" -> is_pondering := true
           |"wtime" -> wtime := (float_of_string g)
           |"btime" -> btime := (float_of_string g)
@@ -425,6 +464,8 @@ let go instructions position search_tables =
     number_of_pv := min !multipv (picker.number_of_captures + picker.number_of_quiets);
     results := (Array.init !multipv (fun _ ->  {depth = 0; score = 0; bestmove = 0}));
     if !threads_number > 1 then begin
+      current_position := copy_position position;
+      current_search_tables := copy_search_tables search_tables;
       Mutex.lock domain_mutex;
         incr current_job;
         jobs_remaining := !threads_number - 1;
@@ -433,9 +474,16 @@ let go instructions position search_tables =
       Mutex.unlock domain_mutex
     end;
     iterative_deepening position search_tables !depth !mate 0;
-    for thread = 1 to !threads_number - 1 do
-      stop_search.(thread) <- true
-    done;
+    if !threads_number > 1 then begin
+      Mutex.lock domain_mutex;
+      for thread = 1 to !threads_number - 1 do
+        stop_search.(thread) <- true
+      done;
+      while !jobs_remaining > 0 do
+        Condition.wait domain_cond domain_mutex
+      done;
+      Mutex.unlock domain_mutex;
+    end;
     if !best_line_id = (-1) then begin
       print_endline ("info depth 0 score cp 0" ^ "\n" ^ "bestmove (none)");
     end
@@ -481,11 +529,32 @@ let echekinator () =
     match instructions with
       |"uci" :: _ -> uci ()
       |"isready" :: _ -> print_endline "readyok"
-      |"setoption" :: _ -> process (fun () -> setoption position search_tables instructions)
+      |"setoption" :: _ -> process (fun () -> setoption search_tables instructions)
       |"ucinewgame" :: _ -> process (fun () -> reset_hash search_tables)
       |"position" :: _ -> process (fun () -> position_uci instructions position search_tables)
       |"go" :: "perft" :: depth :: _ when is_integer_string depth ->
         print_endline ("\n" ^ "Nodes searched : " ^ (string_of_int (algoperft position search_tables.pickers (int_of_string depth) 0)));
+      |"go" :: "searchmoves" :: instructions ->
+        let index = Int64.to_int (Int64.rem position.state_array.(0).zobrist !slots) in
+        clear_entry !tt index;
+        let picker = search_tables.pickers.(0) in
+        picker.number_of_quiets <- 0;
+        picker.number_of_captures <- 0;
+        let rec func move_list = match move_list with
+          |uci_move :: other_moves ->
+            let move = try mouvement_of_uci uci_move position with _ -> 0 in
+            if move <> 0 then begin
+              add_move move picker
+            end;
+            func other_moves
+          |_ -> ()
+        in func instructions;
+        let _ = Thread.create
+          (fun () -> process (
+            fun () ->
+              go instructions position search_tables;
+              legal_moves position picker phase_all)) ()
+        in ()
       |"go" :: _ ->
         let _ = Thread.create
           (fun () -> process (fun () -> go instructions position search_tables)) ()
@@ -497,9 +566,9 @@ let echekinator () =
         done;
       |"d" :: _ -> display position
       |"eval" :: _ ->
-        for i = 0 to search_tables.pickers.(0).number_of_captures - 1 do
+        (*for i = 0 to search_tables.pickers.(0).number_of_captures - 1 do
           print_endline (Printf.sprintf "%s : see %i" (uci_of_mouvement search_tables.pickers.(0).capture_moves.(i)) (see position search_tables.pickers.(0).capture_moves.(i)))
-        done;
+        done;*)
         let eval =
           if position.white_to_move = 0 then
             (float_of_int (hce position)) /. 100.

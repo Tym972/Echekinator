@@ -114,12 +114,10 @@ let rec pvs position search_tables thread multi depth search_ply alpha beta ispv
           (*Move loop*)
           if !no_cut then begin
             let counter = ref 0 in
-            picker.stage <- Stage_TT;
             picker.hash_move <- hash_move;
-            picker.number_of_captures <- 0;
-            picker.number_of_quiets <- 0;
+            picker.stage <- Stage_TT;
             while !no_cut do
-              let move = next_move position picker search_tables in
+              let move = next_move position picker search_tables search_ply in
               if move <> 0 then begin
                 make position move;
                 let score =

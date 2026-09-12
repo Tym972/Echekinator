@@ -66,23 +66,38 @@ let move_array_mem move legal_moves number_of_legal_moves =
 let mouvement_of_uci uci position =
   let white_to_move = position.white_to_move in
   let from = Hashtbl.find hash_coord (String.sub uci 0 2) in
-  let to_ = ref (Hashtbl.find hash_coord (String.sub uci 2 2)) in
+  let raw_to = Hashtbl.find hash_coord (String.sub uci 2 2) in
   let piece = (position.board.(from)) in
   let promotion_piece = try Hashtbl.find hash_pieces (Char.uppercase_ascii uci.[4]) with _ -> 0 in
-  let capture = if position.board.(!to_) = empty then 0 else 4 in
+  let capture = if position.board.(raw_to) = empty then 0 else 4 in
   let player_castling_infos = castling_infos.(white_to_move) in
-  let flag = 
-    if piece = pawn + 6 * white_to_move && (from - !to_) mod 8 <> 0 && capture = 0 then 
+  let is_king = piece mod 6 = king in
+  let is_pawn = piece mod 6 = pawn in
+  let is_short_castling =
+    is_king && from = player_castling_infos.from_king && (raw_to = player_castling_infos.to_short_king || (!chess_960 && raw_to = player_castling_infos.from_short_rook))
+  in let is_long_castling =
+    is_king && from = player_castling_infos.from_king && (raw_to = player_castling_infos.to_long_king || (!chess_960 && raw_to = player_castling_infos.from_long_rook))
+  in let to_ =
+    if !chess_960 then begin
+      if is_short_castling then player_castling_infos.to_short_king
+      else if is_long_castling then player_castling_infos.to_long_king
+      else raw_to
+    end
+    else begin
+      raw_to
+    end
+  in let flag = 
+    if is_pawn && (from - to_) mod 8 <> 0 && capture = 0 then 
       5
-    else if piece = pawn + 6 * white_to_move && abs (from - !to_) = 16 then
+    else if is_pawn && abs (from - to_) = 16 then
       1
-    else if piece = king + 6 * white_to_move && from = player_castling_infos.from_king && (!to_ = player_castling_infos.to_short_king || (!chess_960 && !to_ = player_castling_infos.from_short_rook)) then
+    else if is_short_castling then
       2
-    else if piece = king + 6 * white_to_move && from = player_castling_infos.from_king && (!to_ = player_castling_infos.to_long_king || (!chess_960 && !to_ = player_castling_infos.from_long_rook)) then
+    else if is_long_castling then
       3
     else if promotion_piece <> 0 then
       (promotion_piece + 6) lor capture
     else
       capture
   in
-  encode_move from !to_ flag
+  encode_move from to_ flag
