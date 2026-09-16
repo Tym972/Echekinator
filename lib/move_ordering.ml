@@ -39,12 +39,12 @@ let see position move =
   let current_side = ref position.white_to_move in
   let attackers = ref (get_all_attackers to_ pieces_bitboards !total_occupancy) in
   let gain = Array.make 20 0 in
-  if flag <> 5 then begin
-    gain.(0) <- tabvalue.(board.(to_) mod 6)
-  end
-  else begin
+  if flag = 5 then begin
     gain.(0) <- tabvalue.(board.(from) mod 6);
     total_occupancy := !total_occupancy ^^^ single_bitboards_tab.(to_ - push_vects.(!current_side))
+  end
+  else if flag > 3 then begin
+    gain.(0) <- tabvalue.(board.(to_) mod 6)
   end;
   let depth = ref 1 in
   let from_bitboard = ref (single_bitboards_tab.(from)) in

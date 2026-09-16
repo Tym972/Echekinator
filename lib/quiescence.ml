@@ -42,7 +42,7 @@ let rec quiescence_search position search_tables thread search_ply alpha beta is
     else begin
       let best_move = ref 0 in
       let _, hash_lower_bound, hash_upper_bound, hash_move, hash_static_eval = probe state.zobrist in
-      let static_eval = ref hash_static_eval in
+      let static_eval = if hash_static_eval = - max_int then hce position else hash_static_eval in
       let no_cut = ref true in
       let best_score = ref (- max_int) in
       let alpha0 = ref alpha in
@@ -54,11 +54,9 @@ let rec quiescence_search position search_tables thread search_ply alpha beta is
       end;
       if !no_cut then begin
 
-        (*Static eval*)
-        if not (in_check || hash_static_eval <> (- max_int)) then begin
-          static_eval := hce position
+        if not in_check then begin
+          best_score := static_eval
         end;
-        best_score := !static_eval;
 
         (*Stand pat verification then move loop*)
         if !best_score < beta then begin
@@ -149,7 +147,7 @@ let rec quiescence_search position search_tables thread search_ply alpha beta is
           lower_bound := stored_value;
           upper_bound := stored_value
         end;
-      store thread state.zobrist 0 !lower_bound !upper_bound !best_move !static_eval !go_counter
+      store thread state.zobrist 0 !lower_bound !upper_bound !best_move static_eval !go_counter
       end;
     !best_score
     end
