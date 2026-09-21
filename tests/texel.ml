@@ -49,7 +49,7 @@ let error filename =
     let pos = data.(i) in let _ = pos.score in
     incr n;
     position_of_fen pos.fen_string position;
-    let qscore = float_of_int ((quiescence_search position search_tables 0 0 (- max_int) max_int true) * (- 2 * position.white_to_move + 1)) in
+    let qscore = float_of_int ((quiescence_search position search_tables 0 0 (- max_int) max_int) * (- 2 * position.white_to_move + 1)) in
     sigma := !sigma +. Float.pow (pos.result -. (sigmoid qscore)) 2.
   done;
   !sigma /. (float_of_int !n)

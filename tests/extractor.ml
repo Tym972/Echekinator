@@ -136,7 +136,7 @@ let process_pgn_file filename engine1 engine2 =
             let entry = Printf.sprintf "%s | %i | %s\n" (fen position) (format_score engine_eval position.white_to_move) result in
             output_string oc entry
           end;
-          make position (move_of_algebric position move); 
+          make position (move_of_algebric position move);
           moves_loop other_moves other_engine_evals;
       in moves_loop moves engine_evals
   
@@ -144,7 +144,7 @@ let process_pgn_file filename engine1 engine2 =
       not (position.state_array.(position.game_ply).in_check || String.contains engine_eval 'M') &&
       begin
         let static_eval = hce position in
-        (abs (static_eval - (int_of_float ((float_of_string engine_eval) *. 100.)))) <= 70 && (abs (static_eval - quiescence_search position search_tables 0 0 (- max_int) max_int true)) <= 60
+        (abs (static_eval - (int_of_float ((float_of_string engine_eval) *. 100.)))) <= 70 && (abs (static_eval - quiescence_search position search_tables 0 0 (- max_int) max_int)) <= 60
       end
     
     and format_score engine_eval white_to_move =

@@ -2,9 +2,6 @@
 
 open Libs.Bitboards
 
-(*Tableau assoicant la valeur des pièces pour le moteur (indice) à leur notation algébrique anglaise*)
-let english_pieces_lowercase = [|""; "p"; "n"; "b"; "r"; "q"; "k"|]
-
 (*Fonction supprimant les caractères dispensables de la notation algébrique*)
 let remove chain =
   let reg = Str.regexp "ep\\|[x()+.?!\"\n]" in
@@ -14,7 +11,7 @@ let remove chain =
 let hash_pieces =
   let ht = Hashtbl.create 5 in
   List.iter (fun (key, value) -> Hashtbl.add ht key value)
-    [ ('R', 4); ('N', 2); ('B', 3); ('Q', 5); ('K', 6)];
+    [ ('R', rook); ('N', knight); ('B', bishop); ('Q', queen); ('K', king)];
   ht
 
 (* Hash table mapping chessboard coordinates to indices in the coord array *)
@@ -53,7 +50,7 @@ let pawn_origin position move =
       end
     end
     else begin
-      if position.board.(to_) <> 0 then begin
+      if position.board.(to_) <> empty then begin
         let dir = if white_to_move = 0 then 1 else (-1) in
         Hashtbl.find hash_coord ((String.sub move 0 1) ^ string_of_int ((int_of_string (String.sub move 2 1)) - dir)), 4
         end
@@ -64,12 +61,12 @@ let pawn_origin position move =
     end
   in encode_move from to_ flag
 
-let possible_start piece to_ total_occupancy = match piece with
-  |2 | 8 -> generate_knight_attacks to_;
-  |3 | 9 -> generate_bishop_attacks to_ total_occupancy
-  |4 | 10 -> generate_rook_attacks to_ total_occupancy
-  |5 | 11 -> generate_queen_attacks to_ total_occupancy
-  |6 | 12-> generate_king_attacks to_
+let possible_start piece to_ total_occupancy = match piece mod 6 with
+  |1 -> generate_knight_attacks to_;
+  |2 -> generate_bishop_attacks to_ total_occupancy
+  |3 -> generate_rook_attacks to_ total_occupancy
+  |4 -> generate_queen_attacks to_ total_occupancy
+  |5 -> generate_king_attacks to_
   |_ -> 0L
 
 let is_legal_move position move =
@@ -129,7 +126,7 @@ let promotion_origin move white_to_move =
       let dir = if white_to_move = 0 then 1 else (-1) in
       Hashtbl.find hash_coord ((String.sub move 0 1) ^ string_of_int ((int_of_string (String.sub move 2 1)) - dir)), 4
     end
-  in encode_move from to_ ((promotion_piece + 6) lor capture)
+  in encode_move from to_ ((promotion_piece + 7) lor capture)
 
 (*Fonction décomposant une chain de caractère en list de substring correspondants aux mots*)
 let word_detection chain =

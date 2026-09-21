@@ -277,7 +277,7 @@ let iterative_deepening position search_tables depth mate thread =
     incr var_depth;
     for multi = 0 to (!number_of_pv - 1) do
       let new_score =
-        let score = ref (pvs position search_tables thread multi !var_depth 0 alpha_table.(multi) beta_table.(multi) true) in
+        let score = ref (search position search_tables thread multi !var_depth 0 alpha_table.(multi) beta_table.(multi) false) in
         while not (stop_search.(thread) || total_counter node_counter > !node_limit || (!score > alpha_table.(multi) && !score < beta_table.(multi))) do
           if !score <= alpha_table.(multi) then begin
             alpha_table.(multi) <- (-max_int)
@@ -285,7 +285,7 @@ let iterative_deepening position search_tables depth mate thread =
           else if !score >= beta_table.(multi) then begin
             beta_table.(multi) <- max_int
           end;
-          score := pvs position search_tables thread multi !var_depth 0 alpha_table.(multi) beta_table.(multi) true;
+          score := search position search_tables thread multi !var_depth 0 alpha_table.(multi) beta_table.(multi) false;
         done;
         !score
       in if new_score > (-max_int) then begin

@@ -32,10 +32,16 @@ let lmr_table =
       else
         0))
 
-let rec pvs position search_tables thread multi depth search_ply alpha beta ispv =
+let nmp_min_depth = 3
+let razoring_max_depth = 3
+let rfp_max_depth = 7
+let lmp_max_depth = 5
+
+let rec search position search_tables thread multi depth search_ply alpha beta was_null =
   let game_ply = position.game_ply in
   let state = position.state_array.(game_ply) in
   let in_check = state.in_check in
+  let ispv = beta - alpha <> 1 in
   node_counter.(thread) <- node_counter.(thread) + 1;
   if node_counter.(0) mod 1000 = 0 then begin
     if Mtime.Span.compare (Mtime_clock.count !start_time) !hard_bound > 0 then begin
@@ -49,19 +55,12 @@ let rec pvs position search_tables thread multi depth search_ply alpha beta ispv
   end
 
   (*Quiescense search*)
-  else if depth = 0 then begin
-    quiescence_search position search_tables thread search_ply alpha beta ispv
+  else if depth <= 0 then begin
+    quiescence_search position search_tables thread search_ply alpha beta
   end
 
   (*Normal search*)
   else begin
-    (*let bg = Array.copy accumulator in Array.blit bg 0 accumulator 0 n;*)
-    (*vector board;
-    if evaluate () <> make_output_layer board_vector then begin
-      (*print_endline (string_of_bool (board = board_of_vector board_vector));
-      print_board board; print_board (board_of_vector board_vector);*)
-      print_endline (string_of_float (evaluate ()) ^ " " ^ string_of_float (make_output_layer board_vector))
-    end; *)
     let picker = search_tables.pickers.(search_ply) in
     (*Check repetion or fifty moves rule*)
     if search_ply > 0 && (repetition position.state_array game_ply || (state.half_moves = 100 && (not in_check || (legal_moves position picker phase_all; picker.number_of_captures + picker.number_of_quiets <> 0)))) then begin
@@ -94,21 +93,24 @@ let rec pvs position search_tables thread multi depth search_ply alpha beta ispv
           (*Reverse futility pruning razoring and null move pruning*)
           if not (in_check || ispv || is_loss !beta0 || zugzwang position.pieces position.white_to_move) then begin
             (*Reverse futility pruning*)
-            if depth <= 7 && static_eval - 70 * depth >= !beta0 then begin
+            if depth <= rfp_max_depth && static_eval - 70 * depth >= !beta0 then begin
               best_score := static_eval - 70 * depth;
               no_search_cut := false
             end;
 
             (*Razoring*)
-            if !no_search_cut && (depth <= 3 && static_eval + 300 + 60 * depth < !alpha0) then begin
-              best_score := quiescence_search position search_tables thread search_ply alpha beta ispv;
+            if !no_search_cut && (depth <= razoring_max_depth && static_eval + 300 + 60 * depth < !alpha0) then begin
+              best_score := quiescence_search position search_tables thread search_ply alpha beta;
               no_search_cut := false
             end;
 
             (*Null move pruning*)
-            if !no_search_cut && depth > 2 && static_eval >= !beta0 then begin
+            if !no_search_cut && depth >= nmp_min_depth && not was_null && static_eval >= !beta0 + 30 then begin
               make_null position;
-              let score = - pvs position search_tables thread multi (depth - 3) (search_ply + 1) (- !beta0) (- !beta0 + 1) false
+              let reduction = ref (3 + depth / 4) in
+              if !reduction > 6 then reduction := 6;
+              if !reduction > depth - 1 then reduction := depth - 1;
+              let score = - search position search_tables thread multi (depth - 1 - !reduction) (search_ply + 1) (- !beta0) (- !beta0 + 1) true
               in if score >= !beta0 then begin
                 if is_win score then begin
                   best_score := beta  
@@ -134,7 +136,7 @@ let rec pvs position search_tables thread multi depth search_ply alpha beta ispv
                 let no_move_cut = ref true in
 
                 (*Late Move Pruning*)
-                if not ispv && not in_check && !best_score > -max_int && depth < 6 && not is_noisy && !legal_counter > 3 + depth * depth then begin
+                if not ispv && not in_check && !best_score > -max_int && depth <= lmp_max_depth && not is_noisy && !legal_counter > 3 + depth * depth then begin
                   no_move_cut := false
                 end;
 
@@ -144,7 +146,7 @@ let rec pvs position search_tables thread multi depth search_ply alpha beta ispv
                 end;*)
 
                 (*See Pruning*)
-                (*if not ispv && not in_check && !best_score > -max_int && depth < 4 then begin
+                (*if not ispv && not in_check && !best_score > -max_int && depth < 2 then begin
                   let margin = if is_noisy then -120 * depth else -60 * depth in
                   if see position move < margin then
                     no_move_cut := false
@@ -161,6 +163,8 @@ let rec pvs position search_tables thread multi depth search_ply alpha beta ispv
                   incr legal_counter;
                   let gives_checks = position.state_array.(game_ply + 1).in_check in
                   let is_killer = picker.killer1 = move land 0xfff || picker.killer2 = move land 0xfff in
+
+                  (*Late Move Reduction*)
                   if depth > 1 && !legal_counter > 1 && not (ispv && is_noisy) then begin
                     let reduction = ref lmr_table.(min depth 63).(min !legal_counter 63) in
                     if not ispv then reduction := !reduction + 2;
@@ -169,15 +173,15 @@ let rec pvs position search_tables thread multi depth search_ply alpha beta ispv
                     if in_check then reduction := !reduction - 1;
                     if !reduction < 1 then reduction := 1;
                     if !reduction > depth - 1 then reduction := depth - 1;
-                    score := - pvs position search_tables thread multi (depth - 1 - !reduction) (search_ply + 1) (- !alpha0 - 1) (- !alpha0) false;
+                    score := - search position search_tables thread multi (depth - 1 - !reduction) (search_ply + 1) (- !alpha0 - 1) (- !alpha0) false;
                     if !score > !alpha0 then
-                      score := - pvs position search_tables thread multi (depth - 1) (search_ply + 1) (- !alpha0 - 1) (- !alpha0) false
+                      score := - search position search_tables thread multi (depth - 1) (search_ply + 1) (- !alpha0 - 1) (- !alpha0) false
                   end
                   else if not ispv || !legal_counter > 1 then begin
-                    score := - pvs position search_tables thread multi (depth - 1) (search_ply + 1) (- !alpha0 - 1) (- !alpha0) false
+                    score := - search position search_tables thread multi (depth - 1) (search_ply + 1) (- !alpha0 - 1) (- !alpha0) false
                   end;
                   if ispv && (!legal_counter = 1 || (!score > !alpha0 && !score < !beta0)) then begin
-                    score:= - pvs position search_tables thread multi (depth - 1) (search_ply + 1) (- !beta0) (- !alpha0) ispv
+                    score:= - search position search_tables thread multi (depth - 1) (search_ply + 1) (- !beta0) (- !alpha0) false
                   end;
                   unmake position move;
                   if !score > !best_score then begin

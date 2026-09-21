@@ -938,7 +938,7 @@ let make_null position =
   let new_state = position.state_array.(position.game_ply + 1) in
   let white_to_move = position.white_to_move in
   let castling_rights = state.castling_rights in
-  new_state.captured_piece <- 0;
+  new_state.captured_piece <- empty;
   position.white_to_move <- white_to_move lxor 1;
   new_state.castling_rights <- castling_rights;
   new_state.zobrist <- state.zobrist ^^^ tab_zobrist.(768);

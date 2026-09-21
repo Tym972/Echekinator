@@ -21,7 +21,7 @@ let repetition state game_ply =
   !repeat
 
 (*Fonction implémentant la recherche quiescente*)
-let rec quiescence_search position search_tables thread search_ply alpha beta ispv =
+let rec quiescence_search position search_tables thread search_ply alpha beta =
 
   (*Check search limit*)
   if stop_search.(thread) then begin
@@ -47,6 +47,7 @@ let rec quiescence_search position search_tables thread search_ply alpha beta is
       let best_score = ref (- max_int) in
       let alpha0 = ref alpha in
       let beta0 = ref beta in
+      let ispv = beta - alpha <> 1 in
 
       (*Use TT informations*)
       if not ispv then begin
@@ -69,7 +70,7 @@ let rec quiescence_search position search_tables thread search_ply alpha beta is
           picker.hash_move <- hash_move;
           let move_loop move =
             make position move;
-            let score = - quiescence_search position search_tables thread (search_ply + 1) (- !beta0) (- !alpha0) ispv
+            let score = - quiescence_search position search_tables thread (search_ply + 1) (- !beta0) (- !alpha0)
             in if score > !best_score then begin
               best_score := score;
               if score > !alpha0 then begin
