@@ -21,12 +21,23 @@ let zugzwang pieces white_to_move =
   pieces.(rook + 6 * white_to_move) = 0L &&
   pieces.(queen + 6 * white_to_move) = 0L
 
-let lmr_table =
+let lmr_quiet =
   Array.init 64
   (fun depth ->
     Array.init 64 
     (fun legal_count ->
       let reduction = 1.35 +. ((log (float_of_int depth) *. log (float_of_int legal_count)) /. 2.75)
+      in if reduction > 0. then
+        int_of_float reduction
+      else
+        0))
+
+let lmr_noisy =
+  Array.init 64
+  (fun depth ->
+    Array.init 64 
+    (fun legal_count ->
+      let reduction = 0.20 +. ((log (float_of_int depth) *. log (float_of_int legal_count)) /. 3.35)
       in if reduction > 0. then
         int_of_float reduction
       else
@@ -141,15 +152,15 @@ let rec search position search_tables thread multi depth search_ply alpha beta w
                 end;
 
                 (*Futility pruning*)
-                (*if not ispv && not in_check && !best_score > -max_int && depth < 4 && not is_noisy && static_eval + 90 * depth < !alpha0 then begin
+                if not ispv && not in_check && !best_score > -max_int && depth < 4 && not is_noisy && static_eval + 90 * depth < !alpha0 then begin
                   no_move_cut := false
-                end;*)
+                end;
 
                 (*See Pruning*)
-                (*if not ispv && not in_check && !best_score > -max_int && depth < 2 then begin
-                  let margin = if is_noisy then -120 * depth else -60 * depth in
-                  if see position move < margin then
-                    no_move_cut := false
+                (*if not ispv && not in_check && !best_score > -max_int && depth <= 3 then begin
+                  let margin = if is_noisy then -120 * depth else -100 * depth in
+                  if see position move < margin then begin
+                    no_move_cut := false end
                 end;*)
 
                 (*History Pruning*)
@@ -166,12 +177,12 @@ let rec search position search_tables thread multi depth search_ply alpha beta w
 
                   (*Late Move Reduction*)
                   if depth > 1 && !legal_counter > 1 && not (ispv && is_noisy) then begin
-                    let reduction = ref lmr_table.(min depth 63).(min !legal_counter 63) in
+                    let reduction = ref (if is_noisy then lmr_noisy.(min depth 63).(min !legal_counter 63) else lmr_quiet.(min depth 63).(min !legal_counter 63)) in
                     if not ispv then reduction := !reduction + 2;
                     if is_killer then reduction := !reduction - 2;
                     if gives_checks then reduction := !reduction - 1;
                     if in_check then reduction := !reduction - 1;
-                    if !reduction < 1 then reduction := 1;
+                    if !reduction < 0 then reduction := 0;
                     if !reduction > depth - 1 then reduction := depth - 1;
                     score := - search position search_tables thread multi (depth - 1 - !reduction) (search_ply + 1) (- !alpha0 - 1) (- !alpha0) false;
                     if !score > !alpha0 then
@@ -196,7 +207,7 @@ let rec search position search_tables thread multi depth search_ply alpha beta w
                     if !score >= !beta0 then begin
                       no_search_cut := false;
                       if not is_noisy then begin
-                        search_tables.history_moves.(history_index position.white_to_move move) <- depth * depth;
+                        search_tables.history_moves.(history_index position.white_to_move move) <- search_tables.history_moves.(history_index position.white_to_move move) + depth * depth;
                         let quiet_move = move land 0xfff in
                         let killer1 = picker.killer1 in
                         if quiet_move <> killer1 then begin

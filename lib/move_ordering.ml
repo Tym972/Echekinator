@@ -2,7 +2,7 @@ open Board
 open Bitboards
 
 (*Valeur des pièces pour le tri*)
-let tabvalue = [|10; 32; 33; 51; 88; 950|]
+let tabvalue = [|100; 320; 330; 510; 880; 9500|]
 
 let get_all_attackers target pieces_bitboards total_occupancy =
   ((generate_pawn_attacks target 1) &&& pieces_bitboards.(pawn)) |||
