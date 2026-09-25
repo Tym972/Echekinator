@@ -6,9 +6,9 @@ open Libs.Evaluation
 open Libs.Quiescence
 open Algebraic
 
-let process_pgn_file filename engine1 engine2 =
+let process_pgn_file filename output_name engine1 engine2 =
   let ic = open_in filename in
-  let oc = open_out_gen [Open_creat; Open_text; Open_append] 0o666 "Extracted.txt" in
+  let oc = open_out_gen [Open_creat; Open_text; Open_append] 0o666 output_name in
   let moves_regexp = Str.regexp {|\([KQRBN]?[a-h]?[1-8]?x?[a-h][1-8]\(=[QRBN]\)?\|[a-h][1-8][a-h][1-8][qrbn]?\|O-O-O\|O-O\)|} in
   let eval_regexp = Str.regexp {|{\(\([+-]?[0-9]*\.[0-9]+\)\|\([+-]M[0-9]+\)\)/[0-9][0-9]*[^}]*}|} in
   let game_count = ref 0 in
@@ -94,13 +94,8 @@ let process_pgn_file filename engine1 engine2 =
           engine_evals := !engine_evals @ (extract_evals line);
           read_moves ()
         end
-        
-        (*Next game
-        else begin
-          read_games ()
-        end*)
 
-      with End_of_file -> close_in ic
+      with End_of_file -> ()
     
     and extract data line =
       try
@@ -129,22 +124,22 @@ let process_pgn_file filename engine1 engine2 =
         print_endline (Printf.sprintf "Game #%i" !game_count);
       end;
       position_of_fen fen_string position;
-      let rec moves_loop moves engine_evals = match moves, engine_evals with
+      let rec moves_loop moves engine_evals is_first = match moves, engine_evals with
         |[], _ | _, [] -> ()
         |move :: other_moves, engine_eval :: other_engine_evals ->
-          if (position.white_to_move + 1) land !engine <> 0 && isquiet_position position search_tables engine_eval then begin
+          if (position.white_to_move + 1) land !engine <> 0 && isquiet_position position search_tables engine_eval && not is_first then begin
             let entry = Printf.sprintf "%s | %i | %s\n" (fen position) (format_score engine_eval position.white_to_move) result in
             output_string oc entry
           end;
           make position (move_of_algebric position move);
-          moves_loop other_moves other_engine_evals;
-      in moves_loop moves engine_evals
+          moves_loop other_moves other_engine_evals false;
+      in moves_loop moves engine_evals true
   
     and isquiet_position position search_tables engine_eval =
       not (position.state_array.(position.game_ply).in_check || String.contains engine_eval 'M') &&
       begin
         let static_eval = hce position in
-        (abs (static_eval - (int_of_float ((float_of_string engine_eval) *. 100.)))) <= 70 && (abs (static_eval - quiescence_search position search_tables 0 0 (- max_int) max_int)) <= 60
+        (abs (static_eval - (int_of_float ((float_of_string engine_eval) *. 100.)))) <= 70 && ((abs (static_eval - quiescence_search position search_tables 0 0 (- max_int) max_int)) <= 60)
       end
     
     and format_score engine_eval white_to_move =
@@ -159,4 +154,6 @@ let process_pgn_file filename engine1 engine2 =
   close_out oc
 
 
-let () = process_pgn_file "Pgn_fastchess.pgn" "new" "base"
+let () = 
+  let name = "Training_HCE_0" in
+  process_pgn_file (Printf.sprintf "Results/%s.pgn" name) (Printf.sprintf "%s.txt" name) "new" "base"

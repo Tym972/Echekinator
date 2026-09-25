@@ -70,7 +70,14 @@ let possible_start piece to_ total_occupancy = match piece mod 6 with
   |_ -> 0L
 
 let is_legal_move position move =
-  not (is_attacked (lsb_index position.pieces.(king + 6 * (position.white_to_move))) position.white_to_move ((position.occupancy.(0) ||| position.occupancy.(1) ||| single_bitboards_tab.(get_move_to move)) ^^^ single_bitboards_tab.(get_move_from move)) position.pieces)
+  let pieces = position.pieces in
+  let occupancy = position.occupancy in
+  let white_to_move = position.white_to_move in
+  let b = ref true in
+  make position move;
+  b := not (is_attacked (lsb_index pieces.(king + 6 * white_to_move)) white_to_move (occupancy.(0) ||| occupancy.(1)) pieces);
+  unmake position move;
+  !b
 
 (*d*)
 let piece_origin position move piece =
@@ -78,7 +85,8 @@ let piece_origin position move piece =
   let total_occupancy = position.occupancy.(0) ||| position.occupancy.(1) in
   let length = String.length move in
   let to_ = Hashtbl.find hash_coord (String.sub move (length - 2) 2) in
-  let candidates = piece_bitboard &&& (possible_start piece to_ total_occupancy) in
+  let capture = if position.board.(to_) = empty then 0 else 4
+  in let candidates = piece_bitboard &&& (possible_start piece to_ total_occupancy) in
   let candidates_population = population_count candidates in
   let from =
     if candidates_population = 1 then begin
@@ -102,15 +110,13 @@ let piece_origin position move piece =
       while !bb <> 0L do
         let candidate, other_candidates = pop_lsb !bb in
         bb := other_candidates;
-        if is_legal_move position (encode_move candidate to_ 0) then begin
+        if is_legal_move position (encode_move candidate to_ capture) then begin
           real_start := candidate;
           bb := 0L
         end
       done;
       !real_start
     end
-  in let capture =
-    if position.occupancy.(position.white_to_move lxor 1) &&& single_bitboards_tab.(to_) = 0L then 0 else 4
   in encode_move from to_ capture
 
 (*Fonction traduisant une promotion en notation algébrique vers la notation avec le type Mouvement*)

@@ -35,7 +35,12 @@ let rec quiescence_search position search_tables thread search_ply alpha beta =
     let in_check = state.in_check in
     
     (*Check repetion or fifty moves rule*)
-    if repetition position.state_array game_ply || (state.half_moves = 100 && (not in_check || (legal_moves position picker phase_all; picker.number_of_captures + picker.number_of_quiets <> 0))) then begin
+    if repetition position.state_array game_ply ||
+      (state.half_moves = 100 &&
+        (not in_check ||
+        (legal_moves position picker phase_all; picker.number_of_captures + picker.number_of_quiets <> 0))) ||
+        is_material_draw position
+    then begin
       0
     end
 
@@ -65,7 +70,6 @@ let rec quiescence_search position search_tables thread search_ply alpha beta =
             alpha0 := !best_score
           end;
 
-          let counter = ref 0 in
           picker.stage <- Stage_TT;
           picker.hash_move <- hash_move;
           let move_loop move =
@@ -83,8 +87,7 @@ let rec quiescence_search position search_tables thread search_ply alpha beta =
                 no_cut := false
               end
             end;
-            unmake position move;
-            incr counter
+            unmake position move
 
           (*If in check search for all moves*)
           in if in_check then begin

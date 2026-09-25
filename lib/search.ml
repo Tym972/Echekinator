@@ -47,6 +47,7 @@ let nmp_min_depth = 3
 let razoring_max_depth = 3
 let rfp_max_depth = 7
 let lmp_max_depth = 5
+let fp_max_depth = 3
 
 let rec search position search_tables thread multi depth search_ply alpha beta was_null =
   let game_ply = position.game_ply in
@@ -73,8 +74,16 @@ let rec search position search_tables thread multi depth search_ply alpha beta w
   (*Normal search*)
   else begin
     let picker = search_tables.pickers.(search_ply) in
+
     (*Check repetion or fifty moves rule*)
-    if search_ply > 0 && (repetition position.state_array game_ply || (state.half_moves = 100 && (not in_check || (legal_moves position picker phase_all; picker.number_of_captures + picker.number_of_quiets <> 0)))) then begin
+    if search_ply > 0 && begin
+        repetition position.state_array game_ply ||
+        (state.half_moves = 100 &&
+          (not in_check ||
+          (legal_moves position picker phase_all; picker.number_of_captures + picker.number_of_quiets <> 0))) ||
+        is_material_draw position
+      end
+    then begin
       0
     end
 
@@ -147,12 +156,12 @@ let rec search position search_tables thread multi depth search_ply alpha beta w
                 let no_move_cut = ref true in
 
                 (*Late Move Pruning*)
-                if not ispv && not in_check && !best_score > -max_int && depth <= lmp_max_depth && not is_noisy && !legal_counter > 3 + depth * depth then begin
+                if not ispv && not in_check && !best_score > -max_int && not is_noisy && depth <= lmp_max_depth && !legal_counter > 3 + depth * depth then begin
                   no_move_cut := false
                 end;
 
                 (*Futility pruning*)
-                if not ispv && not in_check && !best_score > -max_int && depth < 4 && not is_noisy && static_eval + 90 * depth < !alpha0 then begin
+                if not ispv && not in_check && !best_score > -max_int && not is_noisy && depth <= fp_max_depth && static_eval + 90 * depth < !alpha0 then begin
                   no_move_cut := false
                 end;
 
@@ -164,7 +173,7 @@ let rec search position search_tables thread multi depth search_ply alpha beta w
                 end;*)
 
                 (*History Pruning*)
-                (*if not ispv && not in_check && search_tables.history.(index move) < Margin * depth then begin
+                (*if not ispv && not in_check && not is_noisy && !best_score > -max_int && depth <= 3 && search_tables.history_moves.(history_index position.white_to_move move) < 100 * depth then begin
                   no_move_cut := false
                 end;*)
 

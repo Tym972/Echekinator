@@ -14,10 +14,15 @@ let simple_eval () =
   done;
   for i = 0 to 63 do
     weights.(i + 64 * pawn) <- 100;
+    weights.(i + 384 + 64 * pawn) <- 100;
     weights.(i + 64 * knight) <- 300;
+    weights.(i + 384 + 64 * knight) <- 300;
     weights.(i + 64 * bishop) <- 300;
+    weights.(i + 384 + 64 * bishop) <- 300;
     weights.(i + 64 * rook) <- 500;
-    weights.(i + 64 * queen) <- 900
+    weights.(i + 384 + 64 * rook) <- 500;
+    weights.(i + 64 * queen) <- 900;
+    weights.(i + 384 + 64 * queen) <- 900
   done
 
 let () =
@@ -50,7 +55,8 @@ fastchess  -openings order=random file=/home/tym972/openbench-books-master/UHO_L
 fastchess  -openings order=random file=/home/tym972/openbench-books-master/UHO_Lichess_4852_v1.epd  -engine name=new cmd=/home/tym972/Echekinator/_build/default/bin/echekinator.exe  -engine name=base cmd=/home/tym972/Base/_build/default/bin/echekinator.exe  -concurrency 16  -each tc=10+0.1 -rounds 8000 -repeat -recover   -sprt alpha=0.05 beta=0.10 elo0=0 elo1=10 -pgnout file=/home/tym972/Pgn_fastchess.pgn -pgnout notation=san file=/home/tym972/Echekinator/Results/Pgn_fastchess.pgn
 fastchess  -openings order=random file=/home/tym972/openbench-books-master/UHO_Lichess_4852_v1.epd  -engine name=new cmd=/home/tym972/Echekinator/_build/default/bin/echekinator.exe  -engine name=base cmd=/home/tym972/Base/_build/default/bin/echekinator.exe  -concurrency 16  -each tc=60+0.6 -rounds 8000 -repeat -recover   -sprt alpha=0.05 beta=0.10 elo0=0 elo1=10 -pgnout file=/home/tym972/Pgn_fastchess.pgn -pgnout notation=san file=/home/tym972/Echekinator/Results/Pgn_fastchess.pgn
 
-fastchess  -openings order=random file=/home/tym972/openbench-books-master/UHO_Lichess_4852_v1.epd  -engine name=new cmd=/home/tym972/Echekinator/_build/default/bin/echekinator.exe  -engine name=base cmd=/home/tym972/Base/_build/default/bin/echekinator.exe  -concurrency 1   -each tc=600  option.Threads=16 option.Hash=512  -rounds 8000 -repeat -recover   -sprt alpha=0.05 beta=0.10 elo0=-10 elo1=0 -pgnout file=/home/tym972/Pgn_fastchess.pgn -pgnout notation=san file=/home/tym972/Echekinator/Results/Pgn_fastchess.pgn -log file=/home/tym972/Echekinator/Results/fastchess.log level=info engine=true
+fastchess  -openings order=random file=/home/tym972/openbench-books-master/UHO_Lichess_4852_v1.epd  -engine name=new cmd=/home/tym972/Echekinator/_build/default/bin/echekinator.exe  -engine name=base cmd=/home/tym972/Base/_build/default/bin/echekinator.exe  -concurrency 16  -each nodes=5000 -rounds 12000 -games 1  -pgnout file=/home/tym972/Pgn_fastchess.pgn -pgnout notation=san file=/home/tym972/Echekinator/Results/Pgn_fastchess.pgn
+
 fastchess -config file=config.json -recover
 -log file=/home/tym972/Echekinator/Results/fastchess.log level=info engine=true
 

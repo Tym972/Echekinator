@@ -566,12 +566,12 @@ let echekinator () =
         done;
       |"d" :: _ -> display position
       |"eval" :: _ ->
-        for i = 0 to search_tables.pickers.(0).number_of_captures - 1 do
+        (*for i = 0 to search_tables.pickers.(0).number_of_captures - 1 do
           print_endline (Printf.sprintf "%s : see %i" (uci_of_mouvement search_tables.pickers.(0).capture_moves.(i)) (see position search_tables.pickers.(0).capture_moves.(i)))
         done;
         for i = 0 to search_tables.pickers.(0).number_of_quiets - 1 do
           print_endline (Printf.sprintf "%s : see %i" (uci_of_mouvement search_tables.pickers.(0).quiet_moves.(i)) (see position search_tables.pickers.(0).quiet_moves.(i)))
-        done;
+        done;*)
         let eval =
           if position.white_to_move = 0 then
             (float_of_int (hce position)) /. 100.

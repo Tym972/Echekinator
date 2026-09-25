@@ -81,10 +81,10 @@ let init_weights () =
   distance_weight := weights.(811);
   bishop_mg := weights.(812);
   bishop_eg := weights.(813);
-  semi_open_mg := weights.(814);
-  semi_open_eg := weights.(815);
-  open_mg := weights.(816);
-  open_eg := weights.(817);
+  open_mg := weights.(814);
+  open_eg := weights.(815);
+  semi_open_mg := weights.(816);
+  semi_open_eg := weights.(817);
   open_king := weights.(818);
   doubled_mg := weights.(819);
   doubled_eg := weights.(820);
@@ -92,6 +92,13 @@ let init_weights () =
   isolated_eg := weights.(822)
 
 let () = init_weights ()
+
+let is_material_draw position =
+  let pieces = position.pieces in
+  population_count pieces.(pawn) = 0 && population_count pieces.(pawn + 6) = 0 &&
+  population_count pieces.(rook) = 0 && population_count pieces.(rook + 6) = 0 &&
+  population_count pieces.(queen) = 0 && population_count pieces.(queen + 6) = 0 &&
+  population_count pieces.(knight) + population_count pieces.(bishop) + population_count pieces.(knight + 6) + population_count pieces.(bishop + 6) <= 1
 
 let hce position =
   let mg_score = ref 0 in
@@ -170,10 +177,10 @@ let hce position =
       let file = from land 7 in
       if files.(file) &&& pawns_bitboard = 0L then begin
         if enemy_pawns &&& files.(file) = 0L then begin
-          add_score !semi_open_mg !semi_open_eg sign
+          add_score !open_mg !open_eg sign
         end
         else begin
-          add_score !open_mg !open_eg sign
+          add_score !semi_open_mg !semi_open_eg sign
         end
       end
     done;

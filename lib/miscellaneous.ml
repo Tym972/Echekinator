@@ -47,11 +47,11 @@ let is_integer_string chain =
   i > 0
 
 let print_bitboard bitboard =
-  let board = Array.make 64 0 in
+  let board = Array.make 64 empty in
   let rec aux_1 board index = match index with
     |[] -> ()
     |h::t ->
-      board.(h) <- 6;
+      board.(h) <- king;
       aux_1 board t
   in aux_1 board (index_list bitboard);
   let display = ref "   +---+---+---+---+---+---+---+---+\n"

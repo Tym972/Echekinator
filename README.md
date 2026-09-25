@@ -3,22 +3,40 @@
 [![Lichess Profile](https://img.shields.io/badge/Lichess-Echekinator-000000?style=flat&logo=lichess)](https://lichess.org/@/Echekinator) [![OCaml](https://img.shields.io/badge/Language-OCaml-EC6813?style=flat&logo=ocaml)](https://ocaml.org) [![License](https://img.shields.io/github/license/Tym972/Echekinator)](https://github.com/Tym972/Echekinator/blob/main/LICENSE)
 
 
-Echekinator is a UCI-compatible chess engine written in OCaml.
+Echekinator is an UCI-compatible chess engine written in OCaml.
 
-## Overview
-The engine currently relies on:
-- Principal Variation Search (PVS)
-- Quiescence Search
-- Iterative Deepening
-- Null Move Pruning
-- Reverse Futility Pruning
-- Late Move Reduction
-- PeSTO's evaluation function
-- Killer moves
-- History heuristic
-- Transposition Table
-- Lazy SMP
-- UCI Protocol
+## Features
+
+- Move Generation
+    - Legal generator with 3 modes (all moves, captures/promotions, quiets)
+- HCE
+    - PeSTO Piece-square tables 
+    - Mobility
+    - Pawn Evaluation
+    - Rook activity
+    - Bishop pair
+    - Minimalist king safety
+- Search
+    - Negamax with alpha-beta pruning
+    - Principle Variation Search (PVS)
+    - Quiescence Search with stand-pat cutoffs and SEE filtering
+    - Iterative Deepening
+    - Adaptive Aspiration Windows
+    - Transposition Table
+    - Move Ordering
+        - Transposition Table Move
+        - MVV-LVA for captures and promotions
+        - Differentiation of captures with Static Exchange Evaluation
+        - Killer Move Heuristic (2 slots per ply)
+        - Butterfly History Heuristic
+    - Selectivity & Pruning
+        - TT Cutoffs
+        - Reverse Futility Pruning
+        - Razoring
+        - Null Move Pruning
+        - Late Move Pruning
+        - Futility Pruning
+        - Late Move Reductions
 
 ## Build
 
@@ -41,19 +59,17 @@ To run the engine (raw UCI):
 dune exec bin/echekinator.exe
 ```
 
-## Playing strength
-Echekinator will be tested on the CCRL lists.
+## Ratings
 
-- CCRL 40/15 rating: TBD
-- CCRL Blitz rating: 2143
+|   Version       | CCRL 40/15 | CCRL Blitz | Architecture   |
+|-----------------|------------|------------|----------------|
+| Echekinator 1.0 | —          | 2143       | 0x88 + HCE     |
+| Echekinator 1.1 | —          | —          | Bitboards + HCE|
 
-
-No official rating available yet.
 
 ## Credits
 This project would not have been possible without the help of the Stockfish Discord server. 
 Special thanks to:
-- Fastchess for engine tournaments
+- Disservin fom Fastchess
 - Chess Programming Wiki
-- PeSTO for the evaluation
 - CCRL for testing the engine
