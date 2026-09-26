@@ -84,14 +84,12 @@ let uci () =
     ^ "option name UCI_Chess960 type check default false" ^ "\n"
     ^ "uciok")
 
-(*Variable indication if Pondering is allowed*)
-let option_ponder = ref false
-
+let is_pondering = ref false
 let wtime = ref (-. 1.)
 let btime = ref (-. 1.)
 let winc = ref 0.
 let binc = ref 0.
-let movestogo = ref 500.
+let movestogo = ref 50.
 let movetime = ref (9. *. 10e8)
 
 let reset_hash search_tables =
@@ -148,33 +146,6 @@ let position_uci instructions position search_tables =
     |_ -> ()
   end
 
-(*let print_bitboard bitboard =
-  let board = Array.make 64 0 in
-  let rec aux_1 board index = match index with
-    |[] -> ()
-    |h::t ->
-      board.(h) <- 6;
-      aux_1 board t
-  in aux_1 board (index_list bitboard);
-  let display = ref "   +---+---+---+---+---+---+---+---+\n"
-  in for i = 8 downto 1 do
-    let k_list = ref [] in
-    let k = string_of_int i ^ "  |" in
-    for j = 8 * (i - 1) to 8 * i - 1 do
-      let piece = board.(j) in
-      k_list := tab_print.(piece) :: !k_list;
-    done;
-    k_list := List.rev !k_list;
-    let k_str = String.concat "" !k_list in
-    display := !display ^ (k ^ k_str ^ "\n" ^"   +---+---+---+---+---+---+---+---+\n");
-  done;
-  begin
-  let fichier_sortie = open_out_gen [Open_creat; Open_text; Open_append] 0o666 "Harry.txt"
-  in output_string fichier_sortie (!display ^ "     a   b   c   d   e   f   g   h\n");
-  close_out fichier_sortie
-end;
-  print_endline (!display ^ "     a   b   c   d   e   f   g   h\n")*)
-
 let rec algoperft position pickers depth search_ply =
   if depth = 0 then begin
     1
@@ -204,21 +175,24 @@ let span_of_milliseconds (s : float) : Mtime.span =
   | Some span -> span
   | None -> failwith "Harry Diboula"
 
-let time_management wtime btime winc binc movetime white_to_move movestogo soft_bound hard_bound =
-  let soft_bound_ms, hard_bound_ms =
-    if wtime < 0. && btime < 0. then begin
-      max 1. movetime, max 1. movetime
-    end
-    else begin
-      if white_to_move = 0 then begin
-        max 1. ((wtime /. (min movestogo 22.)) +. winc /. 2.), max 1. ((wtime /. (min movestogo 18.)) +. winc /. 2.)
-      end
-      else begin
-        max 1. ((btime /. (min movestogo 22.)) +. binc /. 2.), max 1. ((btime /. (min movestogo 18.)) +. binc /. 2.)
-      end
-    end
-  in soft_bound := span_of_milliseconds soft_bound_ms;
-  hard_bound := span_of_milliseconds hard_bound_ms
+let time_management position number_of_legal wtime btime winc binc movetime movestogo soft_bound hard_bound =
+  if wtime < 0. && btime < 0. then begin
+    soft_bound := span_of_milliseconds movetime;
+    hard_bound := span_of_milliseconds movetime
+  end
+  else begin
+    let time, inc = if position.white_to_move = 0 then wtime, winc else btime, binc in
+    let base_ms = max 0. ((time /. (min movestogo 20. *. (if number_of_legal = 1 then 10. else 1.))) +. inc *. 0.75) in
+    let hard_bound_ms = ref (min (2. *. base_ms) time) in
+    if !hard_bound_ms +. 25. > time then hard_bound_ms := !hard_bound_ms -. 25.;
+    if !hard_bound_ms < 5. then hard_bound_ms := 5.;
+    let soft_bound_ms = ref (0.75 *. base_ms) in
+    if !soft_bound_ms > !hard_bound_ms then soft_bound_ms := !hard_bound_ms;
+    if !soft_bound_ms < 5. then soft_bound_ms  := 5.;
+    print_endline (string_of_float base_ms ^ " " ^ string_of_float !soft_bound_ms ^ " " ^ string_of_float !hard_bound_ms);
+    soft_bound := span_of_milliseconds !soft_bound_ms;
+    hard_bound := span_of_milliseconds !hard_bound_ms
+  end
 
 (*Fonction mettant en forme le score retourné*)
 let formate_score score var_mate alpha beta =
@@ -250,7 +224,7 @@ let formate_score score var_mate alpha beta =
 let pv_finder position bestmove depth =
   let pv = ref [bestmove] in
   let rec aux position d =
-    if d > 0 && not (position.state_array.(position.game_ply).half_moves = 100 || repetition position.state_array position.game_ply (*depth - d*)) then begin
+    if d > 0 && not (position.state_array.(position.game_ply).half_moves = 100 || repetition position.state_array position.game_ply) then begin
       let state = position.state_array.(position.game_ply) in
       let _, _, _, hash_move, _ = probe state.zobrist in
       if hash_move <> 0 then begin
@@ -273,7 +247,7 @@ let iterative_deepening position search_tables depth mate thread =
   let picker = search_tables.pickers.(0) in
   let zobrist = position.state_array.(0).zobrist in
   let tt_index = Int64.to_int (Int64.rem zobrist !slots) in
-  while not (stop_search.(thread) || (thread = 0 && Mtime.Span.compare (Mtime_clock.count !start_time) !soft_bound > 0) || !var_depth + 1 > depth || total_counter node_counter + 1 > !node_limit || !var_mate < mate + 1 ) do
+  while not (stop_search.(thread) || (thread = 0 && Mtime.Span.compare (Mtime_clock.count !start_time) !soft_bound > 0) || !var_depth + 1 > depth || total_counter node_counter + 1 > !node_limit || !var_mate < mate + 1) || !var_depth = 0 do
     incr var_depth;
     for multi = 0 to (!number_of_pv - 1) do
       let new_score =
@@ -327,7 +301,7 @@ let iterative_deepening position search_tables depth mate thread =
         |[] -> ()
         |(_, multi) :: other_variations ->
           let score = formate_score !results.(multi).score var_mate alpha_table.(multi) beta_table.(multi) in
-          let pv = (String.concat " " (List.map uci_of_mouvement (pv_finder position !results.(multi).bestmove depth))) in
+          let pv = (String.concat " " (List.map uci_of_mouvement (pv_finder position !results.(multi).bestmove !var_depth))) in
           print_endline (Printf.sprintf "info depth %i seldepth %i multipv %i score %s nodes %i nps %i hashfull %i time %i pv %s" !var_depth !var_depth already_printed score (total_counter node_counter) nps hashfull time pv);
           printer other_variations (already_printed + 1)
       in printer !order_of_multi 1
@@ -380,7 +354,7 @@ let setoption search_tables instructions =
       variable := value
     end
   in match (List.tl instructions) with
-    |"name" :: "Ponder" :: _ -> type_check instructions option_ponder
+    |"name" :: "Ponder" :: _ -> ()
     |"name" :: "UCI_Chess960" :: _ -> type_check instructions chess_960
     |"name" :: "Clear" :: "Hash" :: _ -> reset_hash search_tables
     |"name" :: "MultiPV" :: _ ->
@@ -411,14 +385,15 @@ let setoption search_tables instructions =
 
 (*Answer to the command "go"*)
 let go instructions position search_tables =
+  start_time := Mtime_clock.counter ();
   let picker = search_tables.pickers.(0) in
-  if picker.number_of_captures + picker.number_of_quiets = 0 then begin
+  let number_of_legal = picker.number_of_captures + picker.number_of_quiets in
+  if number_of_legal = 0 then begin
     let result = if true then "mate" else "cp" in
     print_endline (Printf.sprintf "info depth 0 score %s 0" result);
     print_endline "bestmove (none)"
   end
   else begin
-    start_time := Mtime_clock.counter ();
     soft_bound := Mtime.Span.max_span;
     hard_bound := Mtime.Span.max_span;
     for thread = 0 to !threads_number - 1 do
@@ -430,7 +405,7 @@ let go instructions position search_tables =
       search_tables.pickers.(i).killer2 <- 0
     done;
     incr go_counter;
-    let is_pondering = ref false in
+    is_pondering := false;
     wtime := (-. 1.);
     btime := (-. 1.);
     winc := 0.;
@@ -441,25 +416,25 @@ let go instructions position search_tables =
     let depth = ref max_depth in
     let mate = ref (-1) in
     let rec aux instruction = match instruction with
-      |h :: g :: t ->
+      |h :: g ->
         begin match h with
           |"ponder" -> is_pondering := true
-          |"wtime" -> wtime := (float_of_string g)
-          |"btime" -> btime := (float_of_string g)
-          |"winc" -> winc := (float_of_string g)
-          |"binc" -> binc := (float_of_string g)
-          |"movestogo" -> movestogo := (float_of_string g)
-          |"depth" -> depth := (int_of_string g)
-          |"nodes" -> node_limit := (int_of_string g)
-          |"mate" -> mate := (int_of_string g)
-          |"movetime" -> movetime := (float_of_string g)
+          |"wtime" -> wtime := (float_of_string (List.hd g))
+          |"btime" -> btime := (float_of_string (List.hd g))
+          |"winc" -> winc := (float_of_string (List.hd g))
+          |"binc" -> binc := (float_of_string (List.hd g))
+          |"movestogo" -> movestogo := (float_of_string (List.hd g))
+          |"depth" -> depth := (int_of_string (List.hd g))
+          |"nodes" -> node_limit := (int_of_string (List.hd g))
+          |"mate" -> mate := (int_of_string (List.hd g))
+          |"movetime" -> movetime := (float_of_string (List.hd g))
           |_ -> ()
         end;
-        aux (g :: t)
+        aux g
       |_ -> ()
     in aux instructions;
     if not !is_pondering then begin
-      time_management !wtime !btime !winc !binc !movetime position.white_to_move !movestogo soft_bound hard_bound
+      time_management position number_of_legal !wtime !btime !winc !binc !movetime !movestogo soft_bound hard_bound
     end;
     number_of_pv := min !multipv (picker.number_of_captures + picker.number_of_quiets);
     results := (Array.init !multipv (fun _ ->  {depth = 0; score = 0; bestmove = 0}));
@@ -488,6 +463,9 @@ let go instructions position search_tables =
       print_endline ("info depth 0 score cp 0" ^ "\n" ^ "bestmove (none)");
     end
     else begin
+      while !is_pondering && not stop_search.(0) do
+        ()
+      done;
       let print_bestmove = "bestmove " ^ try (uci_of_mouvement (!results.(!best_line_id).bestmove)) with _ -> "(none)" in
       let print_ponder = try " ponder " ^ uci_of_mouvement (List.nth (pv_finder position !results.(!best_line_id).bestmove !results.(!best_line_id).depth) 1) with _ -> "" in
       print_endline (print_bestmove ^ print_ponder)
@@ -557,7 +535,7 @@ let echekinator () =
         in ()
       |"go" :: _ ->
         let _ = Thread.create
-          (fun () -> process (fun () -> go instructions position search_tables)) ()
+          (fun () -> process (fun () -> go instructions (copy_position position) search_tables)) ()
         in ()
       |"quit" :: _ -> exit := true
       |"stop" :: _ ->
@@ -579,8 +557,11 @@ let echekinator () =
             -. (float_of_int (hce position)) /. 100.
         in print_endline ("HCE Evaluation : " ^ (if eval > 0. then "+" else "") ^ string_of_float eval ^ " (white side)")
       |"ponderhit" :: _ ->
+        is_pondering := false;
         start_time := Mtime_clock.counter ();
-        time_management !wtime !btime !winc !binc !movetime position.white_to_move !movestogo soft_bound hard_bound
+        soft_bound := Mtime.Span.max_span;
+        hard_bound := Mtime.Span.max_span;
+        time_management position (search_tables.pickers.(0).number_of_captures + search_tables.pickers.(0).number_of_quiets) !wtime !btime !winc !binc !movetime !movestogo soft_bound hard_bound
       |[] -> ()
       |_ -> print_endline (Printf.sprintf "Unknown command: '%s'. Type help for more information." (List.hd instructions))
   done

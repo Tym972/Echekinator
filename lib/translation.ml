@@ -17,10 +17,14 @@ let english_pieces_lowercase = [|""; "p"; "n"; "b"; "r"; "q"; "k"|]
 let uci_of_mouvement move =
   let from = get_move_from move in
   let to_ = get_move_to move in
-  if !chess_960 && (get_move_flag move = 2 || get_move_flag move = 3) then begin
-    coord.(from) ^ coord.(get_move_to move)
+  let flag = get_move_flag move in
+  if !chess_960 && (flag = 2 || flag = 3) then begin
+    let white_to_move = if from < 8 then 0 else 1 in
+    let player_castling_info = castling_infos.(white_to_move) in
+    let castling_square = if flag = 2 then player_castling_info.from_short_rook else player_castling_info.from_long_rook in
+    coord.(from) ^ coord.(castling_square)
   end
-  else if get_move_flag move land 8 <> 0 then begin
+  else if flag land 8 <> 0 then begin
     coord.(from) ^ coord.(to_) ^ english_pieces_lowercase.(get_move_promotion move mod 6)
   end
   else if from + to_ <> 0 then begin
@@ -74,9 +78,9 @@ let mouvement_of_uci uci position =
   let is_king = piece mod 6 = king in
   let is_pawn = piece mod 6 = pawn in
   let is_short_castling =
-    is_king && from = player_castling_infos.from_king && (raw_to = player_castling_infos.to_short_king || (!chess_960 && raw_to = player_castling_infos.from_short_rook))
+    is_king && from = player_castling_infos.from_king && (raw_to = player_castling_infos.to_short_king || (!chess_960 && raw_to = player_castling_infos.from_short_rook && position.board.(raw_to) = (rook + 6 * white_to_move)))
   in let is_long_castling =
-    is_king && from = player_castling_infos.from_king && (raw_to = player_castling_infos.to_long_king || (!chess_960 && raw_to = player_castling_infos.from_long_rook))
+    is_king && from = player_castling_infos.from_king && (raw_to = player_castling_infos.to_long_king || (!chess_960 && raw_to = player_castling_infos.from_long_rook && position.board.(raw_to) = (rook + 6 * white_to_move)))
   in let to_ =
     if !chess_960 then begin
       if is_short_castling then player_castling_infos.to_short_king

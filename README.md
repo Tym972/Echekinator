@@ -3,12 +3,13 @@
 [![Lichess Profile](https://img.shields.io/badge/Lichess-Echekinator-000000?style=flat&logo=lichess)](https://lichess.org/@/Echekinator) [![OCaml](https://img.shields.io/badge/Language-OCaml-EC6813?style=flat&logo=ocaml)](https://ocaml.org) [![License](https://img.shields.io/github/license/Tym972/Echekinator)](https://github.com/Tym972/Echekinator/blob/main/LICENSE)
 
 
-Echekinator is an UCI-compatible chess engine written in OCaml.
+Echekinator is an UCI-compatible chess engine written in OCaml. It supports 
 
 ## Features
 
 - Move Generation
     - Legal generator with 3 modes (all moves, captures/promotions, quiets)
+
 - HCE
     - PeSTO Piece-square tables 
     - Mobility
@@ -16,6 +17,7 @@ Echekinator is an UCI-compatible chess engine written in OCaml.
     - Rook activity
     - Bishop pair
     - Minimalist king safety
+
 - Search
     - Negamax with alpha-beta pruning
     - Principle Variation Search (PVS)
@@ -37,6 +39,20 @@ Echekinator is an UCI-compatible chess engine written in OCaml.
         - Late Move Pruning
         - Futility Pruning
         - Late Move Reductions
+
+### UCI settings
+
+- Hash
+    - The size of the hash table in MB.
+
+- Threads
+    - The number of threads to use for searching.
+
+- MultiPV
+    - Output the N best lines when searching. Leave at 1 for best performance.
+
+- UCI_Chess960
+    - If true, Echekinator will play Chess960.
 
 ## Build
 

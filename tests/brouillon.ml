@@ -1,6 +1,8 @@
 open Libs.Bitboards
 open Libs.Evaluation
 
+(*print_endline (string_of_float base_ms ^ " " ^ string_of_float !soft_bound_ms ^ " " ^ string_of_float !hard_bound_ms);*)
+
 let print_weights weights =
   let w = ref "[| " in
   for i = 0 to Array.length weights - 1 do
