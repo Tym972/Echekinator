@@ -11,7 +11,13 @@ type search_result =
   {score : int;
   bestmove : int}
 
+type nodes_fraction =
+  {move : int;
+  nodes : int}
+
 let search_record = ref (Array.init !multipv (fun _ -> Array.init (max_depth + 1) (fun _ -> {score = -max_int; bestmove = 0})))
+
+let nodes_fraction = ref (Array.init !multipv (fun _ -> Array.init 218 (fun _ -> {move = 0; nodes = 0})))
 
 let zugzwang pieces white_to_move =
   pieces.(knight + 6 * white_to_move) = 0L &&
@@ -147,6 +153,7 @@ let rec search position search_tables thread multi depth search_ply alpha beta w
             let legal_counter = ref 0 in
             picker.hash_move <- hash_move;
             picker.stage <- Stage_TT;
+            let initial_nodes = ref node_counter.(thread) in
             while !no_search_cut do
               let move = next_move position picker search_tables search_ply in
               if move <> 0 then begin
@@ -224,6 +231,14 @@ let rec search position search_tables thread multi depth search_ply alpha beta w
                       end
                     end
                   end
+                end;
+                if search_ply + thread = 0 then begin
+                  let nodes_count = node_counter.(0) in
+                  !nodes_fraction.(multi).(!legal_counter - 1) <- {
+                    move = move;
+                    nodes = nodes_count - !initial_nodes
+                    };
+                  initial_nodes := nodes_count
                 end
               end
               else begin

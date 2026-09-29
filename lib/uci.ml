@@ -250,7 +250,8 @@ let iterative_deepening position search_tables depth mate thread =
   let var_depth = ref 0 in 
   let var_mate = ref max_int in
   let picker = search_tables.pickers.(0) in
-  let number_of_pv = min !multipv (picker.number_of_captures + picker.number_of_quiets) in
+  let number_of_legal = picker.number_of_captures + picker.number_of_quiets in
+  let number_of_pv = min !multipv number_of_legal in
   let alpha_table = Array.make number_of_pv (- max_int) in
   let beta_table = Array.make number_of_pv max_int in
   let zobrist = position.state_array.(position.game_ply).zobrist in
@@ -323,7 +324,7 @@ let iterative_deepening position search_tables depth mate thread =
         else begin
           stability_counter := 0
         end;
-        if !var_depth > 6 && not stop_search.(0) then begin
+        if !var_depth > 6 && not stop_search.(0) && base_ms < 2. *. 10e8  then begin
           let scale = ref 1. in
           if !stability_counter < 2 then begin
             scale := !scale *. 1.3
@@ -334,14 +335,21 @@ let iterative_deepening position search_tables depth mate thread =
           if actual_depth.score + 100 < previous_depth.score then begin
             scale := !scale *. 1.5
           end;
-          let bestmove_nodes_fraction = 0.5 in
-            scale := (1.5 -. bestmove_nodes_fraction) *. !scale;
+          let total_nodes = ref 0 in
+          let bestmove_index = ref (-1) in
+          for i = 0 to number_of_legal - 1 do
+            let move = !nodes_fraction.(bestline.id).(i) in
+            if move.move = actual_depth.bestmove then begin
+              bestmove_index := i
+            end;
+            total_nodes := !total_nodes + move.nodes;
+          done;
+          let bestmove_nodes_fraction = float_of_int !nodes_fraction.(bestline.id).(!bestmove_index).nodes /. float_of_int !total_nodes in
+          scale := (1.75 -. bestmove_nodes_fraction) *. !scale;
           let new_soft_bound = min (miliseconds_of_span !hard_bound) (!scale *. base_ms) in
           soft_bound := span_of_milliseconds new_soft_bound
         end
       end;
-
-
       let rec printer variations already_printed = match variations with
         |[] -> ()
         |(depth, _, multi) :: other_variations ->
@@ -406,7 +414,8 @@ let setoption search_tables instructions =
       let value = value_of_instructions instructions in
       if value <> !multipv then begin
         type_spin value multipv min_multipv max_multipv;
-        search_record :=  (Array.init !multipv (fun _ -> Array.init (max_depth + 1) (fun _ -> {score = -max_int; bestmove = 0})))
+        search_record :=  (Array.init !multipv (fun _ -> Array.init (max_depth + 1) (fun _ -> {score = -max_int; bestmove = 0})));
+        nodes_fraction := (Array.init !multipv (fun _ -> Array.init 218 (fun _ -> {move = 0; nodes = 0})))
         end
     |"name" :: "Hash" :: _ ->
       let value = value_of_instructions instructions in
@@ -482,6 +491,7 @@ let go instructions position search_tables =
       init_time position number_of_legal !wtime !btime !winc !binc !movetime !movestogo
     end;
     search_record := (Array.init !multipv (fun _ -> Array.init (max_depth + 1) (fun _ -> {score = -max_int; bestmove = 0})));
+    nodes_fraction := (Array.init !multipv (fun _ -> Array.init 218 (fun _ -> {move = 0; nodes = 0})));
     if !threads_number > 1 then begin
       current_position := copy_position position;
       current_search_tables := copy_search_tables search_tables;
