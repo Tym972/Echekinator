@@ -112,12 +112,17 @@ let make_list record position =
       end
   in func record
 
-let number_of_pv = ref 1
-
 let current_position = ref (create_position ())
 let current_search_tables = ref (create_search_tables ())
 
-let best_line_id = ref (-1)
+type bestline =
+  {mutable id : int;
+  mutable depth : int}
+
+let bestline = {
+  id = -1 ;
+  depth = 0
+}
 
 (*Answer to the command "command"*)
 let position_uci instructions position search_tables =
@@ -170,26 +175,28 @@ let rec algoperft position pickers depth search_ply =
     !nodes
   end
 
-let span_of_milliseconds (s : float) : Mtime.span =
-  match Mtime.Span.of_float_ns (s *. 1e6) with
+let span_of_milliseconds span =
+  match Mtime.Span.of_float_ns (span *. 1e6) with
   | Some span -> span
   | None -> failwith "Harry Diboula"
 
-let time_management position number_of_legal wtime btime winc binc movetime movestogo soft_bound hard_bound =
+let miliseconds_of_span miliseconds =
+  (Mtime.Span.to_float_ns miliseconds) /. 1e6 
+
+let init_time position number_of_legal wtime btime winc binc movetime movestogo =
   if wtime < 0. && btime < 0. then begin
     soft_bound := span_of_milliseconds movetime;
     hard_bound := span_of_milliseconds movetime
   end
   else begin
     let time, inc = if position.white_to_move = 0 then wtime, winc else btime, binc in
-    let base_ms = max 0. ((time /. (min movestogo 20. *. (if number_of_legal = 1 then 10. else 1.))) +. inc *. 0.75) in
-    let hard_bound_ms = ref (min (2. *. base_ms) time) in
+    let base_ms = max 0. ((time /. ((min movestogo 40.) *. (if number_of_legal = 1 then 10. else 1.))) +. inc *. 0.75) in
+    let hard_bound_ms = ref (min (4. *. base_ms) time) in
     if !hard_bound_ms +. 25. > time then hard_bound_ms := !hard_bound_ms -. 25.;
-    if !hard_bound_ms < 5. then hard_bound_ms := 5.;
-    let soft_bound_ms = ref (0.75 *. base_ms) in
+    if !hard_bound_ms < 1. then hard_bound_ms := 1.;
+    let soft_bound_ms = ref base_ms in
     if !soft_bound_ms > !hard_bound_ms then soft_bound_ms := !hard_bound_ms;
-    if !soft_bound_ms < 5. then soft_bound_ms  := 5.;
-    print_endline (string_of_float base_ms ^ " " ^ string_of_float !soft_bound_ms ^ " " ^ string_of_float !hard_bound_ms);
+    if !soft_bound_ms < 1. then soft_bound_ms  := 1.;
     soft_bound := span_of_milliseconds !soft_bound_ms;
     hard_bound := span_of_milliseconds !hard_bound_ms
   end
@@ -242,69 +249,107 @@ let pv_finder position bestmove depth =
 let iterative_deepening position search_tables depth mate thread =
   let var_depth = ref 0 in 
   let var_mate = ref max_int in
-  let alpha_table = Array.make !number_of_pv (- max_int) in
-  let beta_table = Array.make !number_of_pv max_int in
   let picker = search_tables.pickers.(0) in
-  let zobrist = position.state_array.(0).zobrist in
+  let number_of_pv = min !multipv (picker.number_of_captures + picker.number_of_quiets) in
+  let alpha_table = Array.make number_of_pv (- max_int) in
+  let beta_table = Array.make number_of_pv max_int in
+  let zobrist = position.state_array.(position.game_ply).zobrist in
   let tt_index = Int64.to_int (Int64.rem zobrist !slots) in
+  let actual_depths = Array.make number_of_pv 0 in
+  let bestline_id_tab = Array.make (depth + 1) (-1) in
+  let base_ms = miliseconds_of_span !soft_bound in
+  let stability_counter = ref 0 in
   while not (stop_search.(thread) || (thread = 0 && Mtime.Span.compare (Mtime_clock.count !start_time) !soft_bound > 0) || !var_depth + 1 > depth || total_counter node_counter + 1 > !node_limit || !var_mate < mate + 1) || !var_depth = 0 do
     incr var_depth;
-    for multi = 0 to (!number_of_pv - 1) do
-      let new_score =
-        let score = ref (search position search_tables thread multi !var_depth 0 alpha_table.(multi) beta_table.(multi) false) in
-        while not (stop_search.(thread) || total_counter node_counter > !node_limit || (!score > alpha_table.(multi) && !score < beta_table.(multi))) do
-          if !score <= alpha_table.(multi) then begin
-            alpha_table.(multi) <- (-max_int)
-          end
-          else if !score >= beta_table.(multi) then begin
-            beta_table.(multi) <- max_int
-          end;
-          score := search position search_tables thread multi !var_depth 0 alpha_table.(multi) beta_table.(multi) false;
-        done;
-        !score
-      in if new_score > (-max_int) then begin
-        if (new_score > alpha_table.(multi) && new_score < beta_table.(multi)) then begin
-          alpha_table.(multi) <- new_score - 25;
-          beta_table.(multi) <- new_score + 25
-        end;
-        if !number_of_pv > multi + 1 then begin
-          remove_move !results.(multi).bestmove picker;
-          clear_entry !tt tt_index;
+    for multi = 0 to (number_of_pv - 1) do
+      let score = ref (search position search_tables thread multi !var_depth 0 alpha_table.(multi) beta_table.(multi) false) in
+      while not (stop_search.(thread) || total_counter node_counter > !node_limit || (!score > alpha_table.(multi) && !score < beta_table.(multi))) do
+        if !score <= alpha_table.(multi) then begin
+          alpha_table.(multi) <- (-max_int)
         end
+        else if !score >= beta_table.(multi) then begin
+          beta_table.(multi) <- max_int
+        end;
+        score := search position search_tables thread multi !var_depth 0 alpha_table.(multi) beta_table.(multi) false;
+      done;
+      if !search_record.(multi).(!var_depth).score > (-max_int) then begin
+        if (!score > alpha_table.(multi) && !score < beta_table.(multi)) then begin
+          alpha_table.(multi) <- !score - 25;
+          beta_table.(multi) <- !score + 25
+        end;
+        if number_of_pv > multi + 1 then begin
+          remove_move !search_record.(multi).(!var_depth).bestmove picker;
+          clear_entry !tt tt_index;
+        end;
+        actual_depths.(multi) <- !var_depth
       end
     done;
-    for multi = 0 to (!number_of_pv - 2) do
-      add_move !results.(multi).bestmove picker
+    for multi = 0 to (number_of_pv - 2) do
+      add_move !search_record.(multi).(!var_depth).bestmove picker
     done;
     if thread = 0 then begin
-      let exec_time =
-        let span = Mtime_clock.count !start_time in
-        Mtime.Span.to_float_ns span /. 1e9
-      in let nps = int_of_float (float_of_int (total_counter node_counter) /. exec_time) in
+      let exec_time = Mtime.Span.to_float_ns (Mtime_clock.count !start_time) /. 1e9 in
+      let nps = int_of_float (float_of_int (total_counter node_counter) /. exec_time) in
       let hashfull = min 1000 (int_of_float (1000. *. (float_of_int (total_counter transposition_counter) /. (Int64.to_float !slots)))) in
       let time =  (int_of_float (1000. *. exec_time)) in
-      let order_of_multi = ref [] in
-      for multi = 0 to !number_of_pv - 1 do
-        if !results.(multi).depth = !var_depth then begin
-          order_of_multi := (!results.(multi).score, multi) :: !order_of_multi
+      let variations = ref [] in
+      for multi = 0 to (number_of_pv - 1) do
+        let actual_depth = actual_depths.(multi) in
+        if not (actual_depth <> !var_depth && multi = 0) then begin
+          if actual_depth > 0 then begin
+            let result = !search_record.(multi).(actual_depth) in
+            variations := (actual_depth, result.score, multi) :: !variations
+          end
         end
       done;
-      order_of_multi := List.sort (fun x y -> compare y x) !order_of_multi;
-      if !number_of_pv > 1 then begin
-        let score, multi = List.hd !order_of_multi in
-        store thread zobrist depth score score !results.(multi).bestmove (hce position) !go_counter
+      variations := List.sort (fun x y -> compare y x) !variations;
+      if number_of_pv > 1 then begin
+        let depth, score, multi = List.hd !variations in
+        store thread zobrist depth score score !search_record.(multi).(depth).bestmove (hce position) !go_counter
       end;
       begin try
-        best_line_id := snd (List.hd !order_of_multi) with _ -> ()
+        let depth, _, id = (List.hd !variations) in
+        bestline.depth <- depth;
+        bestline.id <- id;
+        bestline_id_tab.(!var_depth) <- id
+      with _ -> ()
       end;
+      if !var_depth > 1 then begin
+        let previous_depth = !search_record.(bestline_id_tab.(!var_depth - 1)).(!var_depth - 1) in
+        let actual_depth = !search_record.(bestline.id).(!var_depth) in
+        if actual_depth.bestmove = previous_depth.bestmove then begin
+          incr stability_counter
+        end
+        else begin
+          stability_counter := 0
+        end;
+        if !var_depth > 6 && not stop_search.(0) then begin
+          let scale = ref 1. in
+          if !stability_counter < 2 then begin
+            scale := !scale *. 1.3
+          end
+          else if !stability_counter > 3 then begin
+            scale := !scale *. 0.75
+          end;
+          if actual_depth.score + 100 < previous_depth.score then begin
+            scale := !scale *. 1.5
+          end;
+          let bestmove_nodes_fraction = 0.5 in
+            scale := (1.5 -. bestmove_nodes_fraction) *. !scale;
+          let new_soft_bound = min (miliseconds_of_span !hard_bound) (!scale *. base_ms) in
+          soft_bound := span_of_milliseconds new_soft_bound
+        end
+      end;
+
+
       let rec printer variations already_printed = match variations with
         |[] -> ()
-        |(_, multi) :: other_variations ->
-          let score = formate_score !results.(multi).score var_mate alpha_table.(multi) beta_table.(multi) in
-          let pv = (String.concat " " (List.map uci_of_mouvement (pv_finder position !results.(multi).bestmove !var_depth))) in
-          print_endline (Printf.sprintf "info depth %i seldepth %i multipv %i score %s nodes %i nps %i hashfull %i time %i pv %s" !var_depth !var_depth already_printed score (total_counter node_counter) nps hashfull time pv);
+        |(depth, _, multi) :: other_variations ->
+          let score = formate_score !search_record.(multi).(depth).score var_mate alpha_table.(multi) beta_table.(multi) in
+          let pv = (String.concat " " (List.map uci_of_mouvement (pv_finder position !search_record.(multi).(depth).bestmove depth))) in
+          print_endline (Printf.sprintf "info depth %i seldepth %i multipv %i score %s nodes %i nps %i hashfull %i time %i pv %s" depth depth already_printed score (total_counter node_counter) nps hashfull time pv);
           printer other_variations (already_printed + 1)
-      in printer !order_of_multi 1
+      in printer !variations 1
     end;
   done
 
@@ -361,7 +406,7 @@ let setoption search_tables instructions =
       let value = value_of_instructions instructions in
       if value <> !multipv then begin
         type_spin value multipv min_multipv max_multipv;
-        results := (Array.init !multipv (fun _ ->  {depth = 0; score = 0; bestmove = 0}))
+        search_record :=  (Array.init !multipv (fun _ -> Array.init (max_depth + 1) (fun _ -> {score = -max_int; bestmove = 0})))
         end
     |"name" :: "Hash" :: _ ->
       let value = value_of_instructions instructions in
@@ -434,10 +479,9 @@ let go instructions position search_tables =
       |_ -> ()
     in aux instructions;
     if not !is_pondering then begin
-      time_management position number_of_legal !wtime !btime !winc !binc !movetime !movestogo soft_bound hard_bound
+      init_time position number_of_legal !wtime !btime !winc !binc !movetime !movestogo
     end;
-    number_of_pv := min !multipv (picker.number_of_captures + picker.number_of_quiets);
-    results := (Array.init !multipv (fun _ ->  {depth = 0; score = 0; bestmove = 0}));
+    search_record := (Array.init !multipv (fun _ -> Array.init (max_depth + 1) (fun _ -> {score = -max_int; bestmove = 0})));
     if !threads_number > 1 then begin
       current_position := copy_position position;
       current_search_tables := copy_search_tables search_tables;
@@ -448,7 +492,7 @@ let go instructions position search_tables =
         Condition.broadcast domain_cond;
       Mutex.unlock domain_mutex
     end;
-    iterative_deepening position search_tables !depth !mate 0;
+    iterative_deepening (copy_position position) search_tables !depth !mate 0;
     if !threads_number > 1 then begin
       Mutex.lock domain_mutex;
       for thread = 1 to !threads_number - 1 do
@@ -459,17 +503,12 @@ let go instructions position search_tables =
       done;
       Mutex.unlock domain_mutex;
     end;
-    if !best_line_id = (-1) then begin
-      print_endline ("info depth 0 score cp 0" ^ "\n" ^ "bestmove (none)");
-    end
-    else begin
-      while !is_pondering && not stop_search.(0) do
-        ()
-      done;
-      let print_bestmove = "bestmove " ^ try (uci_of_mouvement (!results.(!best_line_id).bestmove)) with _ -> "(none)" in
-      let print_ponder = try " ponder " ^ uci_of_mouvement (List.nth (pv_finder position !results.(!best_line_id).bestmove !results.(!best_line_id).depth) 1) with _ -> "" in
-      print_endline (print_bestmove ^ print_ponder)
-    end
+    while !is_pondering && not stop_search.(0) do
+      ()
+    done;
+    let print_bestmove = "bestmove " ^ try (uci_of_mouvement (!search_record.(bestline.id).(bestline.depth).bestmove)) with _ -> "(none)" in
+    let print_ponder = try " ponder " ^ uci_of_mouvement (List.nth (pv_finder position !search_record.(bestline.id).(bestline.depth).bestmove bestline.depth) 1) with _ -> "" in
+    print_endline (print_bestmove ^ print_ponder)
   end
 
 let checkers position =
@@ -535,7 +574,7 @@ let echekinator () =
         in ()
       |"go" :: _ ->
         let _ = Thread.create
-          (fun () -> process (fun () -> go instructions (copy_position position) search_tables)) ()
+          (fun () -> process (fun () -> go instructions position search_tables)) ()
         in ()
       |"quit" :: _ -> exit := true
       |"stop" :: _ ->
@@ -544,12 +583,12 @@ let echekinator () =
         done;
       |"d" :: _ -> display position
       |"eval" :: _ ->
-        (*for i = 0 to search_tables.pickers.(0).number_of_captures - 1 do
+        for i = 0 to search_tables.pickers.(0).number_of_captures - 1 do
           print_endline (Printf.sprintf "%s : see %i" (uci_of_mouvement search_tables.pickers.(0).capture_moves.(i)) (see position search_tables.pickers.(0).capture_moves.(i)))
         done;
         for i = 0 to search_tables.pickers.(0).number_of_quiets - 1 do
           print_endline (Printf.sprintf "%s : see %i" (uci_of_mouvement search_tables.pickers.(0).quiet_moves.(i)) (see position search_tables.pickers.(0).quiet_moves.(i)))
-        done;*)
+        done;
         let eval =
           if position.white_to_move = 0 then
             (float_of_int (hce position)) /. 100.
@@ -561,7 +600,7 @@ let echekinator () =
         start_time := Mtime_clock.counter ();
         soft_bound := Mtime.Span.max_span;
         hard_bound := Mtime.Span.max_span;
-        time_management position (search_tables.pickers.(0).number_of_captures + search_tables.pickers.(0).number_of_quiets) !wtime !btime !winc !binc !movetime !movestogo soft_bound hard_bound
+        init_time position (search_tables.pickers.(0).number_of_captures + search_tables.pickers.(0).number_of_quiets) !wtime !btime !winc !binc !movetime !movestogo
       |[] -> ()
       |_ -> print_endline (Printf.sprintf "Unknown command: '%s'. Type help for more information." (List.hd instructions))
   done

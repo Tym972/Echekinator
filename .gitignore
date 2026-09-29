@@ -1,8 +1,7 @@
 _build/
 /Results/
 config.json
-translation.txt
 perft960.txt
-tamerlan.txt
+tamerlan.ml
 Pgn_fastchess.pgn
-Extracted.txt
+cub.txt

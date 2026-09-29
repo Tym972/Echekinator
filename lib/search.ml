@@ -7,13 +7,11 @@ open Transposition
 open Quiescence
 open Evaluation
 
-type pv_info = {
-  depth : int;
-  score : int;
-  bestmove : int;
-  }
+type search_result =
+  {score : int;
+  bestmove : int}
 
-let results = ref (Array.init !multipv (fun _ ->  {depth = 0; score = 0; bestmove = 0}))
+let search_record = ref (Array.init !multipv (fun _ -> Array.init (max_depth + 1) (fun _ -> {score = -max_int; bestmove = 0})))
 
 let zugzwang pieces white_to_move =
   pieces.(knight + 6 * white_to_move) = 0L &&
@@ -210,7 +208,7 @@ let rec search position search_tables thread multi depth search_ply alpha beta w
                       best_move := move;
                       alpha0 := !score;
                       if thread + search_ply = 0 && not (stop_search.(thread) || total_counter node_counter >= !node_limit) then begin
-                        !results.(multi) <- {depth = depth; score = !score; bestmove = move}
+                        !search_record.(multi).(depth) <- {score = !score; bestmove = move}
                       end
                     end;
                     if !score >= !beta0 then begin
