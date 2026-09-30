@@ -490,9 +490,10 @@ let go instructions position search_tables =
     if not !is_pondering then begin
       init_time position number_of_legal !wtime !btime !winc !binc !movetime !movestogo
     end;
+    let base_ms = miliseconds_of_span !soft_bound in
     search_record := (Array.init !multipv (fun _ -> Array.init (max_depth + 1) (fun _ -> {score = -max_int; bestmove = 0})));
     nodes_fraction := (Array.init !multipv (fun _ -> Array.init 218 (fun _ -> {move = 0; nodes = 0})));
-    if !threads_number > 1 then begin
+    if !threads_number > 1 && base_ms > 50. then begin
       current_position := copy_position position;
       current_search_tables := copy_search_tables search_tables;
       Mutex.lock domain_mutex;
@@ -503,7 +504,7 @@ let go instructions position search_tables =
       Mutex.unlock domain_mutex
     end;
     iterative_deepening (copy_position position) search_tables !depth !mate 0;
-    if !threads_number > 1 then begin
+    if !threads_number > 1 && base_ms > 50. then begin
       Mutex.lock domain_mutex;
       for thread = 1 to !threads_number - 1 do
         stop_search.(thread) <- true
@@ -516,7 +517,7 @@ let go instructions position search_tables =
     while !is_pondering && not stop_search.(0) do
       ()
     done;
-    let print_bestmove = "bestmove " ^ try (uci_of_mouvement (!search_record.(bestline.id).(bestline.depth).bestmove)) with _ -> "(none)" in
+    let print_bestmove = "bestmove " ^ try (uci_of_mouvement (!search_record.(bestline.id).(bestline.depth).bestmove)) with _ -> uci_of_mouvement picker.hash_move in
     let print_ponder = try " ponder " ^ uci_of_mouvement (List.nth (pv_finder position !search_record.(bestline.id).(bestline.depth).bestmove bestline.depth) 1) with _ -> "" in
     print_endline (print_bestmove ^ print_ponder)
   end
