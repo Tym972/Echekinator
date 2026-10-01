@@ -263,7 +263,7 @@ let iterative_deepening position search_tables depth mate thread =
     let alpha = ref (- 99999) in
     let beta = ref 99999 in
     for multi = 0 to (number_of_pv - 1) do
-      if !var_depth < 2 || multi > 0 then begin
+      if !var_depth < 2 || multi > 0 || thread > 0 then begin
         let _ = (search position search_tables thread multi !var_depth 0 (-99999) 99999 false) in ()
       end
       else begin
