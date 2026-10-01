@@ -3,7 +3,7 @@
 open Bitboards
 
 (*Program version*)
-let project_name = "Echekinator 1.1"
+let project_name = "Echekinator 1.2"
 
 (*Table of coordinates of a chessboard*)
 let coord = [|
