@@ -132,7 +132,7 @@ let move_picker moves number_of_moves scores min_score =
     end
   done;
   if !max_index <> (-1) then begin
-    scores.(!max_index) <- - 100000;
+    scores.(!max_index) <- -max_int;
     moves.(!max_index)
   end
   else begin
@@ -238,7 +238,7 @@ let rec next_move position picker search_tables search_ply = match picker.stage 
           end
         end
         else begin
-          quiet_scores.(index) <- - 1000
+          quiet_scores.(index) <- -max_int
         end
       done;
       next_move position picker search_tables search_ply
@@ -256,7 +256,7 @@ let rec next_move position picker search_tables search_ply = match picker.stage 
       move
     end
   |Stage_History -> 
-    let move = move_picker picker.quiet_moves picker.number_of_quiets picker.quiet_scores (-1) in
+    let move = move_picker picker.quiet_moves picker.number_of_quiets picker.quiet_scores (-max_int) in
     if move = 0 then begin
       picker.stage <- Stage_Bad_Captures;
       next_move position picker search_tables search_ply

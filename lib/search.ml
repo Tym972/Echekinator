@@ -151,6 +151,7 @@ let rec search position search_tables thread multi depth search_ply alpha beta w
           (*Move loop*)
           if !no_search_cut then begin
             let legal_counter = ref 0 in
+            let quiet_moves = ref [] in
             picker.hash_move <- hash_move;
             picker.stage <- Stage_TT;
             let initial_nodes = ref node_counter.(thread) in
@@ -158,6 +159,9 @@ let rec search position search_tables thread multi depth search_ply alpha beta w
               let move = next_move position picker search_tables search_ply in
               if move <> 0 then begin
                 let is_noisy = not (isquiet move) in
+                if not is_noisy then begin
+                  quiet_moves := move :: !quiet_moves
+                end;
                 let no_move_cut = ref true in
 
                 (*Late Move Pruning*)
@@ -221,7 +225,18 @@ let rec search position search_tables thread multi depth search_ply alpha beta w
                     if !score >= !beta0 then begin
                       no_search_cut := false;
                       if not is_noisy then begin
-                        search_tables.history_moves.(history_index position.white_to_move move) <- search_tables.history_moves.(history_index position.white_to_move move) + depth * depth;
+                        let bonus = depth * depth in
+                        let index = history_index position.white_to_move move in
+                        let prev_history = search_tables.history_moves.(index) in
+                        let history = prev_history + bonus - prev_history * bonus / 16000 in
+                        search_tables.history_moves.(index) <- min 16000 history;
+                        List.iter (
+                          fun quiet_move -> 
+                            let index = history_index position.white_to_move quiet_move in
+                            let prev_history = search_tables.history_moves.(index) in
+                            let history = prev_history - bonus - prev_history * bonus / 16000 in
+                            search_tables.history_moves.(index) <- max (-16000) history)
+                          (List.tl !quiet_moves);
                         let quiet_move = move land 0xfff in
                         let killer1 = picker.killer1 in
                         if quiet_move <> killer1 then begin
