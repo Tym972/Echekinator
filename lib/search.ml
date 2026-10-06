@@ -30,11 +30,8 @@ let lmr_quiet =
   (fun depth ->
     Array.init 64 
     (fun legal_count ->
-      let reduction = 1.35 +. ((log (float_of_int depth) *. log (float_of_int legal_count)) /. 2.75)
-      in if reduction > 0. then
-        int_of_float reduction
-      else
-        0))
+      let reduction = Float.round ((log (float_of_int depth) *. log (float_of_int legal_count)) /. 1.6)
+      in if reduction > 5. then 5 else if reduction > 0. then int_of_float reduction else 0))
 
 let lmr_noisy =
   Array.init 64
@@ -42,21 +39,21 @@ let lmr_noisy =
     Array.init 64 
     (fun legal_count ->
       let reduction = 0.20 +. ((log (float_of_int depth) *. log (float_of_int legal_count)) /. 3.35)
-      in if reduction > 0. then
-        int_of_float reduction
-      else
-        0))
+      in if reduction > 0. then int_of_float reduction else 0))
 
 let nmp_min_depth = 3
+let iir_min_depth = 4
+let lmr_min_depth = 3
 let razoring_max_depth = 3
 let rfp_max_depth = 7
-let lmp_max_depth = 5
+let lmp_max_depth = 3
 let fp_max_depth = 3
 
 let rec search position search_tables thread multi depth search_ply alpha beta was_null =
   let game_ply = position.game_ply in
   let state = position.state_array.(game_ply) in
   let in_check = state.in_check in
+  let white_to_move = position.white_to_move in
   let ispv = beta - alpha <> 1 in
   node_counter.(thread) <- node_counter.(thread) + 1;
   if node_counter.(0) mod 1000 = 0 then begin
@@ -116,6 +113,7 @@ let rec search position search_tables thread multi depth search_ply alpha beta w
           
           (*Reverse futility pruning razoring and null move pruning*)
           if not (in_check || ispv || is_loss !beta0 || zugzwang position.pieces position.white_to_move) then begin
+
             (*Reverse futility pruning*)
             if depth <= rfp_max_depth && static_eval - 70 * depth >= !beta0 then begin
               best_score := static_eval - 70 * depth;
@@ -131,11 +129,9 @@ let rec search position search_tables thread multi depth search_ply alpha beta w
             (*Null move pruning*)
             if !no_search_cut && depth >= nmp_min_depth && not was_null && static_eval >= !beta0 + 30 then begin
               make_null position;
-              let reduction = ref (3 + depth / 4) in
-              if !reduction > 6 then reduction := 6;
-              if !reduction > depth - 1 then reduction := depth - 1;
-              let score = - search position search_tables thread multi (depth - 1 - !reduction) (search_ply + 1) (- !beta0) (- !beta0 + 1) true
-              in if score >= !beta0 then begin
+              let reduction = min 6 (min (depth - 1) (3 + depth / 4)) in
+              let score = - search position search_tables thread multi (depth - 1 - reduction) (search_ply + 1) (- !beta0) (- !beta0 + 1) true in
+              if score >= !beta0 then begin
                 if is_win score then begin
                   best_score := beta  
                 end
@@ -148,126 +144,162 @@ let rec search position search_tables thread multi depth search_ply alpha beta w
             end
           end;
 
-          (*Move loop*)
+
           if !no_search_cut then begin
+
+            (*Internal Iterative Reduction*)
+            let depth = if depth >= iir_min_depth && hash_move = 0 && not in_check && search_ply > 0 then depth - 1 else depth in
+
             let legal_counter = ref 0 in
+            let quiet_counter = ref 0 in
             let quiet_moves = ref [] in
             picker.hash_move <- hash_move;
             picker.stage <- Stage_TT;
             let initial_nodes = ref node_counter.(thread) in
+
+            (*Move loop*)
             while !no_search_cut do
               let move = next_move position picker search_tables search_ply in
               if move <> 0 then begin
-                let is_noisy = not (isquiet move) in
-                if not is_noisy then begin
-                  quiet_moves := move :: !quiet_moves
-                end;
+                let is_quiet = isquiet move in
+                if is_quiet then
+                  incr quiet_counter;
                 let no_move_cut = ref true in
 
-                (*Late Move Pruning*)
-                if not ispv && not in_check && !best_score > -max_int && not is_noisy && depth <= lmp_max_depth && !legal_counter > 3 + depth * depth then begin
-                  no_move_cut := false
+                (*SEE Pruning*)
+                if not ispv && not in_check && !best_score > -max_int && (not is_quiet) then begin
+                  let from = get_move_from move in
+                  let to_ = get_move_to move in
+                  let moving_piece = position.board.(from) in
+                  let target_piece = position.board.(to_) in
+                  if tabvalue.(moving_piece mod 6) > tabvalue.(target_piece mod 6) && see position move < -100 * depth then begin
+                    no_move_cut := false
+                  end
                 end;
-
-                (*Futility pruning*)
-                if not ispv && not in_check && !best_score > -max_int && not is_noisy && depth <= fp_max_depth && static_eval + 90 * depth < !alpha0 then begin
-                  no_move_cut := false
-                end;
-
-                (*See Pruning*)
-                (*if not ispv && not in_check && !best_score > -max_int && depth <= 3 then begin
-                  let margin = if is_noisy then -120 * depth else -100 * depth in
-                  if see position move < margin then begin
-                    no_move_cut := false end
-                end;*)
-
-                (*History Pruning*)
-                (*if not ispv && not in_check && not is_noisy && !best_score > -max_int && depth <= 3 && search_tables.history_moves.(history_index position.white_to_move move) < 100 * depth then begin
-                  no_move_cut := false
-                end;*)
 
                 if !no_move_cut then begin
                   let score = ref 0 in
                   make position move;
                   incr legal_counter;
                   let gives_checks = position.state_array.(game_ply + 1).in_check in
-                  let is_killer = picker.killer1 = move land 0xfff || picker.killer2 = move land 0xfff in
 
-                  (*Late Move Reduction*)
-                  if depth > 1 && !legal_counter > 1 && not (ispv && is_noisy) then begin
-                    let reduction = ref (if is_noisy then lmr_noisy.(min depth 63).(min !legal_counter 63) else lmr_quiet.(min depth 63).(min !legal_counter 63)) in
-                    if not ispv then reduction := !reduction + 2;
-                    if is_killer then reduction := !reduction - 2;
-                    if gives_checks then reduction := !reduction - 1;
-                    if in_check then reduction := !reduction - 1;
-                    if !reduction < 0 then reduction := 0;
-                    if !reduction > depth - 1 then reduction := depth - 1;
-                    score := - search position search_tables thread multi (depth - 1 - !reduction) (search_ply + 1) (- !alpha0 - 1) (- !alpha0) false;
-                    if !score > !alpha0 then
-                      score := - search position search_tables thread multi (depth - 1) (search_ply + 1) (- !alpha0 - 1) (- !alpha0) false
-                  end
-                  else if not ispv || !legal_counter > 1 then begin
-                    score := - search position search_tables thread multi (depth - 1) (search_ply + 1) (- !alpha0 - 1) (- !alpha0) false
-                  end;
-                  if ispv && (!legal_counter = 1 || (!score > !alpha0 && !score < !beta0)) then begin
-                    score:= - search position search_tables thread multi (depth - 1) (search_ply + 1) (- !beta0) (- !alpha0) false
-                  end;
-                  unmake position move;
-                  if !score > !best_score then begin
-                    best_score := !score;
-                    if !score > !alpha0 then begin
-                      best_move := move;
-                      alpha0 := !score;
-                      if thread + search_ply = 0 && not (stop_search.(thread) || total_counter node_counter >= !node_limit) then begin
-                        !search_record.(multi).(depth) <- {score = !score; bestmove = move}
+                  (*Late quiet moves pruning*)
+                  if not (not ispv && not in_check && not gives_checks && is_quiet && depth <= lmp_max_depth && !quiet_counter > depth * depth + 3) then begin
+                    
+                    (*Search Extension*)
+                    let extension = if gives_checks then 1 else 0 in
+
+                    (*Late Move Reduction*)
+                    if depth >= lmr_min_depth && !legal_counter > 4 && is_quiet && not gives_checks then begin
+                      let reduction  = min (depth - 2) (lmr_quiet.(min depth 63).(min !legal_counter 63)) in
+
+                      (*Reduced depth search with null window*)
+                      score := - search position search_tables thread multi (depth - 1 + extension - reduction) (search_ply + 1) (- !alpha0 - 1) (- !alpha0) false;
+                      
+                      (*No fail low : research at full depth with null window*)
+                      if !score > !alpha0 && reduction > 0 then begin
+                        score := - search position search_tables thread multi (depth - 1 + extension) (search_ply + 1) (- !alpha0 - 1) (- !alpha0) false
                       end
+
+                    end
+
+                    (*Full depth, Null window Search*)
+                    else if not ispv || !legal_counter > 1 then begin
+                      score := - search position search_tables thread multi (depth - 1 + extension) (search_ply + 1) (- !alpha0 - 1) (- !alpha0) false
                     end;
-                    if !score >= !beta0 then begin
-                      no_search_cut := false;
-                      if not is_noisy then begin
-                        let bonus = depth * depth in
-                        let index = history_index position.white_to_move move in
-                        let prev_history = search_tables.history_moves.(index) in
-                        let history = prev_history + bonus - prev_history * bonus / 16000 in
-                        search_tables.history_moves.(index) <- min 16000 history;
-                        List.iter (
-                          fun quiet_move -> 
-                            let index = history_index position.white_to_move quiet_move in
-                            let prev_history = search_tables.history_moves.(index) in
-                            let history = prev_history - bonus - prev_history * bonus / 16000 in
-                            search_tables.history_moves.(index) <- max (-16000) history)
-                          (List.tl !quiet_moves);
-                        let quiet_move = move land 0xfff in
-                        let killer1 = picker.killer1 in
-                        if quiet_move <> killer1 then begin
-                          picker.killer1 <- quiet_move;
-                          picker.killer2 <- killer1
+
+                    (*Full depth, Normal Window Search*)
+                    if ispv && (!legal_counter = 1 || (!score > !alpha0 && !score < !beta0)) then begin
+                      score := - search position search_tables thread multi (depth - 1 + extension) (search_ply + 1) (- !beta0) (- !alpha0) false
+                    end;
+
+                    if is_quiet then begin
+                      quiet_moves := move :: !quiet_moves
+                    end;
+
+                    (*New best move*)
+                    if !score > !best_score then begin
+
+                      best_score := !score;
+
+                      (*Score is not below then window*)
+                      if !score > !alpha0 then begin
+                        best_move := move;
+                        alpha0 := !score;
+
+                        (*Recover bestmove at root*)
+                        if thread + search_ply = 0 && not (stop_search.(thread) || total_counter node_counter >= !node_limit) then begin
+                          !search_record.(multi).(depth) <- {score = !score; bestmove = move}
+                        end
+
+                      end;
+
+                      (*Cutoff*)
+                      if !score >= !beta0 then begin
+                        no_search_cut := false;
+
+                        (*History and killer heuristic*)
+                        if is_quiet then begin
+
+                          (*Bonus for cutoff move*)
+                          let bonus = depth * depth in
+                          let index = history_index white_to_move move in
+                          let prev_history = search_tables.history_moves.(index) in
+                          let history = prev_history + bonus - prev_history * bonus / 16000 in
+                          search_tables.history_moves.(index) <- min 16000 history;
+
+                          (*Malus for precedent moves*)
+                          List.iter (
+                            fun quiet_move -> 
+                              let index = history_index white_to_move quiet_move in
+                              let prev_history = search_tables.history_moves.(index) in
+                              let history = prev_history - bonus - prev_history * bonus / 16000 in
+                              search_tables.history_moves.(index) <- max (-16000) history)
+                            (List.tl !quiet_moves);
+
+                          (*Killers update*)
+                          let quiet_move = move land 0xfff in
+                          let killer1 = picker.killer1 in
+                          if quiet_move <> killer1 then begin
+                            picker.killer1 <- quiet_move;
+                            picker.killer2 <- killer1
+                          end
+
                         end
                       end
                     end
+                  end;
+                  unmake position move;
+                  if search_ply + thread = 0 then begin
+                    let nodes_count = node_counter.(0) in
+                    !nodes_fraction.(multi).(!legal_counter - 1) <- {
+                      move = move;
+                      nodes = nodes_count - !initial_nodes
+                      };
+                    initial_nodes := nodes_count
                   end
-                end;
-                if search_ply + thread = 0 then begin
-                  let nodes_count = node_counter.(0) in
-                  !nodes_fraction.(multi).(!legal_counter - 1) <- {
-                    move = move;
-                    nodes = nodes_count - !initial_nodes
-                    };
-                  initial_nodes := nodes_count
                 end
               end
               else begin
                 no_search_cut := false
               end
             done;
+
+            (*No legal move*)
             if !legal_counter = 0 then begin
+
+              (*Checkmate*)
               if in_check then begin
                 best_score := search_ply - 99999
               end 
+
+              (*Stalemate*)
               else begin
                 best_score := 0
               end
+
             end
+
           end
         end;
 
@@ -297,7 +329,7 @@ let rec search position search_tables thread multi depth search_ply alpha beta w
           end;
           store thread state.zobrist depth !lower_bound !upper_bound !best_move static_eval !go_counter
         end;
-      !best_score
+        !best_score
       end
     end
   end

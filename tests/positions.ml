@@ -16,6 +16,12 @@ let lasker = "8/k7/3p4/p2P1p2/P2P1P2/8/8/K7 w - - 0 1"
 (*Sacrifice de cavalier obvious*)
 let obvious = "3q1rk1/Q1pn1ppp/4p3/1NPpPb2/5P2/4P3/Pr4PP/R3KB1R b KQ - 1 15"
 
+(*Sacrifice de fou obvious*)
+let obvious2 = "r1bq1rk1/1p1n1ppp/p3p3/b1ppP3/5B1P/2PBPN2/PP3PP1/R2QK2R w KQ c6 0 12"
+
+(*Sacrifice de dame ovious*)
+let obvious3 = "r1q2r2/ppp2p1k/4pBp1/4P1Qp/3n2bP/3B4/PPP2P2/R3K2R w KQ - 2 18"
+
 (*Test Mat*)
 let tour_et_roi = "8/7K/8/8/8/8/R7/7k w - - 0 1"
 let deux_fous_et_roi = "8/8/8/3k4/8/3K4/3BB3/8 w - - 0 1"
