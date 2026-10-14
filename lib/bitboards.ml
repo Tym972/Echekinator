@@ -1019,41 +1019,39 @@ let make position move =
       new_state.half_moves <- 0;
     |2 ->
       let player_rook = rook + 6 * white_to_move in
-      let player_king = king + 6 * white_to_move in
       let player_castling_info = castling_infos.(white_to_move) in
       let from_rook = player_castling_info.from_short_rook in
       let to_rook = player_castling_info.to_short_rook in
       board.(from) <- empty;
       board.(from_rook) <- empty;
-      board.(to_) <- player_king;
+      board.(to_) <- piece;
       board.(to_rook) <- player_rook;
-      pieces.(player_king) <- pieces.(player_king) ^^^ single_bitboards_tab.(from) ^^^ single_bitboards_tab.(to_);
+      pieces.(piece) <- pieces.(piece) ^^^ single_bitboards_tab.(from) ^^^ single_bitboards_tab.(to_);
       pieces.(player_rook) <- pieces.(player_rook) ^^^ single_bitboards_tab.(from_rook) ^^^ single_bitboards_tab.(to_rook);
       occupancy.(white_to_move) <- occupancy.(white_to_move) ^^^ single_bitboards_tab.(from) ^^^ single_bitboards_tab.(to_) ^^^ single_bitboards_tab.(from_rook) ^^^ single_bitboards_tab.(to_rook);
       let new_rights = castling_rights land castling_rights_masks.(from) in
       new_state.castling_rights <- new_rights;
       new_state.zobrist <-
         new_state.zobrist ^^^ tab_zobrist_castling.(castling_rights) ^^^ tab_zobrist_castling.(new_rights) ^^^
-        tab_zobrist.(zobrist_index from player_king) ^^^ tab_zobrist.(zobrist_index to_ player_king) ^^^
+        tab_zobrist.(zobrist_index from piece) ^^^ tab_zobrist.(zobrist_index to_ piece) ^^^
         tab_zobrist.(zobrist_index from_rook player_rook) ^^^ tab_zobrist.(zobrist_index to_rook player_rook)
     |3 ->
       let player_rook = rook + 6 * white_to_move in
-      let player_king = king + 6 * white_to_move in
       let player_castling_info = castling_infos.(white_to_move) in
       let from_rook = player_castling_info.from_long_rook in
       let to_rook = player_castling_info.to_long_rook in
       board.(from) <- empty;
       board.(from_rook) <- empty;
-      board.(to_) <- player_king;
+      board.(to_) <- piece;
       board.(to_rook) <- player_rook;
-      pieces.(player_king) <- pieces.(player_king) ^^^ single_bitboards_tab.(from) ^^^ single_bitboards_tab.(to_);
+      pieces.(piece) <- pieces.(piece) ^^^ single_bitboards_tab.(from) ^^^ single_bitboards_tab.(to_);
       pieces.(player_rook) <- pieces.(player_rook) ^^^ single_bitboards_tab.(from_rook) ^^^ single_bitboards_tab.(to_rook);
       occupancy.(white_to_move) <- occupancy.(white_to_move) ^^^ single_bitboards_tab.(from) ^^^ single_bitboards_tab.(to_) ^^^ single_bitboards_tab.(from_rook) ^^^ single_bitboards_tab.(to_rook);
       let new_rights = castling_rights land castling_rights_masks.(from) in
       new_state.castling_rights <- new_rights;
       new_state.zobrist <-
         new_state.zobrist ^^^ tab_zobrist_castling.(castling_rights) ^^^ tab_zobrist_castling.(new_rights) ^^^
-        tab_zobrist.(zobrist_index from player_king) ^^^ tab_zobrist.(zobrist_index to_ player_king) ^^^
+        tab_zobrist.(zobrist_index from piece) ^^^ tab_zobrist.(zobrist_index to_ piece) ^^^
         tab_zobrist.(zobrist_index from_rook player_rook) ^^^ tab_zobrist.(zobrist_index to_rook player_rook)
     |5 ->
       board.(from) <- empty;
@@ -1070,7 +1068,7 @@ let make position move =
       new_state.half_moves <- 0
     |_ ->
       begin
-        let promotion_piece = (flag lor 4) + - 11 +  6 * white_to_move in
+        let promotion_piece = (flag lor 4) - 11 + 6 * white_to_move in
         board.(from) <- empty;
         board.(to_) <- promotion_piece;
         pieces.(piece) <- pieces.(piece) ^^^ single_bitboards_tab.(from);
@@ -1120,7 +1118,6 @@ let unmake position move =
     occupancy.(white_to_move lxor 1) <- occupancy.(white_to_move lxor 1) ^^^ single_bitboards_tab.(to_)
   |2->
     let player_rook = rook + 6 * white_to_move in
-    let player_king = king + 6 * white_to_move in
     let player_castling_info = castling_infos.(white_to_move) in
     let from_rook = player_castling_info.from_short_rook in
     let to_rook = player_castling_info.to_short_rook in
@@ -1128,12 +1125,11 @@ let unmake position move =
     board.(to_rook) <- empty;
     board.(from) <- piece;
     board.(from_rook) <- player_rook;
-    pieces.(player_king) <- pieces.(player_king) ^^^ single_bitboards_tab.(from) ^^^ single_bitboards_tab.(to_);
+    pieces.(piece) <- pieces.(piece) ^^^ single_bitboards_tab.(from) ^^^ single_bitboards_tab.(to_);
     pieces.(player_rook) <- pieces.(player_rook) ^^^ single_bitboards_tab.(from_rook) ^^^ single_bitboards_tab.(to_rook);
     occupancy.(white_to_move) <- occupancy.(white_to_move) ^^^ single_bitboards_tab.(from) ^^^ single_bitboards_tab.(to_) ^^^ single_bitboards_tab.(from_rook) ^^^ single_bitboards_tab.(to_rook)
   |3 ->
     let player_rook = rook + 6 * white_to_move in
-    let player_king = king + 6 * white_to_move in
     let player_castling_info = castling_infos.(white_to_move) in
     let from_rook = player_castling_info.from_long_rook in
     let to_rook = player_castling_info.to_long_rook in
@@ -1141,7 +1137,7 @@ let unmake position move =
     board.(to_rook) <- empty;
     board.(from) <- piece;
     board.(from_rook) <- player_rook;
-    pieces.(player_king) <- pieces.(player_king) ^^^ single_bitboards_tab.(from) ^^^ single_bitboards_tab.(to_);
+    pieces.(piece) <- pieces.(piece) ^^^ single_bitboards_tab.(from) ^^^ single_bitboards_tab.(to_);
     pieces.(player_rook) <- pieces.(player_rook) ^^^ single_bitboards_tab.(from_rook) ^^^ single_bitboards_tab.(to_rook);
     occupancy.(white_to_move) <- occupancy.(white_to_move) ^^^ single_bitboards_tab.(from) ^^^ single_bitboards_tab.(to_) ^^^ single_bitboards_tab.(from_rook) ^^^ single_bitboards_tab.(to_rook)
   |5 ->

@@ -79,13 +79,13 @@ dune exec bin/echekinator.exe
 
 |   Version       | CCRL 40/15 | CCRL Blitz | Architecture   |
 |-----------------|------------|------------|----------------|
-| Echekinator 1.0 | —          | 2143       | 0x88 + HCE     |
-| Echekinator 1.1 | —          | —          | Bitboards + HCE|
-
+| Echekinator 1.0 | —          | 2143       | Mailbox + HCE  |
+| Echekinator 1.1 | —          | 2489       | Bitboards + HCE|
+| Echekinator 1.2 | —          | -          | Bitboards + HCE|
 
 ## Credits
 This project would not have been possible without the help of the Stockfish Discord server. 
 Special thanks to:
-- Disservin fom Fastchess
+- Disservin from Fastchess
 - Chess Programming Wiki
 - CCRL for testing the engine

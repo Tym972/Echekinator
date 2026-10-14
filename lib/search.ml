@@ -25,21 +25,13 @@ let zugzwang pieces white_to_move =
   pieces.(rook + 6 * white_to_move) = 0L &&
   pieces.(queen + 6 * white_to_move) = 0L
 
-let lmr_quiet =
+let lmr =
   Array.init 64
   (fun depth ->
     Array.init 64 
     (fun legal_count ->
       let reduction = Float.round ((log (float_of_int depth) *. log (float_of_int legal_count)) /. 1.6)
       in if reduction > 5. then 5 else if reduction > 0. then int_of_float reduction else 0))
-
-let lmr_noisy =
-  Array.init 64
-  (fun depth ->
-    Array.init 64 
-    (fun legal_count ->
-      let reduction = 0.20 +. ((log (float_of_int depth) *. log (float_of_int legal_count)) /. 3.35)
-      in if reduction > 0. then int_of_float reduction else 0))
 
 let nmp_min_depth = 3
 let iir_min_depth = 4
@@ -191,7 +183,7 @@ let rec search position search_tables thread multi depth search_ply alpha beta w
 
                     (*Late Move Reduction*)
                     if depth >= lmr_min_depth && !legal_counter > 4 && is_quiet && not gives_checks then begin
-                      let reduction  = min (depth - 2) (lmr_quiet.(min depth 63).(min !legal_counter 63)) in
+                      let reduction = min (depth - 2) (lmr.(min depth 63).(min !legal_counter 63)) in
 
                       (*Reduced depth search with null window*)
                       score := - search position search_tables thread multi (depth - 1 + extension - reduction) (search_ply + 1) (- !alpha0 - 1) (- !alpha0) false;
