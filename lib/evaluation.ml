@@ -1,97 +1,5 @@
 open Bitboards
-
-let distance from to_ =
-  max (abs ((from land 7) - (to_ land 7))) (abs ((from / 8) - (to_ / 8)))
-
-let distance_tab = Array.init 64 (fun i -> Array.init 64 (fun j -> distance i j))
-
-let ahead = Array.init 128
-  (fun i ->
-    let file = (i mod 64) land 7 in
-    let rank = (i mod 64) / 8 in
-    let bitboard = ref 0L in
-    let acc = ref 0L in
-    if i < 64 then begin
-      for j = rank + 1 to 7 do
-        acc := !acc ||| ranks.(j)
-      done
-    end
-    else begin
-      for j = rank - 1 downto 0 do
-        acc := !acc ||| ranks.(j)
-      done
-    end;
-    for j = max 0 (file - 1) to min 7 (file + 1) do
-      bitboard := !bitboard ||| (!acc &&& files.(j)) 
-    done;
-    !bitboard
-  )
-
-let gamephase_table = [| 0; 1; 1; 2; 4; 0|]
-let hidden_squares = [| 0xE7L; 0xE700000000000000L|]
-
-let weights = [| 82; 82; 82; 82; 82; 82; 82; 82; 47; 81; 62; 59; 67; 106; 120; 60; 56; 78; 78; 72; 85; 85; 115; 70; 55; 80; 77; 94; 99; 88; 92; 57; 68; 95; 88; 103; 105; 94; 99; 59; 76; 89; 108; 113; 147; 138; 107; 62; 180; 216; 143; 177; 150; 208; 116; 71; 82; 82; 82; 82; 82; 82; 82; 82; 232; 316; 279; 304; 320; 309; 318; 314; 308; 284; 325; 334; 336; 355; 323; 318; 314; 328; 349; 347; 356; 354; 362; 321; 324; 341; 353; 350; 365; 356; 358; 329; 328; 354; 356; 390; 374; 406; 355; 359; 290; 397; 374; 402; 421; 466; 410; 381; 264; 296; 409; 373; 360; 399; 344; 320; 170; 248; 303; 288; 398; 240; 322; 230; 332; 362; 351; 344; 352; 353; 326; 344; 369; 380; 381; 365; 372; 386; 398; 366; 365; 380; 380; 380; 379; 392; 383; 375; 359; 378; 378; 391; 399; 377; 375; 369; 361; 370; 384; 415; 402; 402; 372; 363; 349; 402; 408; 405; 400; 415; 402; 363; 339; 381; 347; 352; 395; 424; 383; 318; 336; 369; 283; 328; 340; 323; 372; 357; 458; 464; 478; 494; 493; 484; 440; 451; 433; 461; 457; 468; 476; 488; 471; 406; 432; 452; 461; 460; 480; 477; 472; 444; 441; 451; 465; 476; 486; 470; 483; 454; 453; 466; 484; 503; 501; 512; 469; 457; 472; 496; 503; 513; 494; 522; 538; 493; 504; 509; 535; 539; 557; 544; 503; 521; 509; 519; 509; 528; 540; 486; 508; 520; 1024; 1007; 1016; 1035; 1010; 1000; 994; 975; 990; 1017; 1036; 1027; 1033; 1040; 1022; 1026; 1011; 1027; 1014; 1023; 1020; 1027; 1039; 1030; 1016; 999; 1016; 1015; 1023; 1021; 1028; 1022; 998; 998; 1009; 1009; 1024; 1042; 1023; 1026; 1012; 1008; 1032; 1033; 1054; 1081; 1072; 1082; 1001; 986; 1020; 1026; 1009; 1082; 1053; 1079; 997; 1025; 1054; 1037; 1084; 1069; 1068; 1070; -15; 36; 12; -54; 8; -28; 24; 14; 1; 7; -8; -64; -43; -16; 9; 8; -14; -14; -22; -46; -44; -30; -15; -27; -49; -1; -27; -39; -46; -44; -33; -51; -17; -20; -12; -27; -30; -25; -14; -36; -9; 24; 2; -16; -20; 6; 22; -22; 29; -1; -20; -7; -8; -4; -38; -29; -65; 23; 16; -15; -56; -34; 2; 13; 94; 94; 94; 94; 94; 94; 94; 94; 107; 102; 102; 104; 107; 94; 96; 87; 98; 101; 88; 95; 94; 89; 93; 86; 107; 103; 91; 87; 87; 86; 97; 93; 126; 118; 107; 99; 92; 98; 111; 111; 188; 194; 179; 161; 150; 147; 176; 178; 272; 267; 252; 228; 241; 226; 259; 281; 94; 94; 94; 94; 94; 94; 94; 94; 252; 230; 258; 266; 259; 263; 231; 217; 239; 261; 271; 276; 279; 261; 258; 237; 258; 278; 280; 296; 291; 278; 261; 259; 263; 275; 297; 306; 297; 298; 285; 263; 264; 284; 303; 303; 303; 292; 289; 263; 257; 261; 291; 290; 280; 272; 262; 240; 256; 273; 256; 279; 272; 256; 257; 229; 223; 243; 268; 253; 250; 254; 218; 182; 274; 288; 274; 292; 288; 281; 292; 280; 283; 279; 290; 296; 301; 288; 282; 270; 285; 294; 305; 307; 310; 300; 290; 282; 291; 300; 310; 316; 304; 307; 294; 288; 294; 306; 309; 306; 311; 307; 300; 299; 299; 289; 297; 296; 295; 303; 297; 301; 289; 293; 304; 285; 294; 284; 293; 283; 283; 276; 286; 289; 290; 288; 280; 273; 503; 514; 515; 511; 507; 499; 516; 492; 506; 506; 512; 514; 503; 503; 501; 509; 508; 512; 507; 511; 505; 500; 504; 496; 515; 517; 520; 516; 507; 506; 504; 501; 516; 515; 525; 513; 514; 513; 511; 514; 519; 519; 519; 517; 516; 509; 507; 509; 523; 525; 525; 523; 509; 515; 520; 515; 525; 522; 530; 527; 524; 524; 520; 517; 903; 908; 914; 893; 931; 904; 916; 895; 914; 913; 906; 920; 920; 913; 900; 904; 920; 909; 951; 942; 945; 953; 946; 941; 918; 964; 955; 983; 967; 970; 975; 959; 939; 958; 960; 981; 993; 976; 993; 972; 916; 942; 945; 985; 983; 971; 955; 945; 919; 956; 968; 977; 994; 961; 966; 936; 927; 958; 958; 963; 963; 955; 946; 956; -53; -34; -21; -11; -28; -14; -24; -43; -27; -11; 4; 13; 14; 4; -5; -17; -19; -3; 11; 21; 23; 16; 7; -9; -18; -4; 21; 24; 27; 23; 9; -11; -8; 22; 24; 27; 26; 33; 26; 3; 10; 17; 23; 15; 20; 45; 44; 13; -12; 17; 14; 17; 17; 38; 23; 11; -74; -35; -18; -18; -11; 15; 4; -17; -4; -6; -6; -13; 0; 5; 3; 2; 1; 5; 3; 5; 7; -6; -7; 8; 40; 106; -14; 1; 34; 62; 98; 57; -7; -20; -7; 14; 61; 117; -4; 2; 9; 2; -7; -60;  27; 16; 4; -5; 12; 51; -21; 12; 30; 60; 44; -3; 21; 6; -5; -12; -20; -15; -12|]
-
-let mg_pst = Array.make 384 0
-let eg_pst = Array.make 384 0
-
-let mob_center = Array.make 7 0
-let mob_step_mg = Array.make 7 0
-let mob_step_eg = Array.make 7 0
-
-let pp_mg = Array.make 8 0
-let pp_eg = Array.make 8 0
-let pp_blocked_mg = Array.make 8 0
-let pp_blocked_eg = Array.make 8 0
-
-let shield_value = Array.make 8 0
-
-let distance_weight = ref 0
-let bishop_mg = ref 0
-let bishop_eg = ref 0
-let semi_open_mg = ref 0
-let semi_open_eg = ref 0
-let open_mg = ref 0
-let open_eg = ref 0
-let open_king = ref 0
-let doubled_mg = ref 0
-let doubled_eg = ref 0
-let isolated_mg = ref 0
-let isolated_eg = ref 0
-
-let init_weights () =
-  for i = 0 to 383 do
-    mg_pst.(i) <- weights.(i);
-    eg_pst.(i) <- weights.(i + 384)
-  done;
-  for i = 0 to 3 do
-    mob_center.(i + 1) <- weights.(i + 768);
-    mob_step_mg.(i + 1) <- weights.(i + 772);
-    mob_step_eg.(i + 1) <- weights.(i + 776)
-  done;
-  for i = 0 to 5 do
-    pp_mg.(i + 1) <- weights.(i + 780);
-    pp_eg.(i + 1) <- weights.(i + 786);
-    pp_blocked_mg.(i + 1) <- weights.(i + 792);
-    pp_blocked_eg.(i + 1) <- weights.(i + 798);
-  done;
-  for i = 0 to 6 do
-    shield_value.(i + 1) <- weights.(i + 804)
-  done;
-  distance_weight := weights.(811);
-  bishop_mg := weights.(812);
-  bishop_eg := weights.(813);
-  open_mg := weights.(814);
-  open_eg := weights.(815);
-  semi_open_mg := weights.(816);
-  semi_open_eg := weights.(817);
-  open_king := weights.(818);
-  doubled_mg := weights.(819);
-  doubled_eg := weights.(820);
-  isolated_mg := weights.(821);
-  isolated_eg := weights.(822)
-
-let () = init_weights ()
+open Board
 
 let is_material_draw position =
   let pieces = position.pieces in
@@ -100,137 +8,217 @@ let is_material_draw position =
   population_count pieces.(queen) = 0 && population_count pieces.(queen + 6) = 0 &&
   population_count pieces.(knight) + population_count pieces.(bishop) + population_count pieces.(knight + 6) + population_count pieces.(bishop + 6) <= 1
 
-let hce position =
-  let mg_score = ref 0 in
-  let eg_score = ref 0  in
-  let gamephase = ref 0 in
-  let pieces_bitboard = position.pieces in
-  let occupancy = position.occupancy in
-  let total_occupancy = occupancy.(0) ||| occupancy.(1) in
-  let [@inline] add_score mg eg sign =
-    mg_score := !mg_score + sign * mg;
-    eg_score := !eg_score + sign * eg
-  in for side = 0 to 1 do
-    let sign = (-2 * side + 1) in
-    let not_occupancy = Int64.lognot occupancy.(side) in
-    let pawns_bitboard = pieces_bitboard.(pawn + 6 * side) in
-    let enemy_pawns = pieces_bitboard.(pawn + 6 * (side lxor 1)) in
-    let knights_bitboard = pieces_bitboard.(knight + 6 * side) in
-    let bishop_bitboards = pieces_bitboard.(bishop + 6 * side) in
-    let rooks_bitboard = pieces_bitboard.(rook + 6 * side) in
-    let queens_bitboard = pieces_bitboard.(queen + 6 * side) in
-    let king_bitboard = pieces_bitboard.(king + 6 * side) in
-    let king_square = lsb_index king_bitboard in
+let hidden_weights = Array.make (n * 768) 0
+let hidden_bias = Array.make n 0
 
-    let bitboard = ref pawns_bitboard in
-    while !bitboard <> 0L do
-      let from, other_pieces_bitboard = pop_lsb !bitboard in
-      bitboard := other_pieces_bitboard;
-      let index = (from lxor (56 * side)) + 64 * pawn in
-      add_score mg_pst.(index) eg_pst.(index) sign;
-      gamephase := !gamephase + gamephase_table.(pawn);
-      let file = from land 7 in
-      let rank = if side = 0 then from / 8 else 7 - (from / 8)
-      in if (ahead.(from + 64 * side) &&& enemy_pawns = 0L) then begin
-        let blocked = occupancy.(side lxor 1) &&& (ahead.(from + 64 * side) &&& files.(file)) <> 0L in
-        let bonus_mg = if blocked then pp_blocked_mg.(rank) else pp_mg.(rank) in
-        let bonus_eg = ref (if blocked then pp_blocked_eg.(rank) else pp_eg.(rank)) in
-        bonus_eg := !bonus_eg + !distance_weight * (distance_tab.(from).(lsb_index pieces_bitboard.(king + 6 * (side lxor 1))) - distance_tab.(from).(king_square));
-        add_score bonus_mg !bonus_eg sign
-      end
-    done;
+let output_weights = Array.make (2 * n) 0
+let output_bias = ref 0
+let weights_loaded = ref false
 
-    bitboard := knights_bitboard;
-    while !bitboard <> 0L do
-      let from, other_pieces_bitboard = pop_lsb !bitboard in
-      bitboard := other_pieces_bitboard;
-      let index = (from lxor (56 * side)) + 64 * knight in
-      add_score mg_pst.(index) eg_pst.(index) sign;
-      gamephase := !gamephase + gamephase_table.(knight);
-      let mob = mob_center.(knight) + population_count ((generate_knight_attacks from) &&& not_occupancy) in
-      add_score (mob_step_mg.(knight) * mob) (mob_step_eg.(knight) * mob) sign
-    done;
+let [@inline] feature_weight neuron feature = hidden_weights.(feature * n + neuron)
 
-    bitboard := bishop_bitboards;
-    while !bitboard <> 0L do
-      let from, other_pieces_bitboard = pop_lsb !bitboard in
-      bitboard := other_pieces_bitboard;
-      let index = (from lxor (56 * side)) + 64 * bishop in
-      add_score mg_pst.(index) eg_pst.(index) sign;
-      gamephase := !gamephase + gamephase_table.(bishop);
-      let mob = mob_center.(bishop) + population_count ((generate_bishop_attacks from total_occupancy) &&& not_occupancy) in
-      add_score (mob_step_mg.(bishop) * mob) (mob_step_eg.(bishop) * mob) sign;
-    done;
-    if population_count bishop_bitboards > 1 then begin
-      add_score !bishop_mg !bishop_eg sign
-    end;
+let weights_payload_size = 2 * ((768 * n) + n + (2 * n) + 1)
+let weights_padding = String.concat "" (List.init 10 (fun _ -> "bullet")) ^ "bu"
 
-    bitboard := rooks_bitboard;
-    while !bitboard <> 0L do
-      let from, other_pieces_bitboard = pop_lsb !bitboard in
-      bitboard := other_pieces_bitboard;
-      let index = (from lxor (56 * side))  + 64 * rook in
-      add_score mg_pst.(index) eg_pst.(index) sign;
-      gamephase := !gamephase + gamephase_table.(rook);
-      let mob = mob_center.(rook) + population_count ((generate_rook_attacks from total_occupancy) &&& not_occupancy) in
-      add_score (mob_step_mg.(rook) * mob) (mob_step_eg.(rook) * mob) sign;
-      let file = from land 7 in
-      if files.(file) &&& pawns_bitboard = 0L then begin
-        if enemy_pawns &&& files.(file) = 0L then begin
-          add_score !open_mg !open_eg sign
+let load_weights path =
+  let contents =
+    try
+      let channel = open_in_bin path in
+      Fun.protect
+        ~finally:(fun () -> close_in_noerr channel)
+        (fun () -> really_input_string channel (in_channel_length channel))
+    with
+    | Sys_error message ->
+      failwith (Printf.sprintf "Unable to load NNUE weights from '%s': %s" path message)
+  in
+  if String.length contents <> weights_payload_size + String.length weights_padding then
+    failwith
+      (Printf.sprintf
+         "Invalid NNUE weights file '%s': expected %d bytes, got %d"
+         path (weights_payload_size + String.length weights_padding) (String.length contents));
+  if String.sub contents weights_payload_size (String.length weights_padding) <> weights_padding then
+    failwith (Printf.sprintf "Invalid NNUE weights file '%s': Bullet padding does not match" path);
+  let offset = ref 0 in
+  let read_int16_array count =
+    Array.init count (fun _ ->
+      let low = Char.code contents.[!offset] in
+      let high = Char.code contents.[!offset + 1] in
+      offset := !offset + 2;
+      let value = low lor (high lsl 8) in
+      if value land 0x8000 = 0 then value else value - 0x10000)
+  in let loaded_hidden_weights = read_int16_array (768 * n) in
+  let loaded_hidden_bias = read_int16_array n in
+  let loaded_output_weights = read_int16_array (2 * n) in
+  let loaded_output_bias = (read_int16_array 1).(0) in
+  Array.blit loaded_hidden_weights 0 hidden_weights 0 (Array.length hidden_weights);
+  Array.blit loaded_hidden_bias 0 hidden_bias 0 (Array.length hidden_bias);
+  Array.blit loaded_output_weights 0 output_weights 0 (Array.length output_weights);
+  output_bias := loaded_output_bias;
+  weights_loaded := true
+
+let [@inline] screlu x =
+  let x = max 0 (min 255 x) in
+  x * x
+
+let get_accumulator position =
+  let state = position.state_array.(position.game_ply) in
+  let board = position.board in
+  let white_to_move = position.white_to_move in
+  let side_accumulator = state.side_accumulator in
+  let not_side_accumulator = state.not_side_accumulator in
+  Array.blit hidden_bias 0 side_accumulator 0 n;
+  Array.blit hidden_bias 0 not_side_accumulator 0 n;
+  for square =  0 to 63 do
+    let piece = board.(square) in
+    if piece <> empty then begin
+      let piece_type = piece mod 6 in
+      let piece_color = piece / 6 in
+      let side_is_enemy = piece_color lxor white_to_move in
+      let side_idx = 64 * (piece_type + 6 * side_is_enemy) + (square lxor (56 * white_to_move)) in
+      let not_side_idx = 64 * (piece_type + 6 * (side_is_enemy lxor 1)) + (square lxor (56 * (white_to_move lxor 1))) in
+      for i = 0 to n - 1 do
+        side_accumulator.(i) <- side_accumulator.(i) + feature_weight i side_idx;
+        not_side_accumulator.(i) <- not_side_accumulator.(i) + feature_weight i not_side_idx
+      done
+    end
+  done
+
+let feature_index perspective piece square =
+  let enemy = (piece / 6) lxor perspective in
+  let oriented_square = square lxor (56 * perspective) in
+  64 * ((piece mod 6) + (6 * enemy)) + oriented_square
+
+let update_accumulator position move =
+  let board = position.board in
+  let white_to_move = position.white_to_move in
+  let from = get_move_from move in
+  let to_ = get_move_to move in
+  let piece = board.(from) mod 6 in
+  let captured_piece = board.(to_) mod 6 in
+
+  let p_side = white_to_move lxor 1 in
+  let p_not_side = white_to_move in
+
+  let enemy_side = (board.(from) / 6) lxor p_side in
+  let enemy_not_side = (board.(from) / 6) lxor p_not_side in
+  let enemy_cap_side = (board.(to_) / 6) lxor p_side in
+  let enemy_cap_not_side = (board.(to_) / 6) lxor p_not_side in
+
+  let oriented_from_side = from lxor (56 * p_side) in
+  let oriented_from_not_side = from lxor (56 * p_not_side) in
+  let oriented_to_side = to_ lxor (56 * p_side) in
+  let oriented_to_not_side = to_ lxor (56 * p_not_side) in
+
+  let side_idx_to = 64 * (piece + 6 * enemy_side) + oriented_to_side in
+  let side_idx_from = 64 * (piece + 6 * enemy_side) + oriented_from_side in
+  let side_idx_capture = 64 * (captured_piece + 6 * enemy_cap_side) + oriented_to_side in
+
+  let not_side_idx_to = 64 * (piece + 6 * enemy_not_side) + oriented_to_not_side in
+  let not_side_idx_from = 64 * (piece + 6 * enemy_not_side) + oriented_from_not_side in
+  let not_side_idx_capture = 64 * (captured_piece + 6 * enemy_cap_not_side) + oriented_to_not_side in
+
+  let state = position.state_array.(position.game_ply) in
+  let new_state = position.state_array.(position.game_ply + 1) in
+  let side_accumulator = new_state.side_accumulator in
+  let not_side_accumulator = new_state.not_side_accumulator in
+  Array.blit state.side_accumulator 0 not_side_accumulator 0 n;
+  Array.blit state.not_side_accumulator 0 side_accumulator 0 n;
+  let flag = get_move_flag move in
+  begin match flag with
+    |0 |1 ->
+      for i = 0 to n - 1 do
+        side_accumulator.(i) <- side_accumulator.(i) + feature_weight i side_idx_to - feature_weight i side_idx_from;
+        not_side_accumulator.(i) <- not_side_accumulator.(i) + feature_weight i not_side_idx_to - feature_weight i not_side_idx_from
+      done
+    |4 ->
+      for i = 0 to n - 1 do
+        side_accumulator.(i) <- side_accumulator.(i) + feature_weight i side_idx_to - feature_weight i side_idx_from - feature_weight i side_idx_capture;
+        not_side_accumulator.(i) <- not_side_accumulator.(i) + feature_weight i not_side_idx_to - feature_weight i not_side_idx_from - feature_weight i not_side_idx_capture
+      done
+    |2 ->
+      let player_castling_info = castling_infos.(white_to_move) in
+      let from_rook = player_castling_info.from_short_rook in
+      let to_rook = player_castling_info.to_short_rook in
+      let rook_piece_type = rook in
+      let rook_color_piece = rook + 6 * white_to_move in
+      let rook_enemy_side = (rook_color_piece / 6) lxor p_side in
+      let rook_enemy_not_side = (rook_color_piece / 6) lxor p_not_side in
+      let oriented_rf_side = from_rook lxor (56 * p_side) in
+      let oriented_rt_side = to_rook lxor (56 * p_side) in
+      let oriented_rf_not_side = from_rook lxor (56 * p_not_side) in
+      let oriented_rt_not_side = to_rook lxor (56 * p_not_side) in
+      let side_idx_from_rook = 64 * (rook_piece_type + 6 * rook_enemy_side) + oriented_rf_side in
+      let side_idx_to_rook = 64 * (rook_piece_type + 6 * rook_enemy_side) + oriented_rt_side in
+      let not_side_idx_from_rook = 64 * (rook_piece_type + 6 * rook_enemy_not_side) + oriented_rf_not_side in
+      let not_side_idx_to_rook = 64 * (rook_piece_type + 6 * rook_enemy_not_side) + oriented_rt_not_side in
+      for i = 0 to n - 1 do
+        side_accumulator.(i) <- side_accumulator.(i) + feature_weight i side_idx_to - feature_weight i side_idx_from + feature_weight i side_idx_to_rook - feature_weight i side_idx_from_rook;
+        not_side_accumulator.(i) <- not_side_accumulator.(i) + feature_weight i not_side_idx_to - feature_weight i not_side_idx_from + feature_weight i not_side_idx_to_rook - feature_weight i not_side_idx_from_rook
+      done
+    |3 ->
+      let player_castling_info = castling_infos.(white_to_move) in
+      let from_rook = player_castling_info.from_long_rook in
+      let to_rook = player_castling_info.to_long_rook in
+      let rook_piece_type = rook in
+      let rook_color_piece = rook + 6 * white_to_move in
+      let rook_enemy_side = (rook_color_piece / 6) lxor p_side in
+      let rook_enemy_not_side = (rook_color_piece / 6) lxor p_not_side in
+      let oriented_rf_side = from_rook lxor (56 * p_side) in
+      let oriented_rt_side = to_rook lxor (56 * p_side) in
+      let oriented_rf_not_side = from_rook lxor (56 * p_not_side) in
+      let oriented_rt_not_side = to_rook lxor (56 * p_not_side) in
+      let side_idx_from_rook = 64 * (rook_piece_type + 6 * rook_enemy_side) + oriented_rf_side in
+      let side_idx_to_rook = 64 * (rook_piece_type + 6 * rook_enemy_side) + oriented_rt_side in
+      let not_side_idx_from_rook = 64 * (rook_piece_type + 6 * rook_enemy_not_side) + oriented_rf_not_side in
+      let not_side_idx_to_rook = 64 * (rook_piece_type + 6 * rook_enemy_not_side) + oriented_rt_not_side in
+      for i = 0 to n - 1 do
+        side_accumulator.(i) <- side_accumulator.(i) + feature_weight i side_idx_to - feature_weight i side_idx_from + feature_weight i side_idx_to_rook - feature_weight i side_idx_from_rook;
+        not_side_accumulator.(i) <- not_side_accumulator.(i) + feature_weight i not_side_idx_to - feature_weight i not_side_idx_from + feature_weight i not_side_idx_to_rook - feature_weight i not_side_idx_from_rook
+      done
+    |5 ->
+      let captured_pawn_square = (to_ - push_vects.(white_to_move)) in
+      let pawn_color_piece = pawn + 6 * (white_to_move lxor 1) in
+      let pawn_enemy_side = (pawn_color_piece / 6) lxor p_side in
+      let pawn_enemy_not_side = (pawn_color_piece / 6) lxor p_not_side in
+      let oriented_cp_side = captured_pawn_square lxor (56 * p_side) in
+      let oriented_cp_not_side = captured_pawn_square lxor (56 * p_not_side) in
+      let side_idx_captured_pawn = 64 * (pawn + 6 * pawn_enemy_side) + oriented_cp_side in
+      let not_side_idx_captured_pawn = 64 * (pawn + 6 * pawn_enemy_not_side) + oriented_cp_not_side in
+      for i = 0 to n - 1 do
+        side_accumulator.(i) <- side_accumulator.(i) + feature_weight i side_idx_to - feature_weight i side_idx_from - feature_weight i side_idx_captured_pawn;
+        not_side_accumulator.(i) <- not_side_accumulator.(i) + feature_weight i not_side_idx_to - feature_weight i not_side_idx_from - feature_weight i not_side_idx_captured_pawn
+      done
+    |_ ->
+      begin
+        let promotion_piece = (flag lor 4) - 11 in
+        let promo_color_piece = promotion_piece + 6 * white_to_move in
+        let promo_enemy_side = (promo_color_piece / 6) lxor p_side in
+        let promo_enemy_not_side = (promo_color_piece / 6) lxor p_not_side in
+        let side_idx_to_promotion = 64 * (promotion_piece + 6 * promo_enemy_side) + oriented_to_side in
+        let not_side_idx_to_promotion = 64 * (promotion_piece + 6 * promo_enemy_not_side) + oriented_to_not_side in
+        if flag land 4 <> 0 then begin
+          for i = 0 to n - 1 do
+          side_accumulator.(i) <- side_accumulator.(i) + feature_weight i side_idx_to_promotion - feature_weight i side_idx_from - feature_weight i side_idx_capture;
+          not_side_accumulator.(i) <- not_side_accumulator.(i) + feature_weight i not_side_idx_to_promotion - feature_weight i not_side_idx_from - feature_weight i not_side_idx_capture
+        done
         end
         else begin
-          add_score !semi_open_mg !semi_open_eg sign
+          for i = 0 to n - 1 do
+            side_accumulator.(i) <- side_accumulator.(i) + feature_weight i side_idx_to_promotion - feature_weight i side_idx_from;
+            not_side_accumulator.(i) <- not_side_accumulator.(i) + feature_weight i not_side_idx_to_promotion - feature_weight i not_side_idx_from
+          done
         end
       end
-    done;
+  end
 
-    bitboard := queens_bitboard;
-    while !bitboard <> 0L do
-      let from, other_pieces_bitboard = pop_lsb !bitboard in
-      bitboard := other_pieces_bitboard;
-      let index = (from lxor (56 * side)) + 64 * queen in
-      add_score mg_pst.(index) eg_pst.(index) sign;
-      gamephase := !gamephase + gamephase_table.(queen);
-      let mob = mob_center.(queen) + population_count ((generate_queen_attacks from total_occupancy) &&& not_occupancy) in
-      add_score (mob_step_mg.(queen) * mob) (mob_step_eg.(queen) * mob) sign
-    done;
-    
-    let index = (if side = 0 then king_square else king_square lxor 56)  + 64 * king in
-    add_score mg_pst.(index) eg_pst.(index) sign;
-    gamephase := !gamephase + gamephase_table.(king);
-
-    if king_bitboard &&& hidden_squares.(side) <> 0L then begin
-      let shield = ref 0 in
-      let king_file = king_square land 7 in
-      for file = max 0 (king_file - 1) to min 7 (king_file + 1) do
-        let file_pawns = files.(file) &&& pawns_bitboard in
-        if file_pawns <> 0L then begin
-          let rank = if side = 0 then (lsb_index file_pawns) / 8 else 7 - (msb_index file_pawns / 8)
-          in shield := !shield + shield_value.(rank)
-        end
-        else begin
-          shield := !shield + shield_value.(7);
-          if files.(file) &&& enemy_pawns = 0L then begin
-            shield := !shield + !open_king
-          end
-        end
-      done;
-      mg_score := !mg_score + sign * !shield;
-    end;
-
-    for file = 0 to 7 do
-      let file_pawns = files.(file) &&& pawns_bitboard in
-      let pawn_number = population_count file_pawns in
-      if pawn_number > 0 then begin
-        if pawn_number > 1 then begin
-          add_score ((pawn_number - 1) * !doubled_mg) ((pawn_number - 1) * !doubled_eg) sign
-        end;
-        if (file = 0 || files.(file - 1) &&& pawns_bitboard = 0L) && (file = 7 || files.(file + 1) &&& pawns_bitboard = 0L) then begin
-          add_score !isolated_mg !isolated_eg sign
-        end
-      end
-    done
+let evaluate position =
+  let state = position.state_array.(position.game_ply) in
+  let side_accumulator = state.side_accumulator in
+  let not_side_accumulator = state.not_side_accumulator in
+  let output = ref 0 in
+  for i = 0 to n - 1 do
+    output := !output
+      + screlu side_accumulator.(i) * output_weights.(i)
+      + screlu not_side_accumulator.(i) * output_weights.(n + i)
   done;
-  let phase = min !gamephase 24 in
-  (- 2 * position.white_to_move + 1) * ((!mg_score * phase + !eg_score * (24 - phase)) / 24)
+  ((!output / 255 + !output_bias) * 400) / (255 * 64)

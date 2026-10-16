@@ -92,7 +92,7 @@ let rec search position search_tables thread multi depth search_ply alpha beta w
       else begin
         let best_move = ref 0 in
         let hash_depth, hash_lower_bound, hash_upper_bound, hash_move, hash_static_eval = probe state.zobrist in
-        let static_eval = if hash_static_eval = - max_int then hce position else hash_static_eval in
+        let static_eval = if hash_static_eval = - max_int then evaluate position else hash_static_eval in
         let no_search_cut = ref true in
         let best_score = ref (- max_int) in
 
@@ -120,6 +120,9 @@ let rec search position search_tables thread multi depth search_ply alpha beta w
 
             (*Null move pruning*)
             if !no_search_cut && depth >= nmp_min_depth && not was_null && static_eval >= !beta0 + 30 then begin
+              let new_state = position.state_array.(position.game_ply + 1) in
+              Array.blit state.side_accumulator 0 new_state.not_side_accumulator 0 n;
+              Array.blit state.not_side_accumulator 0 new_state.side_accumulator 0 n;
               make_null position;
               let reduction = min 6 (min (depth - 1) (3 + depth / 4)) in
               let score = - search position search_tables thread multi (depth - 1 - reduction) (search_ply + 1) (- !beta0) (- !beta0 + 1) true in
@@ -171,6 +174,7 @@ let rec search position search_tables thread multi depth search_ply alpha beta w
 
                 if !no_move_cut then begin
                   let score = ref 0 in
+                  update_accumulator position move;
                   make position move;
                   incr legal_counter;
                   let gives_checks = position.state_array.(game_ply + 1).in_check in

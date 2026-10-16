@@ -3,7 +3,7 @@
 open Bitboards
 
 (*Program version*)
-let project_name = "Echekinator 1.2"
+let project_name = "Echekinator 1.3"
 
 (*Table of coordinates of a chessboard*)
 let coord = [|
@@ -21,6 +21,8 @@ let coord = [|
 let max_depth = 255
 
 let max_moves = 2048
+
+let n = 32
 
 (*SMP variables*)
 let threads_number = ref 1
@@ -67,7 +69,9 @@ let create_empty_state () = {
   half_moves = 0;
   zobrist = 0L;
   captured_piece = 0;
-  in_check = false
+  in_check = false;
+  side_accumulator = Array.make n 0;
+  not_side_accumulator = Array.make n 0
 }
 
 let copy_state state = {
@@ -76,7 +80,9 @@ let copy_state state = {
   half_moves = state.half_moves;
   zobrist = state.zobrist;
   captured_piece = state.captured_piece;
-  in_check = state.in_check
+  in_check = state.in_check;
+  side_accumulator = Array.copy state.side_accumulator;
+  not_side_accumulator = Array.copy state.not_side_accumulator
 }
 
 let create_position () = {

@@ -47,7 +47,7 @@ let rec quiescence_search position search_tables thread search_ply alpha beta =
     else begin
       let best_move = ref 0 in
       let _, hash_lower_bound, hash_upper_bound, hash_move, hash_static_eval = probe state.zobrist in
-      let static_eval = if hash_static_eval = - max_int then hce position else hash_static_eval in
+      let static_eval = if hash_static_eval = - max_int then evaluate position else hash_static_eval in
       let no_cut = ref true in
       let best_score = ref (- max_int) in
       let alpha0 = ref alpha in
@@ -73,6 +73,7 @@ let rec quiescence_search position search_tables thread search_ply alpha beta =
           picker.stage <- Stage_TT;
           picker.hash_move <- hash_move;
           let move_loop move =
+            update_accumulator position move;
             make position move;
             let score = - quiescence_search position search_tables thread (search_ply + 1) (- !beta0) (- !alpha0)
             in if score > !best_score then begin

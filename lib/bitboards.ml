@@ -227,7 +227,9 @@ type state = {
   mutable half_moves : int;
   mutable zobrist : int64;
   mutable captured_piece : int;
-  mutable in_check : bool
+  mutable in_check : bool;
+  side_accumulator : int array;
+  not_side_accumulator : int array
 }
 
 type position = {

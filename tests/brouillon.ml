@@ -433,3 +433,39 @@ let main plateau =
   List.iter (fun tab -> Array.iter (fun c -> if c <> 0 then print_string (coord.(c) ^ " ")) tab; print_newline ()) [chemin_blanc_pr; chemin_blanc_gr; chemin_noir_pr; chemin_noir_gr]; print_newline ();
   List.iter (fun list -> List.iter (fun c -> print_string (coord.(c) ^ " ")) list; print_newline ()) [!vides_blanc_pr; !vides_blanc_gr; !vides_noir_pr; !vides_noir_gr]
 *)*)
+
+let pqst position =
+  let mg_score = ref 0 in
+  let pieces_bitboard = position.pieces in
+  let [@inline] add_score mg sign =
+    mg_score := !mg_score + sign * mg;
+  in for side = 0 to 1 do
+    let sign = (-2 * side + 1) in
+    for piece = pawn to king do
+      let bitboard = ref (pieces_bitboard.(piece + 6 * side)) in
+      while !bitboard <> 0L do
+        let from, other_pieces_bitboard = pop_lsb !bitboard in
+        bitboard := other_pieces_bitboard;
+        let index = (from lxor (56 * side)) + 64 * piece in
+        add_score mg_pst.(index) sign;
+      done
+    done
+  done;
+  (- 2 * position.white_to_move + 1) * !mg_score
+
+
+
+let get_output state =
+  let side_accumulator = state.side_accumulator in
+  let not_side_accumulator = state.not_side_accumulator in
+  let output = ref 0 in
+  for i = 0 to n - 1 do
+    output := !output
+      + screlu side_accumulator.(i) * output_weights.(i)
+      + screlu not_side_accumulator.(i) * output_weights.(n + i)
+  done;
+  ((!output / 255 + !output_bias) * 400) / (255 * 64)
+
+let naive_nnue position =
+  get_accumulator position;
+  get_output position.state_array.(position.game_ply)

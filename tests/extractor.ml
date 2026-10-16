@@ -44,7 +44,11 @@ let process_pgn_file filename output_name engine1 engine2 =
 
         (*Result reading*)
         else if String.starts_with ~prefix:"[Result" line then begin
-          result := extract "Result" line;
+          result := begin match extract "Result" line with
+            |"1-0" -> "1"
+            |"0-1" -> "0"
+            |_ -> "0.5"
+           end;
           read_headers ()
         end
 
@@ -138,7 +142,7 @@ let process_pgn_file filename output_name engine1 engine2 =
     and isquiet_position position search_tables engine_eval =
       not (position.state_array.(position.game_ply).in_check || String.contains engine_eval 'M') &&
       begin
-        let static_eval = hce position in
+        let static_eval = evaluate position in
         (abs (static_eval - (int_of_float ((float_of_string engine_eval) *. 100.)))) <= 70 && ((abs (static_eval - quiescence_search position search_tables 0 0 (- max_int) max_int)) <= 60)
       end
     

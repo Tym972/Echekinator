@@ -81,6 +81,7 @@ let uci () =
     ^ "option name MultiPV type spin default 1 min 1 max 256" ^ "\n"
     ^ "option name Ponder type check default false" ^ "\n"
     ^ "option name Threads type spin default 1 min 1 max 1024" ^ "\n"
+    ^ "option name EvalFile type string default quantised.bin" ^ "\n"
     ^ "option name UCI_Chess960 type check default false" ^ "\n"
     ^ "uciok")
 
@@ -146,6 +147,7 @@ let position_uci instructions position search_tables =
           let record = (word_detection (String.concat " " (pop instructions (!index_moves + 1)))) in
           make_list record position
         end;
+        get_accumulator position;
         legal_moves position search_tables.pickers.(0) phase_all
       end
     |_ -> ()
@@ -314,7 +316,7 @@ let iterative_deepening position search_tables depth mate thread =
       variations := List.sort (fun x y -> compare y x) !variations;
       if number_of_pv > 1 then begin
         let depth, score, multi = List.hd !variations in
-        store thread zobrist depth score score !search_record.(multi).(depth).bestmove (hce position) !go_counter
+        store thread zobrist depth score score !search_record.(multi).(depth).bestmove (evaluate position) !go_counter
       end;
       begin try
         let depth, _, id = (List.hd !variations) in
@@ -402,7 +404,9 @@ let domain_loop thread_id =
     Mutex.unlock domain_mutex;
   done
 
-let setoption search_tables instructions =
+let eval_file = ref "quantised.bin"
+
+let setoption search_tables position instructions =
   let type_check instructions boolean =
     match instructions with
     |_ :: _ :: _ :: "value" :: value :: _ -> begin try boolean := (bool_of_string value) with _ -> () end
@@ -417,6 +421,21 @@ let setoption search_tables instructions =
     end
   in match (List.tl instructions) with
     |"name" :: "Ponder" :: _ -> ()
+    |"name" :: "EvalFile" :: _ ->
+      let rec value = function
+        |"value" :: path -> String.concat " " path
+        |_ :: rest -> value rest
+        |[] -> ""
+      in
+      let path = value instructions in
+      if path <> "" then begin
+        try
+          load_weights path;
+          eval_file := path;
+          get_accumulator position
+        with Failure message | Sys_error message ->
+          print_endline ("info string " ^ message)
+      end
     |"name" :: "UCI_Chess960" :: _ -> type_check instructions chess_960
     |"name" :: "Clear" :: "Hash" :: _ -> reset_hash search_tables
     |"name" :: "MultiPV" :: _ ->
@@ -554,6 +573,7 @@ let display position =
 let echekinator () =
   let position = create_position () in
   let search_tables = create_search_tables () in
+  load_weights !eval_file;
   position_uci ["position"; "startpos"] position search_tables;
   uninitialized := true;
   print_endline (project_name ^ " by Timothée Fixy");
@@ -566,7 +586,7 @@ let echekinator () =
     match instructions with
       |"uci" :: _ -> uci ()
       |"isready" :: _ -> print_endline "readyok"
-      |"setoption" :: _ -> process (fun () -> setoption search_tables instructions)
+      |"setoption" :: _ -> process (fun () -> setoption search_tables position instructions)
       |"ucinewgame" :: _ -> process (fun () -> reset_hash search_tables)
       |"position" :: _ -> process (fun () -> position_uci instructions position search_tables)
       |"go" :: "perft" :: depth :: _ when is_integer_string depth ->
@@ -609,12 +629,9 @@ let echekinator () =
         for i = 0 to search_tables.pickers.(0).number_of_quiets - 1 do
           print_endline (Printf.sprintf "%s : see %i" (uci_of_mouvement search_tables.pickers.(0).quiet_moves.(i)) (see position search_tables.pickers.(0).quiet_moves.(i)))
         done;*)
-        let eval =
-          if position.white_to_move = 0 then
-            (float_of_int (hce position)) /. 100.
-          else
-            -. (float_of_int (hce position)) /. 100.
-        in print_endline ("HCE Evaluation : " ^ (if eval > 0. then "+" else "") ^ string_of_float eval ^ " (white side)")
+        let eval = float_of_int (evaluate position) /. 100. in
+        let eval = if position.white_to_move = 0 then eval else -. eval in
+        print_endline ("NNUE Evaluation : " ^ (if eval > 0. then "+" else "") ^ string_of_float eval ^ " (white side)")
       |"ponderhit" :: _ ->
         is_pondering := false;
         start_time := Mtime_clock.counter ();
