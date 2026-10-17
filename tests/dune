@@ -5,8 +5,7 @@
  nnue
  magics
  bitboards
- extractor
- texel)
+ extractor)
  (modules
  perft
  brouillon
@@ -16,8 +15,7 @@
  nnue
  magics
  extractor
- algebraic
- texel)
+ algebraic)
  (libraries 
  unix
  threads

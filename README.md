@@ -12,6 +12,7 @@ Echekinator is an UCI-compatible chess engine written in OCaml. It supports
 
 - NNUE
     - (768 -> 32 x 2 -> 1)
+
 - Search
     - Negamax with alpha-beta pruning
     - Principle Variation Search (PVS)
@@ -74,9 +75,9 @@ dune exec bin/echekinator.exe
 |   Version       | CCRL 40/15 | CCRL Blitz |  Architecture   |
 |-----------------|------------|------------|-----------------|
 | Echekinator 1.0 | —          | 2143       | Mailbox + HCE   |
-| Echekinator 1.1 | —          | 2489       | Bitboards + HCE |
-| Echekinator 1.2 | —          | _          | Bitboards + HCE |
-| Echekinator 1.3 | —          | _          | Bitboards + NNUE|
+| Echekinator 1.1 | —          | 2492       | Bitboards + HCE |
+| Echekinator 1.2 | —          | —          | Bitboards + HCE |
+| Echekinator 1.3 | —          | —          | Bitboards + NNUE|
 
 ## Credits
 This project would not have been possible without the help of the Stockfish Discord server. 

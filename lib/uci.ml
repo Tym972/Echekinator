@@ -404,7 +404,7 @@ let domain_loop thread_id =
     Mutex.unlock domain_mutex;
   done
 
-let eval_file = ref "quantised.bin"
+let eval_file = ref "quantised.nnue"
 
 let setoption search_tables position instructions =
   let type_check instructions boolean =

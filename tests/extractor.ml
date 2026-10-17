@@ -2,8 +2,8 @@ open Libs.Bitboards
 open Libs.Board
 open Libs.Fen
 open Libs.Move_ordering
-open Libs.Evaluation
-open Libs.Quiescence
+(*open Libs.Evaluation
+open Libs.Quiescence*)
 open Algebraic
 
 let process_pgn_file filename output_name engine1 engine2 =
@@ -131,23 +131,31 @@ let process_pgn_file filename output_name engine1 engine2 =
       let rec moves_loop moves engine_evals is_first = match moves, engine_evals with
         |[], _ | _, [] -> ()
         |move :: other_moves, engine_eval :: other_engine_evals ->
-          if (position.white_to_move + 1) land !engine <> 0 && isquiet_position position search_tables engine_eval && not is_first then begin
+          let uci_move = move_of_algebric position move in
+          if (position.white_to_move + 1) land !engine <> 0 && isquiet_position position uci_move search_tables engine_eval && not is_first then begin
             let entry = Printf.sprintf "%s | %i | %s\n" (fen position) (format_score engine_eval position.white_to_move) result in
             output_string oc entry
           end;
-          make position (move_of_algebric position move);
+          make position uci_move;
           moves_loop other_moves other_engine_evals false;
       in moves_loop moves engine_evals true
   
-    and isquiet_position position search_tables engine_eval =
-      not (position.state_array.(position.game_ply).in_check || String.contains engine_eval 'M') &&
+    and isquiet_position position move search_tables engine_eval =
+      let _ = search_tables, engine_eval in
+      not (position.state_array.(position.game_ply).in_check || (not (isquiet move)) (*|| String.contains engine_eval 'M'*)) (*&&
       begin
         let static_eval = evaluate position in
         (abs (static_eval - (int_of_float ((float_of_string engine_eval) *. 100.)))) <= 70 && ((abs (static_eval - quiescence_search position search_tables 0 0 (- max_int) max_int)) <= 60)
-      end
+      end*)
     
     and format_score engine_eval white_to_move =
-      (int_of_float ((float_of_string engine_eval) *. 100.)) * (- 2 * white_to_move + 1)
+      if String.contains engine_eval 'M' then begin
+        5000 * int_of_string (Printf.sprintf "%c" engine_eval.[0] ^ "1") * (- 2 * white_to_move + 1)
+      end
+      else begin
+        let score = (int_of_float ((float_of_string engine_eval) *. 100.)) * (- 2 * white_to_move + 1) in
+        if score > 5000 then 5000 else if score < -5000 then -5000 else score
+      end
 
     in
     read_headers ();
