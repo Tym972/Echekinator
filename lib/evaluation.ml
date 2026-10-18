@@ -13,6 +13,7 @@ let hidden_bias = Array.make n 0
 
 let output_weights = Array.make (2 * n) 0
 let output_bias = ref 0
+
 let weights_loaded = ref false
 
 let [@inline] feature_weight neuron feature = hidden_weights.(feature * n + neuron)
