@@ -2,7 +2,6 @@
  (names
  perft
  brouillon
- nnue
  magics
  bitboards
  extractor)
@@ -12,7 +11,6 @@
  config
  positions
  bitboards
- nnue
  magics
  extractor
  algebraic)

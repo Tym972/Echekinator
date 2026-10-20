@@ -81,7 +81,7 @@ let uci () =
     ^ "option name MultiPV type spin default 1 min 1 max 256" ^ "\n"
     ^ "option name Ponder type check default false" ^ "\n"
     ^ "option name Threads type spin default 1 min 1 max 1024" ^ "\n"
-    ^ "option name EvalFile type string default quantised.bin" ^ "\n"
+    ^ "option name EvalFile type string default embedded" ^ "\n"
     ^ "option name UCI_Chess960 type check default false" ^ "\n"
     ^ "uciok")
 
@@ -404,8 +404,6 @@ let domain_loop thread_id =
     Mutex.unlock domain_mutex;
   done
 
-let eval_file = ref "quantised.nnue"
-
 let setoption search_tables position instructions =
   let type_check instructions boolean =
     match instructions with
@@ -430,9 +428,13 @@ let setoption search_tables position instructions =
       let path = value instructions in
       if path <> "" then begin
         try
-          load_weights path;
-          eval_file := path;
-          get_accumulator position
+          if path = "embedded" then begin
+            load_embedded_weights ()
+          end
+          else begin
+            load_weights path;
+            get_accumulator position
+          end
         with Failure message | Sys_error message ->
           print_endline ("info string " ^ message)
       end
@@ -573,7 +575,7 @@ let display position =
 let echekinator () =
   let position = create_position () in
   let search_tables = create_search_tables () in
-  load_weights !eval_file;
+  load_embedded_weights ();
   position_uci ["position"; "startpos"] position search_tables;
   uninitialized := true;
   print_endline (project_name ^ " by Timothée Fixy");

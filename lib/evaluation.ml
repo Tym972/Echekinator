@@ -21,24 +21,14 @@ let [@inline] feature_weight neuron feature = hidden_weights.(feature * n + neur
 let weights_payload_size = 2 * ((768 * n) + n + (2 * n) + 1)
 let weights_padding = String.concat "" (List.init 10 (fun _ -> "bullet")) ^ "bu"
 
-let load_weights path =
-  let contents =
-    try
-      let channel = open_in_bin path in
-      Fun.protect
-        ~finally:(fun () -> close_in_noerr channel)
-        (fun () -> really_input_string channel (in_channel_length channel))
-    with
-    | Sys_error message ->
-      failwith (Printf.sprintf "Unable to load NNUE weights from '%s': %s" path message)
-  in
+let load_weights_contents source contents =
   if String.length contents <> weights_payload_size + String.length weights_padding then
     failwith
       (Printf.sprintf
          "Invalid NNUE weights file '%s': expected %d bytes, got %d"
-         path (weights_payload_size + String.length weights_padding) (String.length contents));
+         source (weights_payload_size + String.length weights_padding) (String.length contents));
   if String.sub contents weights_payload_size (String.length weights_padding) <> weights_padding then
-    failwith (Printf.sprintf "Invalid NNUE weights file '%s': Bullet padding does not match" path);
+    failwith (Printf.sprintf "Invalid NNUE weights file '%s': Bullet padding does not match" source);
   let offset = ref 0 in
   let read_int16_array count =
     Array.init count (fun _ ->
@@ -56,6 +46,21 @@ let load_weights path =
   Array.blit loaded_output_weights 0 output_weights 0 (Array.length output_weights);
   output_bias := loaded_output_bias;
   weights_loaded := true
+
+let read_weights_file path =
+  try
+    let channel = open_in_bin path in
+    Fun.protect
+      ~finally:(fun () -> close_in_noerr channel)
+      (fun () -> really_input_string channel (in_channel_length channel))
+  with
+  | Sys_error message ->
+    failwith (Printf.sprintf "Unable to load NNUE weights from '%s': %s" path message)
+
+let load_weights path = load_weights_contents path (read_weights_file path)
+
+let load_embedded_weights () =
+  load_weights_contents "embedded NNUE weights" Embedded_weights.contents
 
 let [@inline] screlu x =
   let x = max 0 (min 255 x) in

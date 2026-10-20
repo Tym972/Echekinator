@@ -11,6 +11,7 @@
   quiescence
   search
   evaluation
+  embedded_weights
   uci
   miscellaneous)
  (libraries
@@ -18,3 +19,9 @@
   unix
   threads
   mtime.clock))
+
+(rule
+ (target embedded_weights.ml)
+ (deps ../net.nnue)
+ (action
+  (run %{exe:../scripts/embed_nnue.exe} %{dep:../net.nnue} %{target})))

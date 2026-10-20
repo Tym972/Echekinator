@@ -168,4 +168,4 @@ let process_pgn_file filename output_name engine1 engine2 =
 
 let () = 
   let name = "Training_HCE_0" in
-  process_pgn_file (Printf.sprintf "Results/%s.pgn" name) (Printf.sprintf "%s.txt" name) "new" "base"
+  process_pgn_file (Printf.sprintf "Results/Pgn_fastchess#3.pgn") (Printf.sprintf "%s.txt" name) "new" "base"

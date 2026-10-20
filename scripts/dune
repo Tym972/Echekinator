@@ -1,0 +1,3 @@
+(executable
+ (name embed_nnue)
+ (modules embed_nnue))
