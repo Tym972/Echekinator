@@ -12,24 +12,22 @@ let is_material_draw position =
 let hidden_weights = Array1.create Int16_signed C_layout (hidden_size * 768)
 let hidden_bias = Array1.create Int16_signed C_layout hidden_size
 
-let output_weights = Array1.create Int16_signed C_layout (2 * hidden_size)
-let output_bias = ref 0
+let output_weights = Array1.create Int16_signed C_layout (2 * hidden_size * output_buckets)
+let output_bias = Array1.create Int16_signed C_layout output_buckets
 
 let weights_loaded = ref false
 
-let [@inline] feature_weight neuron feature = Array1.get hidden_weights (feature * hidden_size + neuron)
+let [@inline] feature_weight neuron feature = hidden_weights.{feature * hidden_size + neuron}
 
-let weights_payload_size = 2 * ((768 * hidden_size) + hidden_size + (2 * hidden_size) + 1)
+let weights_payload_size = 2 * ((768 * hidden_size) + hidden_size + (2 * hidden_size * output_buckets) + output_buckets)
 let weights_padding = String.concat "" (List.init 10 (fun _ -> "bullet")) ^ "bu"
 
 let load_weights_contents source contents =
-  if String.length contents <> weights_payload_size + String.length weights_padding then
+  if String.length contents < weights_payload_size then
     failwith
       (Printf.sprintf
-         "Invalid NNUE weights file '%s': expected %d bytes, got %d"
-         source (weights_payload_size + String.length weights_padding) (String.length contents));
-  if String.sub contents weights_payload_size (String.length weights_padding) <> weights_padding then
-    failwith (Printf.sprintf "Invalid NNUE weights file '%s': Bullet padding does not match" source);
+         "Invalid NNUE weights file '%s': expected at least %d bytes, got %d"
+         source weights_payload_size (String.length contents));
   let offset = ref 0 in
   let read_int_array kind count =
     Array1.init kind C_layout count (fun _ ->
@@ -37,15 +35,18 @@ let load_weights_contents source contents =
       let high = Char.code contents.[!offset + 1] in
       offset := !offset + 2;
       let value = low lor (high lsl 8) in
-      if value land 0x8000 = 0 then value else value - 0x10000)
+      if value land 0x8000 = 0 then
+        value
+      else
+        value - 0x10000)
   in let loaded_hidden_weights = read_int_array Int16_signed (768 * hidden_size) in
   let loaded_hidden_bias = read_int_array Int16_signed hidden_size in
-  let loaded_output_weights = read_int_array Int16_signed (2 * hidden_size) in
-  let loaded_output_bias = Array1.get (read_int_array Int 1) 0 in
+  let loaded_output_weights = read_int_array Int16_signed (2 * hidden_size * output_buckets) in
+  let loaded_output_bias = read_int_array Int16_signed output_buckets in
   Array1.blit loaded_hidden_weights hidden_weights;
   Array1.blit loaded_hidden_bias hidden_bias;
   Array1.blit loaded_output_weights output_weights;
-  output_bias := loaded_output_bias;
+  Array1.blit loaded_output_bias output_bias;
   weights_loaded := true
 
 let read_weights_file path =
@@ -222,10 +223,13 @@ let evaluate position =
   let state = position.state_array.(position.game_ply) in
   let side_accumulator = state.side_accumulator in
   let not_side_accumulator = state.not_side_accumulator in
+  let number_of_pieces = population_count (position.occupancy.(0) ||| position.occupancy.(1)) in
+  let bucket = (number_of_pieces - 2 ) / 4 in
+  let bucket_offset = bucket * 2 * hidden_size in
   let output = ref 0 in
   for i = 0 to hidden_size - 1 do
     output := !output
-      + screlu side_accumulator.{i} * Array1.get output_weights i
-      + screlu not_side_accumulator.{i} * Array1.get output_weights (hidden_size + i)
+      + screlu side_accumulator.{i} * output_weights.{bucket_offset + i}
+      + screlu not_side_accumulator.{i} * output_weights.{bucket_offset + hidden_size + i}
   done;
-  ((!output / 255 + !output_bias) * 400) / (255 * 64)
+  ((!output / 255 + output_bias.{bucket}) * 400) / (255 * 64)

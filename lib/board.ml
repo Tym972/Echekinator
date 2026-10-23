@@ -26,6 +26,9 @@ let max_moves = 2048
 (*NNUE Hidden size*)
 let hidden_size = 64
 
+(*Output buckets*)
+let output_buckets = 8
+
 (*SMP variables*)
 let threads_number = ref 1
 let min_threads_number = 1
