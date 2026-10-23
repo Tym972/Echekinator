@@ -1,5 +1,6 @@
 open Bitboards
 open Board
+open Bigarray
 
 let is_material_draw position =
   let pieces = position.pieces in
@@ -8,17 +9,17 @@ let is_material_draw position =
   population_count pieces.(queen) = 0 && population_count pieces.(queen + 6) = 0 &&
   population_count pieces.(knight) + population_count pieces.(bishop) + population_count pieces.(knight + 6) + population_count pieces.(bishop + 6) <= 1
 
-let hidden_weights = Array.make (n * 768) 0
-let hidden_bias = Array.make n 0
+let hidden_weights = Array1.create Int16_signed C_layout (hidden_size * 768)
+let hidden_bias = Array1.create Int16_signed C_layout hidden_size
 
-let output_weights = Array.make (2 * n) 0
+let output_weights = Array1.create Int16_signed C_layout (2 * hidden_size)
 let output_bias = ref 0
 
 let weights_loaded = ref false
 
-let [@inline] feature_weight neuron feature = hidden_weights.(feature * n + neuron)
+let [@inline] feature_weight neuron feature = Array1.get hidden_weights (feature * hidden_size + neuron)
 
-let weights_payload_size = 2 * ((768 * n) + n + (2 * n) + 1)
+let weights_payload_size = 2 * ((768 * hidden_size) + hidden_size + (2 * hidden_size) + 1)
 let weights_padding = String.concat "" (List.init 10 (fun _ -> "bullet")) ^ "bu"
 
 let load_weights_contents source contents =
@@ -30,20 +31,20 @@ let load_weights_contents source contents =
   if String.sub contents weights_payload_size (String.length weights_padding) <> weights_padding then
     failwith (Printf.sprintf "Invalid NNUE weights file '%s': Bullet padding does not match" source);
   let offset = ref 0 in
-  let read_int16_array count =
-    Array.init count (fun _ ->
+  let read_int_array kind count =
+    Array1.init kind C_layout count (fun _ ->
       let low = Char.code contents.[!offset] in
       let high = Char.code contents.[!offset + 1] in
       offset := !offset + 2;
       let value = low lor (high lsl 8) in
       if value land 0x8000 = 0 then value else value - 0x10000)
-  in let loaded_hidden_weights = read_int16_array (768 * n) in
-  let loaded_hidden_bias = read_int16_array n in
-  let loaded_output_weights = read_int16_array (2 * n) in
-  let loaded_output_bias = (read_int16_array 1).(0) in
-  Array.blit loaded_hidden_weights 0 hidden_weights 0 (Array.length hidden_weights);
-  Array.blit loaded_hidden_bias 0 hidden_bias 0 (Array.length hidden_bias);
-  Array.blit loaded_output_weights 0 output_weights 0 (Array.length output_weights);
+  in let loaded_hidden_weights = read_int_array Int16_signed (768 * hidden_size) in
+  let loaded_hidden_bias = read_int_array Int16_signed hidden_size in
+  let loaded_output_weights = read_int_array Int16_signed (2 * hidden_size) in
+  let loaded_output_bias = Array1.get (read_int_array Int 1) 0 in
+  Array1.blit loaded_hidden_weights hidden_weights;
+  Array1.blit loaded_hidden_bias hidden_bias;
+  Array1.blit loaded_output_weights output_weights;
   output_bias := loaded_output_bias;
   weights_loaded := true
 
@@ -72,8 +73,8 @@ let get_accumulator position =
   let white_to_move = position.white_to_move in
   let side_accumulator = state.side_accumulator in
   let not_side_accumulator = state.not_side_accumulator in
-  Array.blit hidden_bias 0 side_accumulator 0 n;
-  Array.blit hidden_bias 0 not_side_accumulator 0 n;
+  Array1.blit hidden_bias side_accumulator;
+  Array1.blit hidden_bias not_side_accumulator;
   for square =  0 to 63 do
     let piece = board.(square) in
     if piece <> empty then begin
@@ -82,9 +83,9 @@ let get_accumulator position =
       let side_is_enemy = piece_color lxor white_to_move in
       let side_idx = 64 * (piece_type + 6 * side_is_enemy) + (square lxor (56 * white_to_move)) in
       let not_side_idx = 64 * (piece_type + 6 * (side_is_enemy lxor 1)) + (square lxor (56 * (white_to_move lxor 1))) in
-      for i = 0 to n - 1 do
-        side_accumulator.(i) <- side_accumulator.(i) + feature_weight i side_idx;
-        not_side_accumulator.(i) <- not_side_accumulator.(i) + feature_weight i not_side_idx
+      for i = 0 to hidden_size - 1 do
+        side_accumulator.{i} <- (side_accumulator.{i}  + feature_weight i side_idx);
+        not_side_accumulator.{i} <- (not_side_accumulator.{i}  + feature_weight i not_side_idx)
       done
     end
   done
@@ -127,19 +128,19 @@ let update_accumulator position move =
   let new_state = position.state_array.(position.game_ply + 1) in
   let side_accumulator = new_state.side_accumulator in
   let not_side_accumulator = new_state.not_side_accumulator in
-  Array.blit state.side_accumulator 0 not_side_accumulator 0 n;
-  Array.blit state.not_side_accumulator 0 side_accumulator 0 n;
+  Array1.blit state.side_accumulator not_side_accumulator;
+  Array1.blit state.not_side_accumulator side_accumulator;
   let flag = get_move_flag move in
   begin match flag with
     |0 |1 ->
-      for i = 0 to n - 1 do
-        side_accumulator.(i) <- side_accumulator.(i) + feature_weight i side_idx_to - feature_weight i side_idx_from;
-        not_side_accumulator.(i) <- not_side_accumulator.(i) + feature_weight i not_side_idx_to - feature_weight i not_side_idx_from
+      for i = 0 to hidden_size - 1 do
+        side_accumulator.{i} <- (side_accumulator.{i}  + feature_weight i side_idx_to - feature_weight i side_idx_from);
+        not_side_accumulator.{i} <- (not_side_accumulator.{i} + feature_weight i not_side_idx_to - feature_weight i not_side_idx_from)
       done
     |4 ->
-      for i = 0 to n - 1 do
-        side_accumulator.(i) <- side_accumulator.(i) + feature_weight i side_idx_to - feature_weight i side_idx_from - feature_weight i side_idx_capture;
-        not_side_accumulator.(i) <- not_side_accumulator.(i) + feature_weight i not_side_idx_to - feature_weight i not_side_idx_from - feature_weight i not_side_idx_capture
+      for i = 0 to hidden_size - 1 do
+        side_accumulator.{i} <- (side_accumulator.{i} + feature_weight i side_idx_to - feature_weight i side_idx_from - feature_weight i side_idx_capture);
+        not_side_accumulator.{i} <- (not_side_accumulator.{i} + feature_weight i not_side_idx_to - feature_weight i not_side_idx_from - feature_weight i not_side_idx_capture)
       done
     |2 ->
       let player_castling_info = castling_infos.(white_to_move) in
@@ -157,9 +158,9 @@ let update_accumulator position move =
       let side_idx_to_rook = 64 * (rook_piece_type + 6 * rook_enemy_side) + oriented_rt_side in
       let not_side_idx_from_rook = 64 * (rook_piece_type + 6 * rook_enemy_not_side) + oriented_rf_not_side in
       let not_side_idx_to_rook = 64 * (rook_piece_type + 6 * rook_enemy_not_side) + oriented_rt_not_side in
-      for i = 0 to n - 1 do
-        side_accumulator.(i) <- side_accumulator.(i) + feature_weight i side_idx_to - feature_weight i side_idx_from + feature_weight i side_idx_to_rook - feature_weight i side_idx_from_rook;
-        not_side_accumulator.(i) <- not_side_accumulator.(i) + feature_weight i not_side_idx_to - feature_weight i not_side_idx_from + feature_weight i not_side_idx_to_rook - feature_weight i not_side_idx_from_rook
+      for i = 0 to hidden_size - 1 do
+        side_accumulator.{i} <- (side_accumulator.{i} + feature_weight i side_idx_to - feature_weight i side_idx_from + feature_weight i side_idx_to_rook - feature_weight i side_idx_from_rook);
+        not_side_accumulator.{i} <- (not_side_accumulator.{i} + feature_weight i not_side_idx_to - feature_weight i not_side_idx_from + feature_weight i not_side_idx_to_rook - feature_weight i not_side_idx_from_rook)
       done
     |3 ->
       let player_castling_info = castling_infos.(white_to_move) in
@@ -177,9 +178,9 @@ let update_accumulator position move =
       let side_idx_to_rook = 64 * (rook_piece_type + 6 * rook_enemy_side) + oriented_rt_side in
       let not_side_idx_from_rook = 64 * (rook_piece_type + 6 * rook_enemy_not_side) + oriented_rf_not_side in
       let not_side_idx_to_rook = 64 * (rook_piece_type + 6 * rook_enemy_not_side) + oriented_rt_not_side in
-      for i = 0 to n - 1 do
-        side_accumulator.(i) <- side_accumulator.(i) + feature_weight i side_idx_to - feature_weight i side_idx_from + feature_weight i side_idx_to_rook - feature_weight i side_idx_from_rook;
-        not_side_accumulator.(i) <- not_side_accumulator.(i) + feature_weight i not_side_idx_to - feature_weight i not_side_idx_from + feature_weight i not_side_idx_to_rook - feature_weight i not_side_idx_from_rook
+      for i = 0 to hidden_size - 1 do
+        side_accumulator.{i} <- (side_accumulator.{i} + feature_weight i side_idx_to - feature_weight i side_idx_from + feature_weight i side_idx_to_rook - feature_weight i side_idx_from_rook);
+        not_side_accumulator.{i} <- (not_side_accumulator.{i} + feature_weight i not_side_idx_to - feature_weight i not_side_idx_from + feature_weight i not_side_idx_to_rook - feature_weight i not_side_idx_from_rook)
       done
     |5 ->
       let captured_pawn_square = (to_ - push_vects.(white_to_move)) in
@@ -190,9 +191,9 @@ let update_accumulator position move =
       let oriented_cp_not_side = captured_pawn_square lxor (56 * p_not_side) in
       let side_idx_captured_pawn = 64 * (pawn + 6 * pawn_enemy_side) + oriented_cp_side in
       let not_side_idx_captured_pawn = 64 * (pawn + 6 * pawn_enemy_not_side) + oriented_cp_not_side in
-      for i = 0 to n - 1 do
-        side_accumulator.(i) <- side_accumulator.(i) + feature_weight i side_idx_to - feature_weight i side_idx_from - feature_weight i side_idx_captured_pawn;
-        not_side_accumulator.(i) <- not_side_accumulator.(i) + feature_weight i not_side_idx_to - feature_weight i not_side_idx_from - feature_weight i not_side_idx_captured_pawn
+      for i = 0 to hidden_size - 1 do
+        side_accumulator.{i} <- (side_accumulator.{i} + feature_weight i side_idx_to - feature_weight i side_idx_from - feature_weight i side_idx_captured_pawn);
+        not_side_accumulator.{i} <- (not_side_accumulator.{i} + feature_weight i not_side_idx_to - feature_weight i not_side_idx_from - feature_weight i not_side_idx_captured_pawn)
       done
     |_ ->
       begin
@@ -203,15 +204,15 @@ let update_accumulator position move =
         let side_idx_to_promotion = 64 * (promotion_piece + 6 * promo_enemy_side) + oriented_to_side in
         let not_side_idx_to_promotion = 64 * (promotion_piece + 6 * promo_enemy_not_side) + oriented_to_not_side in
         if flag land 4 <> 0 then begin
-          for i = 0 to n - 1 do
-          side_accumulator.(i) <- side_accumulator.(i) + feature_weight i side_idx_to_promotion - feature_weight i side_idx_from - feature_weight i side_idx_capture;
-          not_side_accumulator.(i) <- not_side_accumulator.(i) + feature_weight i not_side_idx_to_promotion - feature_weight i not_side_idx_from - feature_weight i not_side_idx_capture
+          for i = 0 to hidden_size - 1 do
+          side_accumulator.{i} <- (side_accumulator.{i} + feature_weight i side_idx_to_promotion - feature_weight i side_idx_from - feature_weight i side_idx_capture);
+          not_side_accumulator.{i} <- (not_side_accumulator.{i} + feature_weight i not_side_idx_to_promotion - feature_weight i not_side_idx_from - feature_weight i not_side_idx_capture)
         done
         end
         else begin
-          for i = 0 to n - 1 do
-            side_accumulator.(i) <- side_accumulator.(i) + feature_weight i side_idx_to_promotion - feature_weight i side_idx_from;
-            not_side_accumulator.(i) <- not_side_accumulator.(i) + feature_weight i not_side_idx_to_promotion - feature_weight i not_side_idx_from
+          for i = 0 to hidden_size - 1 do
+            side_accumulator.{i} <- (side_accumulator.{i} + feature_weight i side_idx_to_promotion - feature_weight i side_idx_from);
+            not_side_accumulator.{i} <- (not_side_accumulator.{i} + feature_weight i not_side_idx_to_promotion - feature_weight i not_side_idx_from)
           done
         end
       end
@@ -222,9 +223,9 @@ let evaluate position =
   let side_accumulator = state.side_accumulator in
   let not_side_accumulator = state.not_side_accumulator in
   let output = ref 0 in
-  for i = 0 to n - 1 do
+  for i = 0 to hidden_size - 1 do
     output := !output
-      + screlu side_accumulator.(i) * output_weights.(i)
-      + screlu not_side_accumulator.(i) * output_weights.(n + i)
+      + screlu side_accumulator.{i} * Array1.get output_weights i
+      + screlu not_side_accumulator.{i} * Array1.get output_weights (hidden_size + i)
   done;
   ((!output / 255 + !output_bias) * 400) / (255 * 64)

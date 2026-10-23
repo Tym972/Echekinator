@@ -3,14 +3,11 @@
  perft
  brouillon
  magics
- bitboards
  extractor)
  (modules
  perft
  brouillon
- config
  positions
- bitboards
  magics
  extractor
  algebraic)

@@ -1,5 +1,6 @@
 (*Module implémentant la recherche Minimax et des fonctions nécessaire à l'élaboration de la stratégie*)
 
+open Bigarray
 open Board
 open Bitboards
 open Move_ordering
@@ -121,10 +122,10 @@ let rec search position search_tables thread multi depth search_ply alpha beta w
             (*Null move pruning*)
             if !no_search_cut && depth >= nmp_min_depth && not was_null && static_eval >= !beta0 + 30 then begin
               let new_state = position.state_array.(position.game_ply + 1) in
-              Array.blit state.side_accumulator 0 new_state.not_side_accumulator 0 n;
-              Array.blit state.not_side_accumulator 0 new_state.side_accumulator 0 n;
+              Array1.blit state.side_accumulator new_state.not_side_accumulator;
+              Array1.blit state.not_side_accumulator new_state.side_accumulator;
               make_null position;
-              let reduction = min 6 (min (depth - 1) (3 + depth / 4)) in
+              let reduction = min 6 (3 + depth / 4) in
               let score = - search position search_tables thread multi (depth - 1 - reduction) (search_ply + 1) (- !beta0) (- !beta0 + 1) true in
               if score >= !beta0 then begin
                 if is_win score then begin

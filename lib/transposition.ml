@@ -2,13 +2,13 @@ open Board
 open Bigarray
 
 type tt = {
-  key   : (int64, int64_elt, c_layout) Array1.t;
-  depth  : (int, int_elt, c_layout) Array1.t;
-  lower_bound  : (int, int_elt, c_layout) Array1.t;
+  key : (int64, int64_elt, c_layout) Array1.t;
+  depth : (int, int_elt, c_layout) Array1.t;
+  lower_bound : (int, int_elt, c_layout) Array1.t;
   upper_bound  : (int, int_elt, c_layout) Array1.t;
-  move   : (int, int_elt, c_layout) Array1.t;
+  move : (int, int_elt, c_layout) Array1.t;
   static_eval : (int, int_elt, c_layout) Array1.t;
-  generation    : (int, int_elt, c_layout) Array1.t;
+  generation : (int, int_elt, c_layout) Array1.t
 }
 
 let empty_depth = (-40)
@@ -23,13 +23,13 @@ let max_hash_size = 33554432
 let slots = ref (Int64.of_int ((!hash_size * 1024 * 1024) / entry_size))
 
 let clear_entry tt i =
-  Array1.set tt.key i 0L;
-  Array1.set tt.depth i empty_depth;
-  Array1.set tt.lower_bound i (-max_int);
-  Array1.set tt.upper_bound i max_int;
-  Array1.set tt.move i 0;
-  Array1.set tt.static_eval i (-max_int);
-  Array1.set tt.generation i 0
+  tt.key.{i} <- 0L;
+  tt.depth.{i} <- empty_depth;
+  tt.lower_bound.{i} <- (-max_int);
+  tt.upper_bound.{i} <- max_int;
+  tt.move.{i} <- 0;
+  tt.static_eval.{i} <- (-max_int);
+  tt.generation.{i} <- 0
 
 let clear tt =
   for i = 0 to Int64.to_int !slots - 1 do
@@ -80,29 +80,33 @@ let hash_treatment hash_lower_bound hash_upper_bound alpha beta best_score no_cu
   end
 
 let score_node lower_bound upper_bound =
-  if lower_bound = upper_bound then 3
+  if lower_bound = upper_bound then
+    3
   else if lower_bound > - max_int then begin
-    if upper_bound < max_int then 2
-    else 1
+    if upper_bound < max_int then
+      2
+    else
+      1
   end
-  else 0
+  else
+    0
 
 let store thread key depth lower_bound upper_bound move static_eval generation =
   let index = Int64.to_int (Int64.rem key !slots) in
-  let old_key = Array1.get !tt.key index in
-  let old_depth = Array1.get !tt.depth index in
-  let old_lower_bound  = Array1.get !tt.lower_bound index in
-  let old_upper_bound = Array1.get !tt.upper_bound index in
-  let old_best_move  = Array1.get !tt.move index in
-  let old_generation = Array1.get !tt.generation index in
+  let old_key = !tt.key.{index} in
+  let old_depth = !tt.depth.{index}  in
+  let old_lower_bound  = !tt.lower_bound.{index}  in
+  let old_upper_bound = !tt.upper_bound.{index}  in
+  let old_best_move  = !tt.move.{index}  in
+  let old_generation = !tt.generation.{index}  in
   if old_depth = empty_depth then begin
-    Array1.set !tt.depth index depth;
-    Array1.set !tt.lower_bound index lower_bound;
-    Array1.set !tt.upper_bound index upper_bound;
-    Array1.set !tt.move index move;
-    Array1.set !tt.static_eval index static_eval;
-    Array1.set !tt.generation index generation;
-    Array1.set !tt.key index key;
+    !tt.depth.{index} <- depth;
+    !tt.lower_bound.{index} <- lower_bound;
+    !tt.upper_bound.{index} <- upper_bound;
+    !tt.move.{index} <- move;
+    !tt.static_eval.{index} <- static_eval;
+    !tt.generation.{index} <- generation;
+    !tt.key.{index} <- key;
     transposition_counter.(thread) <- transposition_counter.(thread) + 1
   end
   else if (!go_counter - old_generation > 5) || (depth > old_depth) || (depth = old_depth && (key = old_key || score_node lower_bound upper_bound > score_node old_lower_bound old_upper_bound)) then begin
@@ -118,30 +122,30 @@ let store thread key depth lower_bound upper_bound move static_eval generation =
         stored_upper_bound := min upper_bound old_upper_bound
       end
     end;
-    Array1.set !tt.depth index depth;
-    Array1.set !tt.lower_bound index !stored_lower_bound;
-    Array1.set !tt.upper_bound index !stored_upper_bound;
-    Array1.set !tt.move index !stored_move;
-    Array1.set !tt.static_eval index static_eval;
-    Array1.set !tt.generation index generation;
-    Array1.set !tt.key index key
+    !tt.depth.{index} <- depth;
+    !tt.lower_bound.{index} <- !stored_lower_bound;
+    !tt.upper_bound.{index} <- !stored_upper_bound;
+    !tt.move.{index} <- !stored_move;
+    !tt.static_eval.{index} <- static_eval;
+    !tt.generation.{index} <- generation;
+    !tt.key.{index} <- key
   end
   else if old_best_move = 0 && move <> 0 && key = old_key then begin
-    Array1.set !tt.depth index old_depth;
-    Array1.set !tt.lower_bound index old_lower_bound;
-    Array1.set !tt.upper_bound index old_upper_bound;
-    Array1.set !tt.move index move;
-    Array1.set !tt.static_eval index static_eval;
-    Array1.set !tt.generation index generation;
-    Array1.set !tt.key index key
+    !tt.depth.{index} <- old_depth;
+    !tt.lower_bound.{index} <- old_lower_bound;
+    !tt.upper_bound.{index} <- old_upper_bound;
+    !tt.move.{index} <- move;
+    !tt.static_eval.{index} <- static_eval;
+    !tt.generation.{index} <- generation;
+    !tt.key.{index} <- key
   end
 
 let probe zobrist =
   let index = Int64.to_int (Int64.rem zobrist !slots) in
-  let old_key = Array1.get !tt.key index in
-  let old_best_move = Array1.get !tt.move index in
+  let old_key = !tt.key.{index}  in
+  let old_best_move = !tt.move.{index}  in
   if zobrist = old_key then begin
-    Array1.get !tt.depth index, Array1.get !tt.lower_bound index, Array1.get !tt.upper_bound index, old_best_move, Array1.get !tt.static_eval index
+    !tt.depth.{index}, !tt.lower_bound.{index} , !tt.upper_bound.{index} , old_best_move, !tt.static_eval.{index} 
   end
   else begin
     empty_depth, - max_int, max_int, 0, (- max_int)

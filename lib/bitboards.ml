@@ -1,3 +1,5 @@
+open Bigarray
+
 let (&&&) = Int64.logand
 let (|||) = Int64.logor
 let (^^^) = Int64.logxor
@@ -228,8 +230,8 @@ type state = {
   mutable zobrist : int64;
   mutable captured_piece : int;
   mutable in_check : bool;
-  side_accumulator : int array;
-  not_side_accumulator : int array
+  side_accumulator : (int, int16_signed_elt, c_layout) Array1.t;
+  not_side_accumulator : (int, int16_signed_elt, c_layout) Array1.t;
 }
 
 type position = {

@@ -1,5 +1,6 @@
 (*Module implémentant le type Mouvement, les constantes et les fonctions de bases du programme*)
 
+open Bigarray
 open Bitboards
 
 (*Program version*)
@@ -22,7 +23,8 @@ let max_depth = 255
 
 let max_moves = 2048
 
-let n = 32
+(*NNUE Hidden size*)
+let hidden_size = 64
 
 (*SMP variables*)
 let threads_number = ref 1
@@ -70,8 +72,8 @@ let create_empty_state () = {
   zobrist = 0L;
   captured_piece = 0;
   in_check = false;
-  side_accumulator = Array.make n 0;
-  not_side_accumulator = Array.make n 0
+  side_accumulator = Array1.create Int16_signed C_layout hidden_size;
+  not_side_accumulator = Array1.create Int16_signed C_layout hidden_size
 }
 
 let copy_state state = {
@@ -81,8 +83,8 @@ let copy_state state = {
   zobrist = state.zobrist;
   captured_piece = state.captured_piece;
   in_check = state.in_check;
-  side_accumulator = Array.copy state.side_accumulator;
-  not_side_accumulator = Array.copy state.not_side_accumulator
+  side_accumulator =  Array1.init Int16_signed C_layout hidden_size (fun i -> state.side_accumulator.{i});
+  not_side_accumulator =  Array1.init Int16_signed C_layout hidden_size (fun i -> state.not_side_accumulator.{i})
 }
 
 let create_position () = {

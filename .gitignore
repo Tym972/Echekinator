@@ -2,6 +2,5 @@ _build/
 /Results/
 config.json
 perft960.txt
-tamerlan.ml
 Pgn_fastchess.pgn
-cub.txt
+Darius.txt
