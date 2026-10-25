@@ -17,8 +17,6 @@ let output_bias = Array1.create Int16_signed C_layout output_buckets
 
 let weights_loaded = ref false
 
-let [@inline] feature_weight neuron feature = hidden_weights.{feature * hidden_size + neuron}
-
 let weights_payload_size = 2 * ((768 * hidden_size) + hidden_size + (2 * hidden_size * output_buckets) + output_buckets)
 let weights_padding = String.concat "" (List.init 10 (fun _ -> "bullet")) ^ "bu"
 
@@ -76,7 +74,7 @@ let get_accumulator position =
   let not_side_accumulator = state.not_side_accumulator in
   Array1.blit hidden_bias side_accumulator;
   Array1.blit hidden_bias not_side_accumulator;
-  for square =  0 to 63 do
+  for square = 0 to 63 do
     let piece = board.(square) in
     if piece <> empty then begin
       let piece_type = piece mod 6 in
@@ -84,9 +82,11 @@ let get_accumulator position =
       let side_is_enemy = piece_color lxor white_to_move in
       let side_idx = 64 * (piece_type + 6 * side_is_enemy) + (square lxor (56 * white_to_move)) in
       let not_side_idx = 64 * (piece_type + 6 * (side_is_enemy lxor 1)) + (square lxor (56 * (white_to_move lxor 1))) in
+      let side_base = side_idx * hidden_size in
+      let not_side_base = not_side_idx * hidden_size in
       for i = 0 to hidden_size - 1 do
-        side_accumulator.{i} <- (side_accumulator.{i}  + feature_weight i side_idx);
-        not_side_accumulator.{i} <- (not_side_accumulator.{i}  + feature_weight i not_side_idx)
+        side_accumulator.{i} <- side_accumulator.{i} + hidden_weights.{side_base + i};
+        not_side_accumulator.{i} <- not_side_accumulator.{i} + hidden_weights.{not_side_base + i}
       done
     end
   done
@@ -134,14 +134,24 @@ let update_accumulator position move =
   let flag = get_move_flag move in
   begin match flag with
     |0 |1 ->
+      let st = side_idx_to * hidden_size in
+      let sf = side_idx_from * hidden_size in
+      let nst = not_side_idx_to * hidden_size in
+      let nsf = not_side_idx_from * hidden_size in
       for i = 0 to hidden_size - 1 do
-        side_accumulator.{i} <- (side_accumulator.{i}  + feature_weight i side_idx_to - feature_weight i side_idx_from);
-        not_side_accumulator.{i} <- (not_side_accumulator.{i} + feature_weight i not_side_idx_to - feature_weight i not_side_idx_from)
+        side_accumulator.{i} <- side_accumulator.{i} + hidden_weights.{st + i} - hidden_weights.{sf + i};
+        not_side_accumulator.{i} <- not_side_accumulator.{i} + hidden_weights.{nst + i} - hidden_weights.{nsf + i}
       done
     |4 ->
+      let st = side_idx_to * hidden_size in
+      let sf = side_idx_from * hidden_size in
+      let sc = side_idx_capture * hidden_size in
+      let nst = not_side_idx_to * hidden_size in
+      let nsf = not_side_idx_from * hidden_size in
+      let nsc = not_side_idx_capture * hidden_size in
       for i = 0 to hidden_size - 1 do
-        side_accumulator.{i} <- (side_accumulator.{i} + feature_weight i side_idx_to - feature_weight i side_idx_from - feature_weight i side_idx_capture);
-        not_side_accumulator.{i} <- (not_side_accumulator.{i} + feature_weight i not_side_idx_to - feature_weight i not_side_idx_from - feature_weight i not_side_idx_capture)
+        side_accumulator.{i} <- side_accumulator.{i} + hidden_weights.{st + i} - hidden_weights.{sf + i} - hidden_weights.{sc + i};
+        not_side_accumulator.{i} <- not_side_accumulator.{i} + hidden_weights.{nst + i} - hidden_weights.{nsf + i} - hidden_weights.{nsc + i}
       done
     |2 ->
       let player_castling_info = castling_infos.(white_to_move) in
@@ -159,9 +169,17 @@ let update_accumulator position move =
       let side_idx_to_rook = 64 * (rook_piece_type + 6 * rook_enemy_side) + oriented_rt_side in
       let not_side_idx_from_rook = 64 * (rook_piece_type + 6 * rook_enemy_not_side) + oriented_rf_not_side in
       let not_side_idx_to_rook = 64 * (rook_piece_type + 6 * rook_enemy_not_side) + oriented_rt_not_side in
+      let st = side_idx_to * hidden_size in
+      let sf = side_idx_from * hidden_size in
+      let str = side_idx_to_rook * hidden_size in
+      let sfr = side_idx_from_rook * hidden_size in
+      let nst = not_side_idx_to * hidden_size in
+      let nsf = not_side_idx_from * hidden_size in
+      let nstr = not_side_idx_to_rook * hidden_size in
+      let nsfr = not_side_idx_from_rook * hidden_size in
       for i = 0 to hidden_size - 1 do
-        side_accumulator.{i} <- (side_accumulator.{i} + feature_weight i side_idx_to - feature_weight i side_idx_from + feature_weight i side_idx_to_rook - feature_weight i side_idx_from_rook);
-        not_side_accumulator.{i} <- (not_side_accumulator.{i} + feature_weight i not_side_idx_to - feature_weight i not_side_idx_from + feature_weight i not_side_idx_to_rook - feature_weight i not_side_idx_from_rook)
+        side_accumulator.{i} <- side_accumulator.{i} + hidden_weights.{st + i} - hidden_weights.{sf + i} + hidden_weights.{str + i} - hidden_weights.{sfr + i};
+        not_side_accumulator.{i} <- not_side_accumulator.{i} + hidden_weights.{nst + i} - hidden_weights.{nsf + i} + hidden_weights.{nstr + i} - hidden_weights.{nsfr + i}
       done
     |3 ->
       let player_castling_info = castling_infos.(white_to_move) in
@@ -179,9 +197,17 @@ let update_accumulator position move =
       let side_idx_to_rook = 64 * (rook_piece_type + 6 * rook_enemy_side) + oriented_rt_side in
       let not_side_idx_from_rook = 64 * (rook_piece_type + 6 * rook_enemy_not_side) + oriented_rf_not_side in
       let not_side_idx_to_rook = 64 * (rook_piece_type + 6 * rook_enemy_not_side) + oriented_rt_not_side in
+      let st = side_idx_to * hidden_size in
+      let sf = side_idx_from * hidden_size in
+      let str = side_idx_to_rook * hidden_size in
+      let sfr = side_idx_from_rook * hidden_size in
+      let nst = not_side_idx_to * hidden_size in
+      let nsf = not_side_idx_from * hidden_size in
+      let nstr = not_side_idx_to_rook * hidden_size in
+      let nsfr = not_side_idx_from_rook * hidden_size in
       for i = 0 to hidden_size - 1 do
-        side_accumulator.{i} <- (side_accumulator.{i} + feature_weight i side_idx_to - feature_weight i side_idx_from + feature_weight i side_idx_to_rook - feature_weight i side_idx_from_rook);
-        not_side_accumulator.{i} <- (not_side_accumulator.{i} + feature_weight i not_side_idx_to - feature_weight i not_side_idx_from + feature_weight i not_side_idx_to_rook - feature_weight i not_side_idx_from_rook)
+        side_accumulator.{i} <- side_accumulator.{i} + hidden_weights.{st + i} - hidden_weights.{sf + i} + hidden_weights.{str + i} - hidden_weights.{sfr + i};
+        not_side_accumulator.{i} <- not_side_accumulator.{i} + hidden_weights.{nst + i} - hidden_weights.{nsf + i} + hidden_weights.{nstr + i} - hidden_weights.{nsfr + i}
       done
     |5 ->
       let captured_pawn_square = (to_ - push_vects.(white_to_move)) in
@@ -192,9 +218,15 @@ let update_accumulator position move =
       let oriented_cp_not_side = captured_pawn_square lxor (56 * p_not_side) in
       let side_idx_captured_pawn = 64 * (pawn + 6 * pawn_enemy_side) + oriented_cp_side in
       let not_side_idx_captured_pawn = 64 * (pawn + 6 * pawn_enemy_not_side) + oriented_cp_not_side in
+      let st = side_idx_to * hidden_size in
+      let sf = side_idx_from * hidden_size in
+      let scp = side_idx_captured_pawn * hidden_size in
+      let nst = not_side_idx_to * hidden_size in
+      let nsf = not_side_idx_from * hidden_size in
+      let nscp = not_side_idx_captured_pawn * hidden_size in
       for i = 0 to hidden_size - 1 do
-        side_accumulator.{i} <- (side_accumulator.{i} + feature_weight i side_idx_to - feature_weight i side_idx_from - feature_weight i side_idx_captured_pawn);
-        not_side_accumulator.{i} <- (not_side_accumulator.{i} + feature_weight i not_side_idx_to - feature_weight i not_side_idx_from - feature_weight i not_side_idx_captured_pawn)
+        side_accumulator.{i} <- side_accumulator.{i} + hidden_weights.{st + i} - hidden_weights.{sf + i} - hidden_weights.{scp + i};
+        not_side_accumulator.{i} <- not_side_accumulator.{i} + hidden_weights.{nst + i} - hidden_weights.{nsf + i} - hidden_weights.{nscp + i}
       done
     |_ ->
       begin
@@ -204,16 +236,22 @@ let update_accumulator position move =
         let promo_enemy_not_side = (promo_color_piece / 6) lxor p_not_side in
         let side_idx_to_promotion = 64 * (promotion_piece + 6 * promo_enemy_side) + oriented_to_side in
         let not_side_idx_to_promotion = 64 * (promotion_piece + 6 * promo_enemy_not_side) + oriented_to_not_side in
+        let stp = side_idx_to_promotion * hidden_size in
+        let sf = side_idx_from * hidden_size in
+        let sc = side_idx_capture * hidden_size in
+        let nstp = not_side_idx_to_promotion * hidden_size in
+        let nsf = not_side_idx_from * hidden_size in
+        let nsc = not_side_idx_capture * hidden_size in
         if flag land 4 <> 0 then begin
           for i = 0 to hidden_size - 1 do
-          side_accumulator.{i} <- (side_accumulator.{i} + feature_weight i side_idx_to_promotion - feature_weight i side_idx_from - feature_weight i side_idx_capture);
-          not_side_accumulator.{i} <- (not_side_accumulator.{i} + feature_weight i not_side_idx_to_promotion - feature_weight i not_side_idx_from - feature_weight i not_side_idx_capture)
-        done
+            side_accumulator.{i} <- side_accumulator.{i} + hidden_weights.{stp + i} - hidden_weights.{sf + i} - hidden_weights.{sc + i};
+            not_side_accumulator.{i} <- not_side_accumulator.{i} + hidden_weights.{nstp + i} - hidden_weights.{nsf + i} - hidden_weights.{nsc + i}
+          done
         end
         else begin
           for i = 0 to hidden_size - 1 do
-            side_accumulator.{i} <- (side_accumulator.{i} + feature_weight i side_idx_to_promotion - feature_weight i side_idx_from);
-            not_side_accumulator.{i} <- (not_side_accumulator.{i} + feature_weight i not_side_idx_to_promotion - feature_weight i not_side_idx_from)
+            side_accumulator.{i} <- side_accumulator.{i} + hidden_weights.{stp + i} - hidden_weights.{sf + i};
+            not_side_accumulator.{i} <- not_side_accumulator.{i} + hidden_weights.{nstp + i} - hidden_weights.{nsf + i}
           done
         end
       end
