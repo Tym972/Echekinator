@@ -62,9 +62,7 @@ let load_weights path = load_weights_contents path (read_weights_file path)
 let load_embedded_weights () =
   load_weights_contents "embedded NNUE weights" Embedded_weights.contents
 
-let [@inline] screlu x =
-  let x = max 0 (min 255 x) in
-  x * x
+let [@inline] screlu x = if x < 0 then 0 else if x < 255 then x * x else 65025
 
 let get_accumulator position =
   let state = position.state_array.(position.game_ply) in
