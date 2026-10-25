@@ -18,7 +18,8 @@
   str
   unix
   threads
-  mtime.clock))
+  mtime.clock)
+  (flags (:standard -unsafe)))
 
 (rule
  (target embedded_weights.ml)
