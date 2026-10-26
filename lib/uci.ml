@@ -74,15 +74,14 @@ let lire_entree message =
 let uci () =
   print_endline (
     "id name " ^ project_name ^ "\n"
-    ^ "id author Timothée Fixy" ^ "\n"
-    ^ "\n"
-    ^ "option name Clear Hash type button" ^ "\n"
-    ^ "option name Hash type spin default 16 min 1 max 33554432" ^ "\n"
-    ^ "option name MultiPV type spin default 1 min 1 max 256" ^ "\n"
-    ^ "option name Ponder type check default false" ^ "\n"
-    ^ "option name Threads type spin default 1 min 1 max 1024" ^ "\n"
-    ^ "option name EvalFile type string default embedded" ^ "\n"
-    ^ "option name UCI_Chess960 type check default false" ^ "\n"
+    ^ "id author Timothée Fixy\n\n"
+    ^ "option name Clear Hash type button\n"
+    ^ "option name Hash type spin default 16 min 1 max 33554432\n"
+    ^ "option name MultiPV type spin default 1 min 1 max 256\n"
+    ^ "option name Ponder type check default false\n"
+    ^ "option name Threads type spin default 1 min 1 max 1024\n"
+    ^ "option name EvalFile type string default embedded\n"
+    ^ "option name UCI_Chess960 type check default false\n"
     ^ "uciok")
 
 let is_pondering = ref false
@@ -185,22 +184,40 @@ let span_of_milliseconds span =
 let miliseconds_of_span miliseconds =
   (Mtime.Span.to_float_ns miliseconds) /. 1e6 
 
-let init_time position number_of_legal wtime btime winc binc movetime movestogo =
+let init_time position number_of_legal wtime btime winc binc movetime movestogo pondertime =
+
+  (*position movetime x*)
   if wtime < 0. && btime < 0. then begin
-    soft_bound := span_of_milliseconds movetime;
-    hard_bound := span_of_milliseconds movetime
+    soft_bound := span_of_milliseconds (pondertime +. movetime);
+    hard_bound := span_of_milliseconds (pondertime +. movetime)
   end
+
+  (*position wtime x btime y winc w binc z*)
   else begin
+
     let time, inc = if position.white_to_move = 0 then wtime, winc else btime, binc in
-    let base_ms = max 0. ((time /. ((min movestogo 40.) *. (if number_of_legal = 1 then 10. else 1.))) +. inc *. 0.75) in
-    let hard_bound_ms = ref (min (4. *. base_ms) time) in
+
+    (*Base time*)
+    let base_ms = ref ((time /. (min movestogo 40.)) +. inc *. 0.75) in
+    if number_of_legal = 1 then base_ms := !base_ms /. 10.;
+    let base_original = !base_ms in
+    if pondertime > 0. then base_ms := !base_ms -. (pondertime *. 0.75);
+    if !base_ms < 0. then base_ms := 0.;
+
+    (*Hard bound*)
+    let max_total_allowed = 4. *. base_original in
+    let remaining_hard = max_total_allowed -. pondertime in
+    let hard_bound_ms = ref (min remaining_hard time) in
     if !hard_bound_ms +. 25. > time then hard_bound_ms := !hard_bound_ms -. 25.;
     if !hard_bound_ms < 1. then hard_bound_ms := 1.;
-    let soft_bound_ms = ref base_ms in
+
+    (*Soft bound*)
+    let soft_bound_ms = ref !base_ms in
     if !soft_bound_ms > !hard_bound_ms then soft_bound_ms := !hard_bound_ms;
     if !soft_bound_ms < 1. then soft_bound_ms  := 1.;
-    soft_bound := span_of_milliseconds !soft_bound_ms;
-    hard_bound := span_of_milliseconds !hard_bound_ms
+
+    soft_bound := span_of_milliseconds (pondertime +. !soft_bound_ms);
+    hard_bound := span_of_milliseconds (pondertime +. !hard_bound_ms)
   end
 
 (*Fonction mettant en forme le score retourné*)
@@ -518,7 +535,7 @@ let go instructions position search_tables =
       |_ -> ()
     in aux instructions;
     if not !is_pondering then begin
-      init_time position number_of_legal !wtime !btime !winc !binc !movetime !movestogo
+      init_time position number_of_legal !wtime !btime !winc !binc !movetime !movestogo 0.
     end;
     let base_ms = miliseconds_of_span !soft_bound in
     search_record := (Array.init !multipv (fun _ -> Array.init (max_depth + 1) (fun _ -> {score = -max_int; bestmove = 0})));
@@ -636,10 +653,8 @@ let echekinator () =
         print_endline ("NNUE Evaluation : " ^ (if eval > 0. then "+" else "") ^ string_of_float eval ^ " (white side)")
       |"ponderhit" :: _ ->
         is_pondering := false;
-        start_time := Mtime_clock.counter ();
-        soft_bound := Mtime.Span.max_span;
-        hard_bound := Mtime.Span.max_span;
-        init_time position (search_tables.pickers.(0).number_of_captures + search_tables.pickers.(0).number_of_quiets) !wtime !btime !winc !binc !movetime !movestogo
+        let ponder_time = Mtime.Span.to_float_ns (Mtime_clock.count !start_time) /. 1e6 in
+        init_time position (search_tables.pickers.(0).number_of_captures + search_tables.pickers.(0).number_of_quiets) !wtime !btime !winc !binc !movetime !movestogo ponder_time
       |[] -> ()
       |_ -> print_endline (Printf.sprintf "Unknown command: '%s'. Type help for more information." (List.hd instructions))
   done

@@ -163,14 +163,8 @@ let rec search position search_tables thread multi depth search_ply alpha beta w
                 let no_move_cut = ref true in
 
                 (*SEE Pruning*)
-                if not ispv && not in_check && !best_score > -max_int && (not is_quiet) then begin
-                  let from = get_move_from move in
-                  let to_ = get_move_to move in
-                  let moving_piece = position.board.(from) in
-                  let target_piece = position.board.(to_) in
-                  if tabvalue.(moving_piece mod 6) > tabvalue.(target_piece mod 6) && see position move < -100 * depth then begin
-                    no_move_cut := false
-                  end
+                if not ispv && not in_check && !best_score > -max_int && not (see_ge position move (-75 * depth)) then begin
+                  no_move_cut := false
                 end;
 
                 if !no_move_cut then begin

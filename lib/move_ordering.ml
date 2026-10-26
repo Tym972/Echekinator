@@ -29,48 +29,84 @@ let get_least_valuable_piece attackers pieces_bitboards attacker_type white_to_m
   done;
   !lvp_bitboard
 
-let see position move =
-  let board = position.board
-  in let from = get_move_from move in
+let see_ge position move threshold =
+  let board = position.board in
+  let from = get_move_from move in
   let to_ = get_move_to move in
   let flag = get_move_flag move in
-  let total_occupancy = ref (position.occupancy.(0) ||| position.occupancy.(1)) in
-  let pieces_bitboards = position.pieces in
-  let current_side = ref position.white_to_move in
-  let attackers = ref (get_all_attackers to_ pieces_bitboards !total_occupancy) in
-  let gain = Array.make 20 0 in
-  if flag = 5 then begin
-    gain.(0) <- tabvalue.(board.(from) mod 6);
-    total_occupancy := !total_occupancy ^^^ single_bitboards_tab.(to_ - push_vects.(!current_side))
+  if flag = 2 || flag = 3 then begin
+    threshold <= 0
   end
-  else if flag > 3 then begin
-    gain.(0) <- tabvalue.(board.(to_) mod 6)
-  end;
-  let depth = ref 1 in
-  let from_bitboard = ref (single_bitboards_tab.(from)) in
-  let attacker = ref (board.(from) mod 6) in
-  while !from_bitboard <> 0L do
-    total_occupancy := !total_occupancy ^^^ !from_bitboard;
-    attackers := !attackers &&& (Int64.lognot !from_bitboard);
-    gain.(!depth) <- tabvalue.(!attacker) - gain.(!depth - 1);
-    incr depth;
-    current_side := !current_side lxor 1;
-    if !attacker <> knight then begin
-      let sliders =
-        ((generate_bishop_attacks to_ !total_occupancy) &&& 
-          (pieces_bitboards.(bishop) ||| pieces_bitboards.(black_bishop) ||| 
-            pieces_bitboards.(queen)  ||| pieces_bitboards.(black_queen))) |||
-        ((generate_rook_attacks to_ !total_occupancy) &&& 
-          (pieces_bitboards.(rook)  ||| pieces_bitboards.(black_rook) ||| 
-            pieces_bitboards.(queen) ||| pieces_bitboards.(black_queen))) 
-      in attackers := !attackers ||| (sliders &&& !total_occupancy)
-    end;
-    from_bitboard := get_least_valuable_piece !attackers pieces_bitboards attacker !current_side
-  done;
-  for i = (!depth - 2) downto 1 do
-    gain.(i - 1) <- - (max (-gain.(i - 1)) gain.(i))
-  done;
-  gain.(0)
+  else begin
+    let moving_piece = board.(from) mod 6 in
+    let captured_value =
+      if flag = 5 then
+        tabvalue.(pawn)
+      else if board.(to_) <> empty then
+        tabvalue.(board.(to_) mod 6)
+      else
+        0
+    in let promotion_value =
+      if flag >= 8 then
+        tabvalue.(1 + (flag land 3))
+      else
+        0
+    in let score =
+      if flag >= 8 then
+        captured_value - threshold + promotion_value - tabvalue.(pawn)
+      else
+        captured_value - threshold
+    in if score < 0 then
+      false
+    else begin
+      let score =
+        if flag >= 8 then
+          score - promotion_value
+        else
+          score - tabvalue.(moving_piece)
+      in if score >= 0 then
+        true
+      else begin
+        let score = ref score in
+        let total_occupancy = ref ((position.occupancy.(0) ||| position.occupancy.(1)) ^^^ single_bitboards_tab.(from) ^^^ single_bitboards_tab.(to_))
+        in if flag = 5 then
+          total_occupancy := !total_occupancy ^^^ single_bitboards_tab.(to_ - push_vects.(position.white_to_move));
+        let attackers = ref (get_all_attackers to_ position.pieces !total_occupancy &&& !total_occupancy)
+        in let diagonal_attackers =
+          position.pieces.(bishop) ||| position.pieces.(black_bishop) |||
+          position.pieces.(queen) ||| position.pieces.(black_queen)
+        in let straight_attackers =
+          position.pieces.(rook) ||| position.pieces.(black_rook) |||
+          position.pieces.(queen) ||| position.pieces.(black_queen)
+        in let side = ref (position.white_to_move lxor 1) in
+        let continue = ref true in
+        while !continue do
+          let side_attackers = !attackers &&& position.occupancy.(!side) in
+          if side_attackers = 0L then
+            continue := false
+          else begin
+            let attacker_type = ref 0 in
+            let attacker = get_least_valuable_piece side_attackers position.pieces attacker_type !side
+            in if !attacker_type = king && (!attackers &&& position.occupancy.(!side lxor 1)) <> 0L then
+              continue := false
+            else begin
+              total_occupancy := !total_occupancy ^^^ attacker;
+              if !attacker_type = pawn || !attacker_type = bishop || !attacker_type = queen then
+                attackers := !attackers ||| (generate_bishop_attacks to_ !total_occupancy &&& diagonal_attackers);
+              if !attacker_type = rook || !attacker_type = queen then
+                attackers := !attackers ||| (generate_rook_attacks to_ !total_occupancy &&& straight_attackers);
+              attackers := !attackers &&& !total_occupancy;
+              score := - !score - 1 - tabvalue.(!attacker_type);
+              side := !side lxor 1;
+              if !score >= 0 then
+                continue := false
+            end
+          end
+        done;
+        !side <> position.white_to_move
+      end
+    end
+  end
 
 let history_index white_to_move move =
   4096 * white_to_move + 64 * (get_move_from move) + get_move_to move
@@ -199,12 +235,11 @@ let rec next_move position picker search_tables search_ply = match picker.stage 
             captures_scores.(index) <- 10000 + mvv_lva_tab.(attacker_piece).(victim_piece)
           end
           else begin
-            let see_capture = see position capture in
-            if see_capture >= 0 then begin
+            if see_ge position capture 0 then begin
               captures_scores.(index) <- 10000 + mvv_lva_tab.(attacker_piece).(victim_piece)
             end
             else begin
-              captures_scores.(index) <- 1000 + see_capture
+              captures_scores.(index) <- 1000 + mvv_lva_tab.(attacker_piece).(victim_piece)
             end
           end
         end
@@ -313,8 +348,7 @@ let rec qsearch_next_move position picker search_tables = match picker.stage wit
           captures_scores.(index) <- 10000 + mvv_lva_tab.(attacker_piece).(victim_piece)
         end
         else begin
-          let see_capture = see position capture in
-          if see_capture >= 0 then begin
+          if see_ge position capture 0 then begin
             captures_scores.(index) <- 10000 + mvv_lva_tab.(attacker_piece).(victim_piece)
           end
           else begin
