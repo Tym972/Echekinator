@@ -78,14 +78,17 @@ let mouvement_of_uci uci position =
   let is_king = piece mod 6 = king in
   let is_pawn = piece mod 6 = pawn in
   let is_short_castling =
-    is_king && from = player_castling_infos.from_king && (raw_to = player_castling_infos.to_short_king || (!chess_960 && raw_to = player_castling_infos.from_short_rook && position.board.(raw_to) = (rook + 6 * white_to_move)))
+    is_king && from = player_castling_infos.from_king && ((raw_to = player_castling_infos.to_short_king && not !chess_960) || (!chess_960 && raw_to = player_castling_infos.from_short_rook && position.board.(raw_to) = (rook + 6 * white_to_move)))
   in let is_long_castling =
-    is_king && from = player_castling_infos.from_king && (raw_to = player_castling_infos.to_long_king || (!chess_960 && raw_to = player_castling_infos.from_long_rook && position.board.(raw_to) = (rook + 6 * white_to_move)))
+    is_king && from = player_castling_infos.from_king && ((raw_to = player_castling_infos.to_long_king && not !chess_960) || (!chess_960 && raw_to = player_castling_infos.from_long_rook && position.board.(raw_to) = (rook + 6 * white_to_move)))
   in let to_ =
     if !chess_960 then begin
-      if is_short_castling then player_castling_infos.to_short_king
-      else if is_long_castling then player_castling_infos.to_long_king
-      else raw_to
+      if is_short_castling then
+        player_castling_infos.to_short_king
+      else if is_long_castling then
+        player_castling_infos.to_long_king
+      else
+        raw_to
     end
     else begin
       raw_to
