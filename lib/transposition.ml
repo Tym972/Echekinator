@@ -59,7 +59,7 @@ let is_win score = score > 90000
 let is_decisive score = abs score > 90000
 
 (*PV node : Exact value, Cut Node : Lower Bound, All Node : Upper Bound*)
-let hash_treatment hash_lower_bound hash_upper_bound alpha beta best_score no_cut search_ply =
+let hash_treatment hash_lower_bound hash_upper_bound alpha beta best_score static_eval no_cut search_ply =
   let adjust_value bound =
     if abs bound = max_int || not (is_decisive bound) then begin
       bound
@@ -77,6 +77,12 @@ let hash_treatment hash_lower_bound hash_upper_bound alpha beta best_score no_cu
   if !alpha >= !beta then begin
     best_score := !alpha;
     no_cut := false
+  end
+  else if not (is_decisive hash_lower_bound) && hash_lower_bound >= !static_eval then begin
+    static_eval := hash_lower_bound
+  end
+  else if not (is_decisive hash_upper_bound) && hash_upper_bound <= !static_eval then begin
+    static_eval := hash_upper_bound
   end
 
 let score_node lower_bound upper_bound =

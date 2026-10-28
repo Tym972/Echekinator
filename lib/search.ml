@@ -93,13 +93,18 @@ let rec search position search_tables thread multi depth search_ply alpha beta w
       else begin
         let best_move = ref 0 in
         let hash_depth, hash_lower_bound, hash_upper_bound, hash_move, hash_static_eval = probe state.zobrist in
-        let static_eval = if hash_static_eval = - max_int then evaluate position else hash_static_eval in
-        let no_search_cut = ref true in
+        let static_eval = ref begin
+          if hash_static_eval = - max_int then
+            evaluate position
+          else
+            hash_static_eval
+        end
+        in let no_search_cut = ref true in
         let best_score = ref (- max_int) in
 
         (*Use TT informations*)
         if not (ispv || depth > hash_depth) then begin
-          hash_treatment hash_lower_bound hash_upper_bound alpha0 beta0 best_score no_search_cut search_ply
+          hash_treatment hash_lower_bound hash_upper_bound alpha0 beta0 best_score static_eval no_search_cut search_ply
         end;
 
         if !no_search_cut then begin
@@ -108,19 +113,19 @@ let rec search position search_tables thread multi depth search_ply alpha beta w
           if not (in_check || ispv || is_loss !beta0 || zugzwang position.pieces position.white_to_move) then begin
 
             (*Reverse futility pruning*)
-            if depth <= rfp_max_depth && static_eval - 70 * depth >= !beta0 then begin
-              best_score := static_eval - 70 * depth;
+            if depth <= rfp_max_depth && !static_eval - 70 * depth >= !beta0 then begin
+              best_score := !static_eval - 70 * depth;
               no_search_cut := false
             end;
 
             (*Razoring*)
-            if !no_search_cut && (depth <= razoring_max_depth && static_eval + 300 + 60 * depth < !alpha0) then begin
+            if !no_search_cut && (depth <= razoring_max_depth && !static_eval + 300 + 60 * depth < !alpha0) then begin
               best_score := quiescence_search position search_tables thread search_ply alpha beta;
               no_search_cut := false
             end;
 
             (*Null move pruning*)
-            if !no_search_cut && depth >= nmp_min_depth && not was_null && static_eval >= !beta0 + 30 then begin
+            if !no_search_cut && depth >= nmp_min_depth && not was_null && !static_eval >= !beta0 + 30 then begin
               let new_state = position.state_array.(position.game_ply + 1) in
               Array1.blit state.side_accumulator new_state.not_side_accumulator;
               Array1.blit state.not_side_accumulator new_state.side_accumulator;
@@ -318,7 +323,7 @@ let rec search position search_tables thread multi depth search_ply alpha beta w
             lower_bound := stored_value;
             upper_bound := stored_value
           end;
-          store thread state.zobrist depth !lower_bound !upper_bound !best_move static_eval !go_counter
+          store thread state.zobrist depth !lower_bound !upper_bound !best_move !static_eval !go_counter
         end;
         !best_score
       end

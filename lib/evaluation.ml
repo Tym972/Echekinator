@@ -4,10 +4,10 @@ open Bigarray
 
 let is_material_draw position =
   let pieces = position.pieces in
-  population_count pieces.(pawn) = 0 && population_count pieces.(pawn + 6) = 0 &&
-  population_count pieces.(rook) = 0 && population_count pieces.(rook + 6) = 0 &&
-  population_count pieces.(queen) = 0 && population_count pieces.(queen + 6) = 0 &&
-  population_count pieces.(knight) + population_count pieces.(bishop) + population_count pieces.(knight + 6) + population_count pieces.(bishop + 6) <= 1
+  pieces.(pawn) = 0L && pieces.(pawn + 6) = 0L &&
+  pieces.(rook) = 0L && pieces.(rook + 6) = 0L &&
+  pieces.(queen) = 0L && pieces.(queen + 6) = 0L &&
+  population_count (pieces.(knight) ||| pieces.(bishop) ||| pieces.(knight + 6) ||| pieces.(bishop + 6)) <= 1
 
 let hidden_weights = Array1.create Int16_signed C_layout (hidden_size * 768)
 let hidden_bias = Array1.create Int16_signed C_layout hidden_size
