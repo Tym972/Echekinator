@@ -150,9 +150,13 @@ let rec search position search_tables thread multi depth search_ply alpha beta w
           if !no_search_cut then begin
 
             (*Internal Iterative Reduction*)
-            let depth = if depth >= iir_min_depth && hash_move = 0 && not in_check && search_ply > 0 then depth - 1 else depth in
+            let depth =
+              if depth >= iir_min_depth && hash_move = 0 && not in_check && search_ply > 0 then
+                depth - 1
+              else
+                depth
 
-            let legal_counter = ref 0 in
+            in let legal_counter = ref 0 in
             let quiet_counter = ref 0 in
             let quiet_moves = ref [] in
             picker.hash_move <- hash_move;
@@ -163,20 +167,31 @@ let rec search position search_tables thread multi depth search_ply alpha beta w
             while !no_search_cut do
               let move = next_move position picker search_tables search_ply in
               if move <> 0 then begin
+                incr legal_counter;
                 let is_quiet = isquiet move in
                 if is_quiet then
                   incr quiet_counter;
                 let gives_check = gives_check position move in
                 let no_move_cut = ref true in
 
-                (*SEE Pruning*)
-                if not ispv && not in_check && !best_score > -max_int && not (see_ge position move (-75 * depth)) then begin
-                  no_move_cut := false
-                end;
+                (*Misc pruning*)
+                if !no_move_cut && not ispv && not in_check && !best_score > -max_int then begin
 
-                (*Late quiet moves pruning*)
-                if !no_move_cut && not ispv && not in_check && not gives_check && is_quiet && depth <= lmp_max_depth && !quiet_counter > depth * depth + 3 then begin
-                  no_move_cut := false
+                  (*Late quiet moves pruning*)
+                  if not gives_check && is_quiet && depth <= lmp_max_depth && !quiet_counter > depth * depth + 3 then begin
+                    no_move_cut := false
+                  end;
+
+                  (*Futility pruning*)
+                  if !no_move_cut && depth <= fp_max_depth && is_quiet && !static_eval + 90 * depth <= !alpha0 then begin
+                    no_move_cut := false
+                  end;
+
+                  (*SEE Pruning*)
+                  if !no_move_cut && not (see_ge position move (-75 * depth)) then begin
+                    no_move_cut := false
+                  end
+
                 end;
 
                 if !no_move_cut then begin
@@ -184,7 +199,6 @@ let rec search position search_tables thread multi depth search_ply alpha beta w
                   update_accumulator position move;
                   new_state.in_check <- gives_check;
                   make position move;
-                  incr legal_counter;
 
                   (*Search Extension*)
                   let extension = ref 0
@@ -197,7 +211,7 @@ let rec search position search_tables thread multi depth search_ply alpha beta w
                     (*Singular*)
                     if score < singular_beta then begin
                       incr extension;
-                      if not ispv && score < singular_beta - 1 then begin
+                      if false && not ispv && score < singular_beta - 1 then begin
                         incr extension
                       end
                     end
@@ -206,6 +220,7 @@ let rec search position search_tables thread multi depth search_ply alpha beta w
                     else if false && singular_beta >= beta then begin
                       best_score := singular_beta;
                       no_move_cut := false;
+                      no_search_cut := false
                     end
 
                     (*Negative extension*)
