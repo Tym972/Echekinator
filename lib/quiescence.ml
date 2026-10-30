@@ -46,7 +46,7 @@ let rec quiescence_search position search_tables thread search_ply alpha beta =
 
     else begin
       let best_move = ref 0 in
-      let _, hash_lower_bound, hash_upper_bound, hash_move, hash_static_eval = probe state.zobrist in
+      let _, hash_lower_bound, hash_upper_bound, hash_move, hash_static_eval = probe state in
       let static_eval = ref begin
         if hash_static_eval = - max_int then
           evaluate position

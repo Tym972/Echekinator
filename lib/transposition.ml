@@ -1,5 +1,6 @@
 open Board
 open Bigarray
+open Bitboards
 
 type tt = {
   key : (int64, int64_elt, c_layout) Array1.t;
@@ -72,8 +73,10 @@ let hash_treatment hash_lower_bound hash_upper_bound alpha beta best_score stati
     end
   in let adjusted_low = adjust_value hash_lower_bound in
   let adjusted_up = adjust_value hash_upper_bound in
-  beta := min !beta adjusted_up;
-  alpha := max !alpha adjusted_low;
+  if !beta > adjusted_up then
+    beta := adjusted_up;
+  if !alpha < adjusted_low then
+    alpha := adjusted_low;
   if !alpha >= !beta then begin
     best_score := !alpha;
     no_cut := false
@@ -146,12 +149,13 @@ let store thread key depth lower_bound upper_bound move static_eval generation =
     !tt.key.{index} <- key
   end
 
-let probe zobrist =
+let probe state =
+  let zobrist = state.zobrist in
   let index = Int64.to_int (Int64.rem zobrist !slots) in
   let old_key = !tt.key.{index}  in
   let old_best_move = !tt.move.{index}  in
-  if zobrist = old_key then begin
-    !tt.depth.{index}, !tt.lower_bound.{index} , !tt.upper_bound.{index} , old_best_move, !tt.static_eval.{index} 
+  if zobrist = old_key && not state.excluded then begin
+    !tt.depth.{index}, !tt.lower_bound.{index}, !tt.upper_bound.{index}, old_best_move, !tt.static_eval.{index} 
   end
   else begin
     empty_depth, - max_int, max_int, 0, (- max_int)

@@ -75,6 +75,7 @@ let create_empty_state () = {
   zobrist = 0L;
   captured_piece = 0;
   in_check = false;
+  excluded = false;
   side_accumulator = Array1.create Int16_signed C_layout hidden_size;
   not_side_accumulator = Array1.create Int16_signed C_layout hidden_size
 }
@@ -86,6 +87,7 @@ let copy_state state = {
   zobrist = state.zobrist;
   captured_piece = state.captured_piece;
   in_check = state.in_check;
+  excluded = state.excluded;
   side_accumulator =  Array1.init Int16_signed C_layout hidden_size (fun i -> state.side_accumulator.{i});
   not_side_accumulator =  Array1.init Int16_signed C_layout hidden_size (fun i -> state.not_side_accumulator.{i})
 }

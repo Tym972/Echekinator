@@ -252,7 +252,7 @@ let pv_finder position bestmove depth =
   let rec aux position d =
     if d > 0 && not (position.state_array.(position.game_ply).half_moves = 100 || repetition position.state_array position.game_ply) then begin
       let state = position.state_array.(position.game_ply) in
-      let _, _, _, hash_move, _ = probe state.zobrist in
+      let _, _, _, hash_move, _ = probe state in
       if hash_move <> 0 then begin
         make position hash_move;
         pv := hash_move :: !pv;

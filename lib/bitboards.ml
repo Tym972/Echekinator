@@ -230,6 +230,7 @@ type state = {
   mutable zobrist : int64;
   mutable captured_piece : int;
   mutable in_check : bool;
+  mutable excluded : bool;
   side_accumulator : (int, int16_signed_elt, c_layout) Array1.t;
   not_side_accumulator : (int, int16_signed_elt, c_layout) Array1.t;
 }
@@ -940,28 +941,26 @@ let make position move =
       occupancy.(white_to_move lxor 1) <- occupancy.(white_to_move lxor 1) ^^^ single_bitboards_tab.(captured_pawn_square);
       new_state.half_moves <- 0
     |_ ->
-      begin
-        let promotion_piece = (flag lor 4) - 11 + 6 * white_to_move in
-        board.(from) <- empty;
-        board.(to_) <- promotion_piece;
-        pieces.(piece) <- pieces.(piece) ^^^ single_bitboards_tab.(from);
-        pieces.(promotion_piece) <- pieces.(promotion_piece) ^^^ single_bitboards_tab.(to_);
-        occupancy.(white_to_move) <- occupancy.(white_to_move) ^^^ single_bitboards_tab.(from) ^^^ single_bitboards_tab.(to_);
-        if flag land 4 <> 0 then begin
-          new_state.zobrist <- new_state.zobrist ^^^ tab_zobrist.(zobrist_index from piece) ^^^ tab_zobrist.(zobrist_index to_ promotion_piece) ^^^ tab_zobrist.(zobrist_index to_ captured_piece);
-          pieces.(captured_piece) <- pieces.(captured_piece) ^^^ single_bitboards_tab.(to_);
-          occupancy.(white_to_move lxor 1) <- occupancy.(white_to_move lxor 1) ^^^ single_bitboards_tab.(to_);
-        end
-        else begin
-          new_state.zobrist <- new_state.zobrist ^^^ tab_zobrist.(zobrist_index from piece) ^^^ tab_zobrist.(zobrist_index to_ promotion_piece)
-        end;
-        let new_rights = castling_rights land castling_rights_masks.(from) land castling_rights_masks.(to_) in
-        if castling_rights <> new_rights then begin
-          new_state.castling_rights <- new_rights;
-          new_state.zobrist <- new_state.zobrist ^^^ tab_zobrist_castling.(castling_rights) ^^^ tab_zobrist_castling.(new_rights)
-        end;
-        new_state.half_moves <- 0
+      let promotion_piece = (flag lor 4) - 11 + 6 * white_to_move in
+      board.(from) <- empty;
+      board.(to_) <- promotion_piece;
+      pieces.(piece) <- pieces.(piece) ^^^ single_bitboards_tab.(from);
+      pieces.(promotion_piece) <- pieces.(promotion_piece) ^^^ single_bitboards_tab.(to_);
+      occupancy.(white_to_move) <- occupancy.(white_to_move) ^^^ single_bitboards_tab.(from) ^^^ single_bitboards_tab.(to_);
+      if flag land 4 <> 0 then begin
+        new_state.zobrist <- new_state.zobrist ^^^ tab_zobrist.(zobrist_index from piece) ^^^ tab_zobrist.(zobrist_index to_ promotion_piece) ^^^ tab_zobrist.(zobrist_index to_ captured_piece);
+        pieces.(captured_piece) <- pieces.(captured_piece) ^^^ single_bitboards_tab.(to_);
+        occupancy.(white_to_move lxor 1) <- occupancy.(white_to_move lxor 1) ^^^ single_bitboards_tab.(to_);
       end
+      else begin
+        new_state.zobrist <- new_state.zobrist ^^^ tab_zobrist.(zobrist_index from piece) ^^^ tab_zobrist.(zobrist_index to_ promotion_piece)
+      end;
+      let new_rights = castling_rights land castling_rights_masks.(from) land castling_rights_masks.(to_) in
+      if castling_rights <> new_rights then begin
+        new_state.castling_rights <- new_rights;
+        new_state.zobrist <- new_state.zobrist ^^^ tab_zobrist_castling.(castling_rights) ^^^ tab_zobrist_castling.(new_rights)
+      end;
+      new_state.half_moves <- 0
   end;
   new_state.in_check <- is_attacked (lsb_index pieces.(king + 6 * (white_to_move lxor 1))) (white_to_move lxor 1) (occupancy.(0) ||| occupancy.(1)) pieces
 
@@ -1023,16 +1022,107 @@ let unmake position move =
     occupancy.(white_to_move) <- occupancy.(white_to_move) ^^^ single_bitboards_tab.(from) ^^^ single_bitboards_tab.(to_);
     occupancy.(white_to_move lxor 1) <- occupancy.(white_to_move lxor 1) ^^^ single_bitboards_tab.(captured_pawn_square)
   |_ ->
-    begin
-      let promotion_piece = (flag lor 4) - 11 +  6 * white_to_move in
-      let player_pawn = white_to_move * 6 in
-      board.(from) <- player_pawn;
-      board.(to_) <- captured_piece;
-      pieces.(player_pawn) <- pieces.(player_pawn) ^^^ single_bitboards_tab.(from);
+    let promotion_piece = (flag lor 4) - 11 +  6 * white_to_move in
+    let player_pawn = white_to_move * 6 in
+    board.(from) <- player_pawn;
+    board.(to_) <- captured_piece;
+    pieces.(player_pawn) <- pieces.(player_pawn) ^^^ single_bitboards_tab.(from);
+    pieces.(promotion_piece) <- pieces.(promotion_piece) ^^^ single_bitboards_tab.(to_);
+    occupancy.(white_to_move) <- occupancy.(white_to_move) ^^^ single_bitboards_tab.(from) ^^^ single_bitboards_tab.(to_);
+    if flag land 4 <> 0 then begin
+      pieces.(captured_piece) <- pieces.(captured_piece) ^^^ single_bitboards_tab.(to_);
+      occupancy.(white_to_move lxor 1) <- occupancy.(white_to_move lxor 1) ^^^ single_bitboards_tab.(to_);
+    end
+
+let gives_check position move =
+  let board = position.board in
+  let white_to_move = position.white_to_move in
+  let pieces = position.pieces in
+  let occupancy = ref (position.occupancy.(0) ||| position.occupancy.(1)) in
+  let from = get_move_from move in
+  let to_ = get_move_to move in
+  let piece = board.(from) in
+  let flag = get_move_flag move in
+  let piece_bitboard = pieces.(piece) in
+  begin match flag with
+    |0 ->
+      pieces.(piece) <- pieces.(piece) ^^^ single_bitboards_tab.(from) ^^^ single_bitboards_tab.(to_);
+      occupancy := !occupancy ^^^ single_bitboards_tab.(from) ^^^ single_bitboards_tab.(to_);
+      let check = is_attacked (lsb_index pieces.(king + 6 * (white_to_move lxor 1))) (white_to_move lxor 1) !occupancy pieces in
+      pieces.(piece) <- piece_bitboard;
+      check
+    |4 ->
+      let captured_piece = board.(to_) in
+      let capture_bitboard = pieces.(captured_piece) in
+      pieces.(piece) <- pieces.(piece) ^^^ single_bitboards_tab.(from) ^^^ single_bitboards_tab.(to_);
+      pieces.(captured_piece) <- pieces.(captured_piece) ^^^ single_bitboards_tab.(to_);
+      occupancy := !occupancy ^^^ single_bitboards_tab.(from) ^^^ single_bitboards_tab.(to_);
+      occupancy := !occupancy ^^^ single_bitboards_tab.(to_);
+      let check = is_attacked (lsb_index pieces.(king + 6 * (white_to_move lxor 1))) (white_to_move lxor 1) !occupancy pieces in
+      pieces.(piece) <- piece_bitboard;
+      pieces.(captured_piece) <- capture_bitboard;
+      check
+    |1 ->
+      pieces.(piece) <- pieces.(piece) ^^^ single_bitboards_tab.(from) ^^^ single_bitboards_tab.(to_);
+      occupancy := !occupancy ^^^ single_bitboards_tab.(from) ^^^ single_bitboards_tab.(to_);
+      let check = is_attacked (lsb_index pieces.(king + 6 * (white_to_move lxor 1))) (white_to_move lxor 1) !occupancy pieces in
+      pieces.(piece) <- piece_bitboard;
+      check
+    |2 ->
+      let player_rook = rook + 6 * white_to_move in
+      let rook_bitboard = pieces.(player_rook) in
+      let player_castling_info = castling_infos.(white_to_move) in
+      let from_rook = player_castling_info.from_short_rook in
+      let to_rook = player_castling_info.to_short_rook in
+      pieces.(piece) <- pieces.(piece) ^^^ single_bitboards_tab.(from) ^^^ single_bitboards_tab.(to_);
+      pieces.(player_rook) <- pieces.(player_rook) ^^^ single_bitboards_tab.(from_rook) ^^^ single_bitboards_tab.(to_rook);
+      occupancy := !occupancy ^^^ single_bitboards_tab.(from) ^^^ single_bitboards_tab.(to_) ^^^ single_bitboards_tab.(from_rook) ^^^ single_bitboards_tab.(to_rook);
+      let check = is_attacked (lsb_index pieces.(king + 6 * (white_to_move lxor 1))) (white_to_move lxor 1) !occupancy pieces in
+      pieces.(piece) <- piece_bitboard;
+      pieces.(player_rook) <- rook_bitboard;
+      check
+    |3 ->
+      let player_rook = rook + 6 * white_to_move in
+      let rook_bitboard = pieces.(player_rook) in
+      let player_castling_info = castling_infos.(white_to_move) in
+      let from_rook = player_castling_info.from_long_rook in
+      let to_rook = player_castling_info.to_long_rook in
+      pieces.(piece) <- pieces.(piece) ^^^ single_bitboards_tab.(from) ^^^ single_bitboards_tab.(to_);
+      pieces.(player_rook) <- pieces.(player_rook) ^^^ single_bitboards_tab.(from_rook) ^^^ single_bitboards_tab.(to_rook);
+      occupancy := !occupancy ^^^ single_bitboards_tab.(from) ^^^ single_bitboards_tab.(to_) ^^^ single_bitboards_tab.(from_rook) ^^^ single_bitboards_tab.(to_rook);
+      let check = is_attacked (lsb_index pieces.(king + 6 * (white_to_move lxor 1))) (white_to_move lxor 1) !occupancy pieces in
+      pieces.(piece) <- piece_bitboard;
+      pieces.(player_rook) <- rook_bitboard;
+      check
+    |5 ->
+      let captured_pawn_square = (to_ - push_vects.(white_to_move)) in
+      let captured_pawn = pawn + 6 * (white_to_move lxor 1) in
+      let capture_bitboard = pieces.(captured_pawn) in
+      pieces.(piece) <- pieces.(piece) ^^^ single_bitboards_tab.(from) ^^^ single_bitboards_tab.(to_);
+      pieces.(captured_pawn) <- pieces.(captured_pawn) ^^^ single_bitboards_tab.(captured_pawn_square);
+      occupancy := !occupancy ^^^ single_bitboards_tab.(from) ^^^ single_bitboards_tab.(to_);
+      occupancy := !occupancy ^^^ single_bitboards_tab.(captured_pawn_square);
+      let check = is_attacked (lsb_index pieces.(king + 6 * (white_to_move lxor 1))) (white_to_move lxor 1) !occupancy pieces in
+      pieces.(piece) <- piece_bitboard;
+      pieces.(captured_pawn) <- capture_bitboard;
+      check
+    |_ ->
+      let captured_piece = board.(to_) in
+      let capture_bitboard = pieces.(captured_piece) in
+      let promotion_piece = (flag lor 4) - 11 + 6 * white_to_move in
+      let promotion_bitboard = pieces.(promotion_piece) in
+      pieces.(piece) <- pieces.(piece) ^^^ single_bitboards_tab.(from);
       pieces.(promotion_piece) <- pieces.(promotion_piece) ^^^ single_bitboards_tab.(to_);
-      occupancy.(white_to_move) <- occupancy.(white_to_move) ^^^ single_bitboards_tab.(from) ^^^ single_bitboards_tab.(to_);
+      occupancy := !occupancy ^^^ single_bitboards_tab.(from) ^^^ single_bitboards_tab.(to_);
       if flag land 4 <> 0 then begin
         pieces.(captured_piece) <- pieces.(captured_piece) ^^^ single_bitboards_tab.(to_);
-        occupancy.(white_to_move lxor 1) <- occupancy.(white_to_move lxor 1) ^^^ single_bitboards_tab.(to_);
-      end
-    end
+        occupancy := !occupancy ^^^ single_bitboards_tab.(to_);
+      end;
+      let check = is_attacked (lsb_index pieces.(king + 6 * (white_to_move lxor 1))) (white_to_move lxor 1) !occupancy pieces in
+      pieces.(piece) <- piece_bitboard;
+      pieces.(promotion_piece) <- promotion_bitboard;
+      if flag land 4 <> 0 then begin
+        pieces.(captured_piece) <- capture_bitboard
+      end;
+      check
+  end
