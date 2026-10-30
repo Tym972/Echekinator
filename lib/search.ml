@@ -182,6 +182,7 @@ let rec search position search_tables thread multi depth search_ply alpha beta w
                 if !no_move_cut then begin
                   let score = ref 0 in
                   update_accumulator position move;
+                  new_state.in_check <- gives_check;
                   make position move;
                   incr legal_counter;
 

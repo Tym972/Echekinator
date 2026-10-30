@@ -961,8 +961,7 @@ let make position move =
         new_state.zobrist <- new_state.zobrist ^^^ tab_zobrist_castling.(castling_rights) ^^^ tab_zobrist_castling.(new_rights)
       end;
       new_state.half_moves <- 0
-  end;
-  new_state.in_check <- is_attacked (lsb_index pieces.(king + 6 * (white_to_move lxor 1))) (white_to_move lxor 1) (occupancy.(0) ||| occupancy.(1)) pieces
+  end
 
 let unmake position move =
   let board = position.board in
@@ -1107,22 +1106,26 @@ let gives_check position move =
       pieces.(captured_pawn) <- capture_bitboard;
       check
     |_ ->
-      let captured_piece = board.(to_) in
-      let capture_bitboard = pieces.(captured_piece) in
       let promotion_piece = (flag lor 4) - 11 + 6 * white_to_move in
       let promotion_bitboard = pieces.(promotion_piece) in
       pieces.(piece) <- pieces.(piece) ^^^ single_bitboards_tab.(from);
       pieces.(promotion_piece) <- pieces.(promotion_piece) ^^^ single_bitboards_tab.(to_);
       occupancy := !occupancy ^^^ single_bitboards_tab.(from) ^^^ single_bitboards_tab.(to_);
       if flag land 4 <> 0 then begin
+        let captured_piece = board.(to_) in
+        let capture_bitboard = pieces.(captured_piece) in
         pieces.(captured_piece) <- pieces.(captured_piece) ^^^ single_bitboards_tab.(to_);
         occupancy := !occupancy ^^^ single_bitboards_tab.(to_);
-      end;
-      let check = is_attacked (lsb_index pieces.(king + 6 * (white_to_move lxor 1))) (white_to_move lxor 1) !occupancy pieces in
-      pieces.(piece) <- piece_bitboard;
-      pieces.(promotion_piece) <- promotion_bitboard;
-      if flag land 4 <> 0 then begin
-        pieces.(captured_piece) <- capture_bitboard
-      end;
-      check
+        let check = is_attacked (lsb_index pieces.(king + 6 * (white_to_move lxor 1))) (white_to_move lxor 1) !occupancy pieces in
+        pieces.(piece) <- piece_bitboard;
+        pieces.(promotion_piece) <- promotion_bitboard;
+        pieces.(captured_piece) <- capture_bitboard;
+        check
+      end
+      else begin
+        let check = is_attacked (lsb_index pieces.(king + 6 * (white_to_move lxor 1))) (white_to_move lxor 1) !occupancy pieces in
+        pieces.(piece) <- piece_bitboard;
+        pieces.(promotion_piece) <- promotion_bitboard;
+        check
+      end
   end

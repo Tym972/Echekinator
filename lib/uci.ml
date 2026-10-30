@@ -107,6 +107,7 @@ let make_list record position =
     |string_move :: other_moves ->
       let move = mouvement_of_uci string_move position in
       if move <> 0 then begin
+        position.state_array.(position.game_ply + 1).in_check <- gives_check position move;
         make position move;
         func other_moves;
       end

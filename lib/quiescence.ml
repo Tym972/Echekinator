@@ -79,6 +79,7 @@ let rec quiescence_search position search_tables thread search_ply alpha beta =
           picker.hash_move <- hash_move;
           let move_loop move =
             update_accumulator position move;
+            position.state_array.(game_ply + 1).in_check <- gives_check position move;
             make position move;
             let score = - quiescence_search position search_tables thread (search_ply + 1) (- !beta0) (- !alpha0)
             in if score > !best_score then begin
