@@ -81,8 +81,8 @@ let rec quiescence_search position search_tables thread search_ply alpha beta =
             update_accumulator position move;
             position.state_array.(game_ply + 1).in_check <- gives_check position move;
             make position move;
-            let score = - quiescence_search position search_tables thread (search_ply + 1) (- !beta0) (- !alpha0)
-            in if score > !best_score then begin
+            let score = - quiescence_search position search_tables thread (search_ply + 1) (- !beta0) (- !alpha0) in
+            if score > !best_score then begin
               best_score := score;
               if score > !alpha0 then begin
                 best_move := move

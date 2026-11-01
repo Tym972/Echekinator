@@ -11,7 +11,7 @@ Echekinator is an UCI-compatible chess engine written in OCaml. It supports
     - Legal generator with 3 modes (all moves, captures/promotions, quiets)
 
 - NNUE
-    - (768 -> 32 x 2 -> 1)
+    - (768 -> 64 x 2) -> 8 -> 1 trained using self generated data and Bullet
 
 - Search
     - Negamax with alpha-beta pruning
@@ -22,7 +22,7 @@ Echekinator is an UCI-compatible chess engine written in OCaml. It supports
     - Transposition Table
     - Move Ordering
         - Transposition Table Move
-        - MVV-LVA for captures and promotions
+        - Captures History for captures and promotions
         - Differentiation of captures with Static Exchange Evaluation
         - Killer Move Heuristic (2 slots per ply)
         - Butterfly History Heuristic
@@ -34,6 +34,7 @@ Echekinator is an UCI-compatible chess engine written in OCaml. It supports
         - Late Move Pruning
         - Futility Pruning
         - Late Move Reductions
+        - Singular Extensions
 
 ### UCI settings
 
@@ -48,6 +49,9 @@ Echekinator is an UCI-compatible chess engine written in OCaml. It supports
 
 - UCI_Chess960
     - If true, Echekinator will play Chess960.
+
+- EvalFile
+    - The path to a NNUE weights file
 
 ## Build
 
@@ -84,4 +88,6 @@ This project would not have been possible without the help of the Stockfish Disc
 Special thanks to:
 - Disservin from Fastchess
 - Chess Programming Wiki
+- Stockfish Discord
 - CCRL for testing the engine
+- Bullet NNUE trainer

@@ -98,6 +98,9 @@ let reset_hash search_tables =
   for i = 0 to 8191 do
     search_tables.history_moves.(i) <- 0
   done;
+  for i = 0 to 2303 do
+    search_tables.capture_history.(i) <- 0
+  done;
   uninitialized := true
 
 (*Fonction permettant de jouer une list de moves*)
@@ -292,7 +295,7 @@ let iterative_deepening position search_tables depth mate thread =
         alpha := (previous_score - !delta);
         beta := (previous_score + !delta);
         let score = ref (search position search_tables thread multi !var_depth 0 !alpha !beta false) in
-        while not (stop_search.(thread) || total_counter node_counter > !node_limit || (!score > !alpha && !score < !beta)) do
+        while not (stop_search.(thread) (*|| total_counter node_counter > !node_limit*) || (!score > !alpha && !score < !beta)) do
           if !score <= !alpha then begin
             beta := (!alpha + !beta) / 2;
             alpha := !alpha - !delta
@@ -643,12 +646,6 @@ let echekinator () =
         done;
       |"d" :: _ -> display position
       |"eval" :: _ ->
-        (*for i = 0 to search_tables.pickers.(0).number_of_captures - 1 do
-          print_endline (Printf.sprintf "%s : see %i" (uci_of_mouvement search_tables.pickers.(0).capture_moves.(i)) (see position search_tables.pickers.(0).capture_moves.(i)))
-        done;
-        for i = 0 to search_tables.pickers.(0).number_of_quiets - 1 do
-          print_endline (Printf.sprintf "%s : see %i" (uci_of_mouvement search_tables.pickers.(0).quiet_moves.(i)) (see position search_tables.pickers.(0).quiet_moves.(i)))
-        done;*)
         let eval = float_of_int (evaluate position) /. 100. in
         let eval = if position.white_to_move = 0 then eval else -. eval in
         print_endline ("NNUE Evaluation : " ^ (if eval > 0. then "+" else "") ^ string_of_float eval ^ " (white side)")

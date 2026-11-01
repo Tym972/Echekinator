@@ -109,17 +109,20 @@ let see_ge position move threshold =
   end
 
 let history_index white_to_move move =
-  4096 * white_to_move + 64 * (get_move_from move) + get_move_to move
+  4096 * white_to_move + 64 * get_move_from move + get_move_to move
 
-let mvv_lva_tab = [|[|15; 25; 35; 45; 55|]; [|14; 24; 34; 44; 54|]; [|13; 23; 33; 43; 53|]; [|12; 22; 32; 42; 52|]; [|11; 21; 31; 41; 51|]; [|10; 20; 30; 40; 50|]|]
+let capture_index piece captured_piece target_square =
+  384 * piece + 6 * target_square + captured_piece
 
 type search_tables = {
   history_moves : int array;
+  capture_history : int array;
   pickers : picker array
 }
 
 let create_search_tables () = { 
   history_moves = Array.make 8192 0;
+  capture_history = Array.make 2304 0;
   pickers = Array.init (max_depth + 40) (fun _ -> {
     hash_move = 0;
     killer1 = 0;
@@ -136,6 +139,7 @@ let create_search_tables () = {
 
 let copy_search_tables search_tables = {
   history_moves = Array.copy search_tables.history_moves;
+  capture_history = Array.copy search_tables.capture_history;
   pickers =
   Array.map (fun picker -> {
     hash_move = picker.hash_move;
@@ -229,29 +233,29 @@ let rec next_move position picker search_tables search_ply = match picker.stage 
           let attacker_value = tabvalue.(attacker_piece) in
           let flag = get_move_flag capture in
           if flag > 7 then begin
-            captures_scores.(index) <- 20000 + 100 * (flag lxor 4) + mvv_lva_tab.(attacker_piece).(victim_piece)
+            captures_scores.(index) <- 1000000 + 100 * (flag lxor 4) + victim_value * 100 + (search_tables.capture_history.(capture_index attacker_piece victim_piece to_square) / 48)
           end
           else if victim_value >= attacker_value then begin
-            captures_scores.(index) <- 10000 + mvv_lva_tab.(attacker_piece).(victim_piece)
+            captures_scores.(index) <- 600000 + victim_value * 100 + (search_tables.capture_history.(capture_index attacker_piece victim_piece to_square) / 48)
           end
           else begin
             if see_ge position capture 0 then begin
-              captures_scores.(index) <- 10000 + mvv_lva_tab.(attacker_piece).(victim_piece)
+              captures_scores.(index) <- 600000 + victim_value * 100 + (search_tables.capture_history.(capture_index attacker_piece victim_piece to_square) / 48)
             end
             else begin
-              captures_scores.(index) <- 1000 + mvv_lva_tab.(attacker_piece).(victim_piece)
+              captures_scores.(index) <- 200000 + victim_value * 100 + (search_tables.capture_history.(capture_index attacker_piece victim_piece to_square) / 48)
             end
           end
         end
         else begin
-          captures_scores.(index) <- - 1000
+          captures_scores.(index) <- - max_int
         end
       done;
     next_move position picker search_tables search_ply
   |Stage_Good_Captures ->
     let capture_moves = picker.capture_moves in
     let captures_scores = picker.captures_scores in
-    let move = move_picker capture_moves picker.number_of_captures captures_scores 9999 in
+    let move = move_picker capture_moves picker.number_of_captures captures_scores 400000 in
     if move = 0 then begin
       picker.stage <- Stage_Killers;
       let quiet_moves = picker.quiet_moves in
@@ -282,7 +286,7 @@ let rec next_move position picker search_tables search_ply = match picker.stage 
       move
     end
   |Stage_Killers ->
-    let move = move_picker picker.quiet_moves picker.number_of_quiets picker.quiet_scores 99999 in
+    let move = move_picker picker.quiet_moves picker.number_of_quiets picker.quiet_scores 999999 in
     if move = 0 then begin
       picker.stage <- Stage_History;
       next_move position picker search_tables search_ply
@@ -342,29 +346,29 @@ let rec qsearch_next_move position picker search_tables = match picker.stage wit
         let attacker_value = tabvalue.(attacker_piece) in
         let flag = get_move_flag capture in
         if flag > 7 then begin
-          captures_scores.(index) <- 20000 + 100 * (flag lxor 4) + mvv_lva_tab.(attacker_piece).(victim_piece)
+          captures_scores.(index) <- 1000000 + 100 * (flag lxor 4) + victim_value * 100 + (search_tables.capture_history.(capture_index attacker_piece victim_piece to_square) / 48)
         end
         else if victim_value >= attacker_value then begin
-          captures_scores.(index) <- 10000 + mvv_lva_tab.(attacker_piece).(victim_piece)
+          captures_scores.(index) <- 600000 + victim_value * 100 + (search_tables.capture_history.(capture_index attacker_piece victim_piece to_square) / 48)
         end
         else begin
           if see_ge position capture 0 then begin
-            captures_scores.(index) <- 10000 + mvv_lva_tab.(attacker_piece).(victim_piece)
+            captures_scores.(index) <- 600000 + victim_value * 100 + (search_tables.capture_history.(capture_index attacker_piece victim_piece to_square) / 48)
           end
           else begin
-            captures_scores.(index) <- - 1000
+            captures_scores.(index) <- - max_int
           end
         end
       end
       else begin
-        captures_scores.(index) <- - 1000
+        captures_scores.(index) <- - max_int
       end
     done;
     qsearch_next_move position picker search_tables
   |Stage_Good_Captures ->
     let capture_moves = picker.capture_moves in
     let captures_scores = picker.captures_scores in
-    let move = move_picker capture_moves picker.number_of_captures captures_scores 9999 in
+    let move = move_picker capture_moves picker.number_of_captures captures_scores 400000 in
     if move = 0 then begin
       picker.stage <- Stage_Done;
       qsearch_next_move position picker search_tables

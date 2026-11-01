@@ -55,21 +55,6 @@ let rec index_list bitboard =
     []
   end
 
-let [@inline] msb_index bitboard =
-  let x = ref bitboard and n = ref 64 in
-  let y = Int64.shift_right_logical !x 32 in
-  if y <> 0L then (n := !n - 32; x := y);
-  let y = Int64.shift_right_logical !x 16 in
-  if y <> 0L then (n := !n - 16; x := y);
-  let y = Int64.shift_right_logical !x  8 in
-  if y <> 0L then (n := !n -  8; x := y);
-  let y = Int64.shift_right_logical !x  4 in
-  if y <> 0L then (n := !n -  4; x := y);
-  let y = Int64.shift_right_logical !x 2 in
-  if y <> 0L then (n := !n -  2; x := y);
-  let y = Int64.shift_right_logical !x 1 in
-  63 - (if y <> 0L then !n - 2 else !n - Int64.to_int !x)
-
 let single_bitboards_tab = Array.init 64 (fun i -> Int64.shift_left 1L i)
 
 let pawn = 0
@@ -87,13 +72,6 @@ let black_queen = 10
 let black_king = 11
 
 let empty = 12
-
-let [@inline] is_pawn piece = piece mod 6 = pawn
-let [@inline] is_knight piece = piece mod 6 = knight
-let [@inline] is_bishop piece = piece mod 6 = bishop
-let [@inline] is_rook piece = piece mod 6 = rook
-let [@inline] is_queen piece = piece mod 6 = queen
-let [@inline] is_king piece = piece mod 6 = king
 
 (*          binary move bits                       hexidecimal constants
     
@@ -863,7 +841,7 @@ let make position move =
         new_state.castling_rights <- new_rights;
         new_state.zobrist <- new_state.zobrist ^^^ tab_zobrist_castling.(castling_rights) ^^^ tab_zobrist_castling.(new_rights)
       end;
-      if is_pawn piece then begin
+      if piece mod 6 = pawn then begin
         new_state.half_moves <- 0
       end;
     |4 ->
