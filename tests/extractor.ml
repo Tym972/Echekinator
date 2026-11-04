@@ -6,6 +6,8 @@ open Libs.Move_ordering
 open Libs.Quiescence*)
 open Algebraic
 
+let table = Hashtbl.create 600000
+
 let process_pgn_file filename output_name engine1 engine2 =
   let ic = open_in filename in
   let oc = open_out_gen [Open_creat; Open_text; Open_append] 0o666 output_name in
@@ -159,7 +161,12 @@ let process_pgn_file filename output_name engine1 engine2 =
 
     in
     read_headers ();
-    select_position engine !moves !engine_evals !fen_string !result
+    if not (Hashtbl.mem table !fen_string) then begin
+      Hashtbl.add table !fen_string 0;
+      select_position engine !moves !engine_evals !fen_string !result
+    end
+    else
+      print_endline !fen_string
 
   in
   read_games ();
@@ -167,7 +174,7 @@ let process_pgn_file filename output_name engine1 engine2 =
 
 
 let () = 
-  let name = "Darius" in
+  let name = "Maximus" in
   for i = 1 to 3 do
-    process_pgn_file (Printf.sprintf "Results/Iteration4/Pgn_fastchess#%i.pgn" i) (Printf.sprintf "%s.txt" name) "new" "base"
+    process_pgn_file (Printf.sprintf "Results/Iteration5/Pgn_fastchess#%i.pgn" i) (Printf.sprintf "%s.txt" name) "new" "base"
   done
