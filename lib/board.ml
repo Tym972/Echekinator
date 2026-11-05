@@ -24,7 +24,7 @@ let max_depth = 255
 let max_moves = 2048
 
 (*NNUE Hidden size*)
-let hidden_size = 64
+let hidden_size = 128
 
 (*Output buckets*)
 let output_buckets = 8
