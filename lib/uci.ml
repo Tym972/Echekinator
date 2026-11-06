@@ -1,7 +1,6 @@
 (*Module implémentant la communication UCI*)
 
 open Board
-open Miscellaneous
 open Bitboards
 open Translation
 open Fen
@@ -64,7 +63,6 @@ let remove_move move picker =
     done
   end
 
-(*Fonction permettant la lecture d'une réponse*)
 let lire_entree message =
   print_string message;
   flush stdout;
@@ -103,12 +101,12 @@ let reset_hash search_tables =
   done;
   uninitialized := true
 
-(*Fonction permettant de jouer une list de moves*)
+(*Sets up the position after a list of moves*)
 let make_list record position =
   let rec func move_list = match move_list with
     |[] -> ()
     |string_move :: other_moves ->
-      let move = mouvement_of_uci string_move position in
+      let move = mouve_of_uci string_move position in
       if move <> 0 then begin
         position.state_array.(position.game_ply + 1).in_check <- gives_check position move;
         make position move;
@@ -128,7 +126,7 @@ let bestline = {
   depth = 0
 }
 
-(*Answer to the command "command"*)
+(*Answer to the command "position fen ... moves .../ position startpos moves ..."*)
 let position_uci instructions position search_tables =
   begin match instructions with
     |"position" :: str :: _ when List.mem str ["fen"; "startpos"] -> begin
@@ -167,11 +165,12 @@ let rec algoperft position pickers depth search_ply =
     let aux moves number_of_moves =
       for i = 0 to number_of_moves - 1 do
         let move = moves.(i) in
+        position.state_array.(position.game_ply + 1).in_check <- gives_check position move;
         make position move;
         let perft = (algoperft position pickers (depth - 1) (search_ply + 1)) in
         nodes := !nodes + perft;
         if search_ply = 0 then begin
-          print_endline (uci_of_mouvement move ^ ": " ^ string_of_int perft)
+          print_endline (uci_of_move move ^ ": " ^ string_of_int perft)
         end;
         unmake position move
       done
@@ -386,7 +385,7 @@ let iterative_deepening position search_tables depth mate thread =
         |(depth, _, multi) :: other_variations ->
           let print_alpha, print_beta = if multi = 0 then !alpha, !beta else (-99999), 99999 in
           let score = formate_score !search_record.(multi).(depth).score var_mate print_alpha print_beta in
-          let pv = (String.concat " " (List.map uci_of_mouvement (pv_finder position !search_record.(multi).(depth).bestmove depth))) in
+          let pv = (String.concat " " (List.map uci_of_move (pv_finder position !search_record.(multi).(depth).bestmove depth))) in
           print_endline (Printf.sprintf "info depth %i seldepth %i multipv %i score %s nodes %i nps %i hashfull %i time %i pv %s" depth depth already_printed score (total_counter node_counter) nps hashfull time pv);
           printer other_variations (already_printed + 1)
       in printer !variations 1
@@ -568,8 +567,8 @@ let go instructions position search_tables =
     while !is_pondering && not stop_search.(0) do
       ()
     done;
-    let print_bestmove = "bestmove " ^ try (uci_of_mouvement (!search_record.(bestline.id).(bestline.depth).bestmove)) with _ -> uci_of_mouvement picker.hash_move in
-    let print_ponder = try " ponder " ^ uci_of_mouvement (List.nth (pv_finder position !search_record.(bestline.id).(bestline.depth).bestmove bestline.depth) 1) with _ -> "" in
+    let print_bestmove = "bestmove " ^ try (uci_of_move (!search_record.(bestline.id).(bestline.depth).bestmove)) with _ -> uci_of_move picker.hash_move in
+    let print_ponder = try " ponder " ^ uci_of_move (List.nth (pv_finder position !search_record.(bestline.id).(bestline.depth).bestmove bestline.depth) 1) with _ -> "" in
     print_endline (print_bestmove ^ print_ponder)
   end
 
@@ -586,14 +585,31 @@ let checkers position =
   done;
   !checkers
 
+let print_board board =
+  let display = ref "   +---+---+---+---+---+---+---+---+\n" in
+  let tab_print = [|" P |"; " N |"; " B |"; " R |"; " Q |"; " K |"; " p |"; " n |"; " b |"; " r |"; " q |"; " k |"; "   |"|] in
+  for i = 8 downto 1 do
+    let k_list = ref [] in
+    let k = string_of_int i ^ "  |" in
+    for j = 8 * (i - 1) to 8 * i - 1 do
+      let piece = board.(j) in
+      k_list := tab_print.(piece) :: !k_list;
+    done;
+    k_list := List.rev !k_list;
+    let k_str = String.concat "" !k_list in
+    display := !display ^ (k ^ k_str ^ "\n" ^"   +---+---+---+---+---+---+---+---+\n");
+  done;
+  print_endline (!display ^ "     a   b   c   d   e   f   g   h\n")
+
 let display position =
   print_board position.board;
   print_endline (Printf.sprintf "Fen: %s" (fen position));
   print_endline (Printf.sprintf "Key: %LX" position.state_array.(0).zobrist);
   print_endline (Printf.sprintf "Checkers: %s" (checkers position))
 
-(*Fonction lançant le programme*)
+(*Launches the engine*)
 let echekinator () =
+  init_bitboards ();
   let position = create_position () in
   let search_tables = create_search_tables () in
   load_embedded_weights ();
@@ -612,7 +628,7 @@ let echekinator () =
       |"setoption" :: _ -> process (fun () -> setoption search_tables position instructions)
       |"ucinewgame" :: _ -> process (fun () -> reset_hash search_tables)
       |"position" :: _ -> process (fun () -> position_uci instructions position search_tables)
-      |"go" :: "perft" :: depth :: _ when is_integer_string depth ->
+      |"go" :: "perft" :: depth :: _ ->
         print_endline ("\n" ^ "Nodes searched : " ^ (string_of_int (algoperft position search_tables.pickers (int_of_string depth) 0)));
       |"go" :: "searchmoves" :: instructions ->
         let index = Int64.to_int (Int64.rem position.state_array.(0).zobrist !slots) in
@@ -622,7 +638,7 @@ let echekinator () =
         picker.number_of_captures <- 0;
         let rec func move_list = match move_list with
           |uci_move :: other_moves ->
-            let move = try mouvement_of_uci uci_move position with _ -> 0 in
+            let move = try mouve_of_uci uci_move position with _ -> 0 in
             if move <> 0 then begin
               add_move move picker
             end;

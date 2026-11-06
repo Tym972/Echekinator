@@ -1,7 +1,7 @@
 open Board
 open Bitboards
 
-(*Valeur des pièces pour le tri*)
+(*Value of pieces for move ordering*)
 let tabvalue = [|100; 320; 330; 510; 880; 9500|]
 
 let get_all_attackers target pieces_bitboards total_occupancy =
@@ -29,6 +29,7 @@ let get_least_valuable_piece attackers pieces_bitboards attacker_type white_to_m
   done;
   !lvp_bitboard
 
+(*Is the exchange worth it?*)
 let see_ge position move threshold =
   let board = position.board in
   let from = get_move_from move in

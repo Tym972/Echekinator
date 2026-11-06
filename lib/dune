@@ -12,8 +12,7 @@
   search
   evaluation
   embedded_weights
-  uci
-  miscellaneous)
+  uci)
  (libraries
   str
   unix

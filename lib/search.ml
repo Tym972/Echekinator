@@ -208,7 +208,7 @@ let rec search position search_tables thread multi depth search_ply alpha beta w
                 if !no_move_cut then begin
                   let score = ref 0 in
 
-                  (*Search Extension*)
+                  (*Search Extension, SE didn't pass SPRT*)
                   let extension = ref 0 in
                   (*if false && depth >= se_min_depth && move = hash_move && not state.excluded && hash_depth > depth - 3 && not (is_decisive hash_lower_bound) then begin
                     let singular_beta = hash_lower_bound - depth * (if ispv then 1 else 2) in

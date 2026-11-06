@@ -3,15 +3,15 @@
 [![Lichess Profile](https://img.shields.io/badge/Lichess-Echekinator-000000?style=flat&logo=lichess)](https://lichess.org/@/Echekinator) [![OCaml](https://img.shields.io/badge/Language-OCaml-EC6813?style=flat&logo=ocaml)](https://ocaml.org) [![License](https://img.shields.io/github/license/Tym972/Echekinator)](https://github.com/Tym972/Echekinator/blob/main/LICENSE)
 
 
-Echekinator is an UCI-compatible chess engine written in OCaml. It supports 
+Echekinator is a UCI-compatible chess engine written in [OCaml](https://ocaml.org).
 
-## Features
+## Functional Details
 
 - Move Generation
     - Legal generator with 3 modes (all moves, captures/promotions, quiets)
 
 - NNUE
-    - (768 -> 64 x 2) -> 8 -> 1 trained using self generated data and Bullet
+    - (768 -> 128) x 2 -> 1 x 8 trained using self generated data and [bullet](https://github.com/jw1912/bullet)
 
 - Search
     - Negamax with alpha-beta pruning
@@ -22,10 +22,10 @@ Echekinator is an UCI-compatible chess engine written in OCaml. It supports
     - Transposition Table
     - Move Ordering
         - Transposition Table Move
-        - Captures History for captures and promotions
         - Differentiation of captures with Static Exchange Evaluation
         - Killer Move Heuristic (2 slots per ply)
         - Butterfly History Heuristic
+        - Captures History
     - Selectivity & Pruning
         - TT Cutoffs
         - Reverse Futility Pruning
@@ -80,14 +80,16 @@ dune exec bin/echekinator.exe
 |-----------------|------------|------------|-----------------|
 | Echekinator 1.0 | —          | 2143       | Mailbox + HCE   |
 | Echekinator 1.1 | —          | 2492       | Bitboards + HCE |
-| Echekinator 1.2 | —          | —          | Bitboards + HCE |
-| Echekinator 1.3 | —          | —          | Bitboards + NNUE|
+| Echekinator 1.2 | —          | ~2600*     | Bitboards + HCE |
+| Echekinator 1.3 | —          | ~3000*     | Bitboards + NNUE|
+
+*\* Estimates based on local self-play (not yet official CCRL list entries).*
 
 ## Credits
-This project would not have been possible without the help of the Stockfish Discord server. 
 Special thanks to:
-- Disservin from Fastchess
-- Chess Programming Wiki
-- Stockfish Discord
-- CCRL for testing the engine
-- Bullet NNUE trainer
+- [chal](https://github.com/namanthanki/chal) for some search weights
+- [fastchess](https://github.com/Disservin/fastchess) to run my tournaments
+- [Chess Programming Wiki](https://chessprogramming.org/Main_Page)
+- [Stockfish](https://github.com/official-stockfish/Stockfish) Discord
+- [CCRL](https://computerchess.org.uk/) for testing the engine
+- [bullet](https://github.com/jw1912/bullet) NNUE trainer

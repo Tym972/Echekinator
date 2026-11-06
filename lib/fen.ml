@@ -1,6 +1,5 @@
 (*Modules implémentant les traductions FEN*)
 
-open Miscellaneous
 open Board
 open Zobrist
 open Translation
@@ -25,7 +24,7 @@ let fen position =
   let fen = ref "" in
   let empties = ref 0 in
   for i = 0 to 63 do
-    let square = board.(flip i) in
+    let square = board.(i lxor 56) in
     if square = empty then begin
       empties := !empties + 1
     end
@@ -111,6 +110,10 @@ let hash_castling_xfen =
   List.iter (fun (key, value) -> Hashtbl.add ht key value)
   [('q', 0); ('a', 0); ('b', 1); ('c', 2); ('d', 3); ('e', 4); ('f', 5); ('g', 6); ('k', 7); ('h', 7)];
   ht
+
+(*Fonction décomposant une chain de caractère en list de substring correspondants aux mots*)
+let word_detection chain =
+  Str.split (Str.regexp " +") chain
 
 (*Fonction traduisant une position FEN en l'int array correspondant. Par défaut si non rensigné, le trait est au blancs, il n'y a plus de castlings, pas de capture en passant, aucun coup joué*)
 let position_of_fen chain position =

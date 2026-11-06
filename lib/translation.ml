@@ -11,10 +11,9 @@ let get_move_promotion move =
   |11 | 15 -> 5
   |_ -> 0
 
-(*Tableau assoicant la valeur des pièces pour le moteur (indice) à leur notation algébrique anglaise*)
 let english_pieces_lowercase = [|""; "p"; "n"; "b"; "r"; "q"; "k"|]
 
-let uci_of_mouvement move =
+let uci_of_move move =
   let from = get_move_from move in
   let to_ = get_move_to move in
   let flag = get_move_flag move in
@@ -34,14 +33,12 @@ let uci_of_mouvement move =
     "(none)"
   end
 
-(*Dictionnaire associant une pièce en notation algébrique anglaise à la valeur des pièces pour le moteur*)
 let hash_pieces =
   let ht = Hashtbl.create 5 in
   List.iter (fun (key, value) -> Hashtbl.add ht key value)
     [ ('R', 4); ('N', 2); ('B', 3); ('Q', 5); ('K', 6)];
   ht
 
-(* Hash table mapping chessboard coordinates to indices in the coord array *)
 let hash_coord =
   let ht = Hashtbl.create 64 in
   List.iter (fun (key, value) -> Hashtbl.add ht key value)
@@ -55,19 +52,7 @@ let hash_coord =
       ("a8", 56); ("b8", 57); ("c8", 58); ("d8", 59); ("e8", 60); ("f8", 61); ("g8", 62); ("h8", 63)];
   ht
 
-let move_array_mem move legal_moves number_of_legal_moves =
-  let mem = ref false in
-  let i = ref 0 in
-  while !i < number_of_legal_moves && not !mem do
-    if legal_moves.(!i) = move then begin
-      mem := true
-    end;
-    incr i
-  done;
-  !mem
-
-(*Fonction interprétant la notation UCI*)
-let mouvement_of_uci uci position =
+let mouve_of_uci uci position =
   let white_to_move = position.white_to_move in
   let from = Hashtbl.find hash_coord (String.sub uci 0 2) in
   let raw_to = Hashtbl.find hash_coord (String.sub uci 2 2) in

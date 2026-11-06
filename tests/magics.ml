@@ -51,5 +51,6 @@ let compute_magic file masks blockers moves =
   close_out file
 
 let () =
+  init_bitboards ();
   compute_magic bishop_file bishop_masks bishop_blockers bishop_moves;
   compute_magic rook_file rook_masks rook_blockers rook_moves

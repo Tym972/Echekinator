@@ -18,7 +18,6 @@ let output_bias = Array1.create Int16_signed C_layout output_buckets
 let weights_loaded = ref false
 
 let weights_payload_size = 2 * ((768 * hidden_size) + hidden_size + (2 * hidden_size * output_buckets) + output_buckets)
-let weights_padding = String.concat "" (List.init 10 (fun _ -> "bullet")) ^ "bu"
 
 let load_weights_contents source contents =
   if String.length contents < weights_payload_size then
@@ -62,7 +61,7 @@ let load_weights path = load_weights_contents path (read_weights_file path)
 let load_embedded_weights () =
   load_weights_contents "embedded NNUE weights" Embedded_weights.contents
 
-let [@inline] screlu x = if x < 0 then 0 else if x < 255 then x * x else 65025
+let [@inline] screlu x = if x <= 0 then 0 else if x < 255 then x * x else 65025
 
 let get_accumulator position =
   let state = position.state_array.(position.game_ply) in
@@ -88,11 +87,6 @@ let get_accumulator position =
       done
     end
   done
-
-let feature_index perspective piece square =
-  let enemy = (piece / 6) lxor perspective in
-  let oriented_square = square lxor (56 * perspective) in
-  64 * ((piece mod 6) + (6 * enemy)) + oriented_square
 
 let update_accumulator position move =
   let board = position.board in

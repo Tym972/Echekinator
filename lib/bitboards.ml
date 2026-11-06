@@ -150,8 +150,6 @@ type player_castlings_info = {
   to_long_king : int;
   to_short_rook : int;
   to_long_rook : int;
-  mutable short_castling_mask : int64;
-  mutable long_castling_mask : int64;
   mutable short_castling_safe_mask : int64;
   mutable long_castling_safe_mask : int64;
   mutable short_castling_empty_mask : int64;
@@ -168,8 +166,6 @@ let white_castling_info = {
   to_long_king = 2;
   to_short_rook = 5;
   to_long_rook = 3;
-  short_castling_mask = 0L;
-  long_castling_mask = 0L;
   short_castling_safe_mask = 0L;
   long_castling_safe_mask = 0L;
   short_castling_empty_mask = 0L;
@@ -186,8 +182,6 @@ let black_castling_info = {
   to_long_king = 58;
   to_short_rook = 61;
   to_long_rook = 59;
-  short_castling_mask = 0L;
-  long_castling_mask = 0L;
   short_castling_safe_mask = 0L;
   long_castling_safe_mask = 0L;
   short_castling_empty_mask = 0L;
@@ -322,8 +316,6 @@ let init_castling_info () =
     ambiguity_masks.(i) <- 0L
   done;
   let aux white_to_move castling_info =
-    castling_info.short_castling_mask <- 0L;
-    castling_info.long_castling_mask <- 0L;
     castling_info.short_castling_safe_mask <- 0L;
     castling_info.long_castling_safe_mask <- 0L;
     castling_info.short_castling_empty_mask <- 0L;
@@ -334,8 +326,6 @@ let init_castling_info () =
     castling_rights_masks.(from_king) <- 15 lxor castling_info.short_castling lxor castling_info.long_castling;
     castling_rights_masks.(from_short_rook) <- 15 lxor castling_info.short_castling;
     castling_rights_masks.(from_long_rook) <- 15 lxor castling_info.long_castling;
-    castling_info.short_castling_mask <- single_bitboards_tab.(from_king) ||| single_bitboards_tab.(from_short_rook);
-    castling_info.long_castling_mask <- single_bitboards_tab.(from_king) ||| single_bitboards_tab.(from_long_rook);
     for square = from_king + 1 to castling_info.to_short_king do
       castling_info.short_castling_safe_mask <- castling_info.short_castling_safe_mask ||| single_bitboards_tab.(square);
       castling_info.short_castling_empty_mask <- castling_info.short_castling_empty_mask ||| single_bitboards_tab.(square)
@@ -495,14 +485,7 @@ let init_tables () =
   in aux bishop_masks bishop_blockers bishop_magics bishop_shifts bishop_moves bishop_table;
   aux rook_masks rook_blockers rook_magics rook_shifts rook_moves rook_table
 
-let () =
-  init_pawn ();
-  init_not_slidings ();
-  init_sliding_masks ();
-  init_blockers ();
-  init_sliding_moves ();
-  init_magic ();
-  init_tables ()
+
 
 let [@inline] add_pawn_moves moves number_of_moves moves_bitboard from flag =
   let bitboard = ref moves_bitboard in
@@ -538,7 +521,7 @@ let [@inline] generate_queen_attacks from occupancy =
 
 let ray_table = Array.init 64 (fun _ -> Array.make 64 0L)
 
-let () =
+let init_ray_table () =
   for from = 0 to 63 do
     for to_ = 0 to 63 do
       if from <> to_ then begin
@@ -553,6 +536,16 @@ let () =
       end
     done
   done
+
+let init_bitboards() =
+  init_pawn ();
+  init_not_slidings ();
+  init_sliding_masks ();
+  init_blockers ();
+  init_sliding_moves ();
+  init_magic ();
+  init_tables ();
+  init_ray_table ()
 
 let [@inline] is_attacked square white_to_move occupancy pieces_bitboard =
   (generate_pawn_attacks square white_to_move) &&& pieces_bitboard.((pawn + 6 * (white_to_move lxor 1))) <> 0L ||

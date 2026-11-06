@@ -1,0 +1,36 @@
+open Libs.Bitboards
+
+let mailbox_of_bitboard pieces_bitboards =
+  let mailbox = Array.make 64 0 in
+  let rec aux index piece = match index with
+    |[] -> ()
+    |h::t ->
+      mailbox.(h) <- piece;
+      aux t piece
+  in for i = 1 to 12 do
+    aux (index_list pieces_bitboards.(i)) i
+  done;
+  mailbox
+
+let print_bitboard bitboard =
+  let tab_print = [|" P |"; " N |"; " B |"; " R |"; " Q |"; " K |"; " p |"; " n |"; " b |"; " r |"; " q |"; " k |"; "   |"|] in
+  let board = Array.make 64 empty in
+  let rec aux_1 board index = match index with
+    |[] -> ()
+    |h::t ->
+      board.(h) <- king;
+      aux_1 board t
+  in aux_1 board (index_list bitboard);
+  let display = ref "   +---+---+---+---+---+---+---+---+\n"
+  in for i = 8 downto 1 do
+    let k_list = ref [] in
+    let k = string_of_int i ^ "  |" in
+    for j = 8 * (i - 1) to 8 * i - 1 do
+      let piece = board.(j) in
+      k_list := tab_print.(piece) :: !k_list;
+    done;
+    k_list := List.rev !k_list;
+    let k_str = String.concat "" !k_list in
+    display := !display ^ (k ^ k_str ^ "\n" ^"   +---+---+---+---+---+---+---+---+\n");
+  done;
+  print_endline (!display ^ "     a   b   c   d   e   f   g   h\n")

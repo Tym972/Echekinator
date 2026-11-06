@@ -64,7 +64,6 @@ let go_counter = ref 0
 let start_time = ref (Mtime_clock.counter ())
 let soft_bound = ref Mtime.Span.max_span
 let hard_bound = ref Mtime.Span.max_span
-let ponder_time = ref Mtime.Span.max_span
 
 let chess_960 = ref false
 

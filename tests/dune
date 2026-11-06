@@ -10,7 +10,8 @@
  positions
  magics
  extractor
- algebraic)
+ algebraic
+ miscellaneous)
  (libraries 
  unix
  threads

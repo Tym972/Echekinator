@@ -1,7 +1,6 @@
 open Libs.Board
 open Libs.Fen
 open Libs.Bitboards
-open Libs.Miscellaneous
 open Libs.Uci
 open Libs.Move_ordering
 
@@ -72,6 +71,7 @@ let process_line perft_list index line depth =
   | _ -> ()
 
 let process_file filename depth number =
+  init_bitboards ();
   let ic = open_in filename in
   let perft_test = Array.init 960 (fun _ -> {fen = ""; depth = 0; result = 0}) in
   begin try

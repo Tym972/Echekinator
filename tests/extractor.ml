@@ -173,7 +173,8 @@ let process_pgn_file filename output_name engine1 engine2 =
   close_out oc
 
 
-let () = 
+let () =
+  init_bitboards ();
   let name = "Maximus" in
   for i = 1 to 3 do
     process_pgn_file (Printf.sprintf "Results/Iteration5/Pgn_fastchess#%i.pgn" i) (Printf.sprintf "%s.txt" name) "new" "base"
